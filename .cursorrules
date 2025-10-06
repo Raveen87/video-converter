@@ -17,6 +17,13 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - Test: `dotnet test`
 - Code coverage: Aim for ≥ 85% overall and enforce ≥ 85% on new/changed code.
 
+Tools available in Local environent:
+* pwsh
+* dotnet
+* git
+* gh
+
+
 ### Local Build Enforcement
 - Always run a local build before claiming any implementation task is complete.
   - Command: `dotnet build VideoConverter.sln`
