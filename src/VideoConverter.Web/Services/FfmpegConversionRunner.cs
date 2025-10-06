@@ -249,5 +249,3 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         return Quote(ffmpegPath) + " " + string.Join(" ", displayArgs);
     }
 }
-
-

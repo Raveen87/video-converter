@@ -11,15 +11,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         var entity = modelBuilder.Entity<Conversion>();
         _ = entity.HasKey(c => c.Id);
         _ = entity.Property(c => c.InputPath)
-          .IsRequired()
-          .HasMaxLength(2048);
+            .IsRequired()
+            .HasMaxLength(2048);
         _ = entity.Property(c => c.OutputDirectory)
-          .IsRequired()
-          .HasMaxLength(1024);
+            .IsRequired()
+            .HasMaxLength(1024);
 
         _ = entity.Property(c => c.CreatedAtUtc)
-          .IsRequired();
+            .IsRequired();
     }
 }
-
-

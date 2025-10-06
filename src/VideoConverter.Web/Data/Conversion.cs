@@ -8,4 +8,3 @@ public class Conversion
     public DateTime CreatedAtUtc { get; set; }
 }
 
-

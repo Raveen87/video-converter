@@ -19,5 +19,3 @@ public sealed class ValidationResult
         return Errors.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
     }
 }
-
-

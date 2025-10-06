@@ -14,5 +14,3 @@ public sealed class ConversionStartResult
     public string Command { get; init; } = string.Empty;
     public string? ErrorMessage { get; init; }
 }
-
-

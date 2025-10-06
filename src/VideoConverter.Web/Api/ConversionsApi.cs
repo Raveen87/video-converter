@@ -88,5 +88,3 @@ public static class ConversionsApi
             : Results.BadRequest(new { message = result.ErrorMessage, conversionId = conversion.Id });
     }
 }
-
-
