@@ -1,0 +1,39 @@
+# Build artifacts
+bin/
+obj/
+
+# User-specific
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# Env files
+.env
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Coverage
+TestResults/
+coverage/
+*.coverage*
+
+# Docker
+.docker/
+**/.dockerignore
+
+# Certificates
+*.pfx
+*.p12
+

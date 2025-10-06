@@ -67,3 +67,7 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - When .NET 10 becomes stable, plan a small PR to upgrade the SDK, Docker base image, and CI.
 
 
+### Dependencies policy
+- Always use the latest stable versions for dependencies unless explicitly instructed otherwise or if there are known or detected problems with specific versions.
+
+
