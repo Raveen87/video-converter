@@ -16,7 +16,12 @@ dotnet test
 - POST `/api/conversions`
   - Body:
     ```json
-    { "inputPath": "C:/videos/input.mp4", "outputDirectory": "C:/videos/out" }
+    {
+      "inputPath": "C:/videos/input.mp4",
+      "outputDirectory": "C:/videos/out",
+      "crf": 40,                      // optional, 0-63 (defaults to 40)
+      "audioBitrateKbps": 128         // optional, 1-450 (defaults to 128)
+    }
     ```
   - Responses:
     - 201 Created with created item
@@ -27,7 +32,14 @@ dotnet test
   - Example:
     ```json
     [
-      { "id": 1, "inputPath": "...", "outputDirectory": "...", "createdAtUtc": "2025-10-06T12:00:00Z" }
+      {
+        "id": 1,
+        "inputPath": "...",
+        "outputDirectory": "...",
+        "createdAtUtc": "2025-10-06T12:00:00Z",
+        "crf": 40,
+        "audioBitrateKbps": 128
+      }
     ]
     ```
 
@@ -60,9 +72,16 @@ dotnet test
 - `tests/VideoConverter.Tests`: xUnit test project
 
 ### Config
+Environment/app settings:
+
+- `Ffmpeg:Path` or `FFMPEG_PATH`: Path to ffmpeg executable (default: `ffmpeg` in PATH)
+- `Ffmpeg:DryRun` or `FFMPEG_DRYRUN`: When `true`, the service will not spawn ffmpeg; it returns the built command string. Useful for tests and diagnostics.
+
 ### Validation
 - `inputPath` must be a non-empty string and point to an existing file (not a directory).
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
+- `crf` (optional): integer 0–63. If omitted, defaults to 40.
+- `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128.
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.
@@ -76,14 +95,14 @@ dotnet test
 - Target framework is `net10.0`.
 
 ### FFmpeg settings used
-- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `4`, GOP `150`, CRF `40`
-- Audio: Opus `-c:a libopus -b:a 128k`
+- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `4`, GOP `150`, configurable CRF (`-crf <0..63>`, default 40)
+- Audio: Opus `-c:a libopus -b:a <kbps>k` (default 128k)
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to 720p if larger, keep if ≤720p; uses Lanczos scaling filter
 
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf 40 -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=increase:flags=lanczos" -c:a libopus -b:a 128k -c:s copy <output>.mkv
+ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf <crf> -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=increase:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
 ```
 
 ### CI/Quality

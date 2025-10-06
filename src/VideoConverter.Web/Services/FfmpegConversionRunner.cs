@@ -11,6 +11,8 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
     private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
         ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
         ?? "ffmpeg";
+    private readonly bool _dryRun = string.Equals(configuration["Ffmpeg:DryRun"], "true", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
     private readonly ILogger<FfmpegConversionRunner> _logger = logger;
 
     private static readonly SemaphoreSlim _preflightLock = new(1, 1);
@@ -21,20 +23,23 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
     {
         await Task.Yield();
 
-        var preflightOk = await EnsurePreflightAsync();
+        var preflightOk = _dryRun || await EnsurePreflightAsync();
         if (!preflightOk)
         {
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = _preflightError ?? "FFmpeg preflight failed" };
         }
 
         var key = Path.Combine(conversion.OutputDirectory ?? string.Empty, Path.GetFileNameWithoutExtension(conversion.InputPath ?? string.Empty));
-        lock (RunningKeys)
+        if (!_dryRun)
         {
-            if (RunningKeys.Contains(key))
+            lock (RunningKeys)
             {
-                return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Conversion already running for this input/output." };
+                if (RunningKeys.Contains(key))
+                {
+                    return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Conversion already running for this input/output." };
+                }
+                _ = RunningKeys.Add(key);
             }
-            _ = RunningKeys.Add(key);
         }
 
         try
@@ -64,15 +69,20 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 "-pix_fmt", "yuv420p10le",
                 "-preset", "4",
                 "-g", "150",
-                "-crf", "40",
+                "-crf", conversion.Crf?.ToString() ?? "40",
                 "-vf", vf,
                 "-c:a", "libopus",
-                "-b:a", "128k",
+                "-b:a", (conversion.AudioBitrateKbps ?? 128) + "k",
                 "-c:s", "copy",
                 outputFile
             };
 
             var cmdString = BuildDisplayCommand(_ffmpegPath, args);
+
+            if (_dryRun)
+            {
+                return new ConversionStartResult { IsSuccess = true, ProcessId = 0, Command = cmdString };
+            }
 
             var startInfo = new ProcessStartInfo
             {

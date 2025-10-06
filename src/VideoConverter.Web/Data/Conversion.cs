@@ -6,5 +6,7 @@ public class Conversion
     public string InputPath { get; set; } = string.Empty;
     public string OutputDirectory { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
+    public int? Crf { get; set; }
+    public int? AudioBitrateKbps { get; set; }
 }
 
