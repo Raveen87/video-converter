@@ -9,6 +9,28 @@ namespace VideoConverter.Web.Api;
 
 public static class ConversionsApi
 {
+    private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
+    private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
+    private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
+
+    private static IEnumerable<string> GetSubtitleTags(string language)
+    {
+        var key = (language ?? string.Empty).Trim().ToLowerInvariant();
+        if (SubtitleTagsSwedish.Contains(key, StringComparer.Ordinal))
+        {
+            return SubtitleTagsSwedish;
+        }
+        if (SubtitleTagsEnglish.Contains(key, StringComparer.Ordinal))
+        {
+            return SubtitleTagsEnglish;
+        }
+        if (SubtitleTagsVietnamese.Contains(key, StringComparer.Ordinal))
+        {
+            return SubtitleTagsVietnamese;
+        }
+        // Fallback: if a tag-like short code is provided, just try it
+        return [key];
+    }
     public static void MapEndpoints(IEndpointRouteBuilder app)
     {
         _ = app.MapPost("/api/conversions", CreateConversionAsync);
@@ -34,6 +56,7 @@ public static class ConversionsApi
         // If audio/subtitle languages specified, probe and validate before persisting
         string? audioIndicesCsv = null;
         string? subtitleIndicesCsv = null;
+        string? externalSubtitlePathsCsv = null;
         if (request.AudioLanguages is { Count: > 0 })
         {
             var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
@@ -56,20 +79,49 @@ public static class ConversionsApi
         if (request.SubtitleLanguages is { Count: > 0 })
         {
             var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
-            try
+            var requested = request.SubtitleLanguages.ToList();
+            List<int> matchedIndices = [];
+            List<string> externalPaths = [];
+
+            foreach (var lang in requested)
             {
-                var requested = request.SubtitleLanguages.ToList();
-                var matched = subtitleMatcher.MatchSubtitleStreams(probe.Streams, requested);
-                subtitleIndicesCsv = string.Join(",", matched);
-            }
-            catch (InvalidOperationException ex)
-            {
-                var dict = new Dictionary<string, string[]>
+                try
                 {
-                    { nameof(request.SubtitleLanguages), new[] { ex.Message } }
-                };
-                return Results.ValidationProblem(dict);
+                    var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
+                    matchedIndices.AddRange(idx);
+                }
+                catch
+                {
+                    // Not found in streams → try filesystem in same folder: <video-name>.<tag>.srt
+                    var videoDir = Path.GetDirectoryName(request.InputPath) ?? string.Empty;
+                    var videoBase = Path.GetFileNameWithoutExtension(request.InputPath) ?? string.Empty;
+                    var tagsToTry = GetSubtitleTags(lang);
+
+                    var found = false;
+                    foreach (var tag in tagsToTry)
+                    {
+                        var path = Path.Combine(videoDir, videoBase + "." + tag + ".srt");
+                        if (File.Exists(path))
+                        {
+                            externalPaths.Add(path);
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        var dict = new Dictionary<string, string[]>
+                        {
+                            { nameof(request.SubtitleLanguages), new[] { $"Requested subtitle language '{lang}' not found in file or as external .srt." } }
+                        };
+                        return Results.ValidationProblem(dict);
+                    }
+                }
             }
+
+            subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(",", matchedIndices) : null;
+            externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
         }
 
         var conversion = new Conversion
@@ -80,7 +132,8 @@ public static class ConversionsApi
             Crf = request.Crf,
             AudioBitrateKbps = request.AudioBitrateKbps,
             SelectedAudioStreamIndicesCsv = audioIndicesCsv,
-            SelectedSubtitleStreamIndicesCsv = subtitleIndicesCsv
+            SelectedSubtitleStreamIndicesCsv = subtitleIndicesCsv,
+            SelectedExternalSubtitlePathsCsv = externalSubtitlePathsCsv
         };
 
         _ = db.Conversions.Add(conversion);

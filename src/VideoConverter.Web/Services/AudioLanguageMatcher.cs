@@ -104,6 +104,7 @@ public sealed class AudioLanguageMatcher : IAudioLanguageMatcher, ISubtitleLangu
         {
             { Normalize("english"), "eng" },
             { Normalize("swedish"), "swe" },
+            { Normalize("vietnamese"), "vie" },
             { Normalize("german"), "deu" },
             { Normalize("french"), "fra" },
             { Normalize("spanish"), "spa" },
@@ -122,8 +123,9 @@ public sealed class AudioLanguageMatcher : IAudioLanguageMatcher, ISubtitleLangu
         // Aliases include common abbreviations and two-letter codes
         return new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
-            { Normalize("english"), new[] { "en", "eng" } },
-            { Normalize("swedish"), new[] { "sv", "swe", "svenska" } },
+            { Normalize("english"), new[] { "en", "eng", "english" } },
+            { Normalize("swedish"), new[] { "sv", "sve", "swe", "svenska", "swedish" } },
+            { Normalize("vietnamese"), new[] { "vi", "vie", "viet", "vietnamese" } },
             { Normalize("german"), new[] { "de", "deu", "ger", "deutsch" } },
             { Normalize("french"), new[] { "fr", "fra", "fre", "francais" } },
             { Normalize("spanish"), new[] { "es", "spa", "esp", "espanol" } },

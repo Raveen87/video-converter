@@ -184,6 +184,63 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     }
 
     [Fact]
+    public async Task Post_with_subtitle_language_uses_external_srt_when_missing_in_streams()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 0, CodecType = "video", LanguageTag = null, Title = null },
+            new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "eng", Title = "English" },
+        ];
+
+        var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+        var tempInput = Path.Combine(tempDir, Guid.NewGuid().ToString("N") + ".mkv");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+
+        // Create external Swedish subtitle: <video>.<tag>.srt
+        var baseName = Path.GetFileNameWithoutExtension(tempInput);
+        var extSub = Path.Combine(tempDir, baseName + ".swe.srt");
+        await File.WriteAllTextAsync(extSub, "1\n00:00:00,000 --> 00:00:01,000\nHej\n");
+
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, subtitleLanguages = new[] { "Swedish" } };
+
+        var create = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = create.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ConversionDto>>("/api/conversions");
+        var created = list!.Single(x => x.InputPath == payload.inputPath);
+
+        var startResp = await client.PostAsync($"/api/conversions/{created.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+        var startPayload = await startResp.Content.ReadFromJsonAsync<RealRunnerTests.StartResponse>();
+
+        // Should include -i <extSub> and map 1:s:0
+        _ = startPayload!.Command.Should().Contain($"-i {extSub}");
+        _ = startPayload!.Command.Should().Contain("-map 1:s:0");
+        _ = startPayload!.Command.Should().Contain("-c:s copy");
+    }
+
+    [Fact]
     public async Task Post_with_nonexistent_audio_language_returns_validation_error()
     {
         var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>

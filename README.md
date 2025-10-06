@@ -94,6 +94,12 @@ Environment/app settings:
   - When provided, the service probes the input and attempts to match each requested language across subtitle streams by language tag and title (with common aliases), similar to audio.
   - If any requested language cannot be matched, the API returns 400 with an error.
   - If not provided, all subtitle tracks are included and copied.
+  - Additionally, for each requested subtitle language, if no matching subtitle stream is found inside the video file, the service searches the same directory as the input file for external `.srt` files named `<video-filename>.<language-tag>.srt`.
+    - Supported tags:
+      - Swedish: `sv`, `sve`, `swe`, `swedish`
+      - English: `en`, `eng`, `english`
+      - Vietnamese: `vi`, `vie`, `viet`, `vietnamese`
+    - When found, external subtitles are added as inputs and mapped to the output and copied (`-c:s copy`).
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.
