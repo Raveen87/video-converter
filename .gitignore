@@ -37,3 +37,9 @@ coverage/
 *.pfx
 *.p12
 
+# SQLite databases (local dev/test)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3

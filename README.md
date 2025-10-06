@@ -31,6 +31,22 @@ dotnet test
     ]
     ```
 
+- POST `/api/conversions/{id}/start`
+  - Starts conversion for the specified id using ffmpeg (runs in background)
+  - Response 200:
+    ```json
+    { "message": "Started", "processId": 1234, "command": "ffmpeg ..." }
+    ```
+  - Response 404 if id not found; 400 if already running or failed to start
+
+- POST `/api/conversions/start-next`
+  - Starts the next conversion in the queue (oldest by `createdAtUtc`)
+  - Response 200:
+    ```json
+    { "message": "Started", "processId": 1234, "command": "ffmpeg ...", "conversionId": 1 }
+    ```
+  - Response 404 if queue is empty
+
 ### Persistence
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
 - Override via environment variables, user secrets, or appsettings.
@@ -50,6 +66,17 @@ dotnet test
 - Compiler/analyzer warnings are treated as errors via `Directory.Build.props`.
 - Nullable reference types are enabled.
 - Target framework is `net10.0`.
+
+### FFmpeg settings used
+- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `4`, GOP `150`, CRF `40`
+- Audio: Opus `-c:a libopus -b:a 128k`
+- Subtitles: copied `-c:s copy`
+- Scaling: downscale to 720p if larger, keep if ≤720p; uses Lanczos scaling filter
+
+Example effective flags (simplified):
+```bash
+ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf 40 -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=increase:flags=lanczos" -c:a libopus -b:a 128k -c:s copy <output>.mkv
+```
 
 ### CI/Quality
 - Warnings-as-errors enforced; code style and analyzers enabled.

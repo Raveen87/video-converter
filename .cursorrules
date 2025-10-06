@@ -17,6 +17,17 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - Test: `dotnet test`
 - Code coverage: Aim for ≥ 85% overall and enforce ≥ 85% on new/changed code.
 
+### Local Build Enforcement
+- Always run a local build before claiming any implementation task is complete.
+  - Command: `dotnet build VideoConverter.sln`
+  - The build must finish with 0 errors (warnings are treated as errors by repo settings).
+- If the build fails, fix the errors first; do not finish the turn while the solution does not compile.
+- After non-trivial C# edits (new endpoints, services, models, DI changes), re-run `dotnet build` before responding.
+- Prefer running `dotnet test` when logic paths or behavior change; however, the hard requirement for completion is a successful `dotnet build`.
+- When adding or changing endpoints or user-visible behavior, update `README.md` in the same task.
+- Do not rely solely on lint output in the editor; use a full CLI build as the source of truth.
+- Summarize completion only after a successful build.
+
 ### Linting, analyzers, and code quality
 - Use `dotnet format` and enable analyzers.
 - Treat compiler/analyzer warnings as errors.
@@ -65,7 +76,6 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 
 ### Notes for future migrations
 - When .NET 10 becomes stable, plan a small PR to upgrade the SDK, Docker base image, and CI.
-
 
 ### Dependencies policy
 - Always use the latest stable versions for dependencies unless explicitly instructed otherwise or if there are known or detected problems with specific versions.
