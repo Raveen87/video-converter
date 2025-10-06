@@ -9,5 +9,6 @@ public class Conversion
     public int? Crf { get; set; }
     public int? AudioBitrateKbps { get; set; }
     public string? SelectedAudioStreamIndicesCsv { get; set; }
+    public string? SelectedSubtitleStreamIndicesCsv { get; set; }
 }
 

@@ -1,8 +1,10 @@
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Tests;
 
@@ -26,6 +28,15 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
                   _ = services.Remove(descriptor);
               }
               _ = services.AddSingleton<IConversionRunner, FakeConversionRunner>();
+
+              // Replace real media prober with a fake that we control per test
+              var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+              if (proberDescriptor != null)
+              {
+                  _ = services.Remove(proberDescriptor);
+              }
+              _ = services.AddSingleton<FakeMediaProber>();
+              _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
           });
       });
 
@@ -71,6 +82,182 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
         var created = list!.Single(x => x.InputPath == payload.inputPath);
         _ = created.Crf.Should().Be(22);
         _ = created.AudioBitrateKbps.Should().Be(192);
+    }
+
+    [Fact]
+    public async Task Post_with_audio_languages_persists_selected_indices_and_propagates()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        // Configure fake probe data: two audio streams eng and swe
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "eng", Title = "English" },
+            new MediaStream { Index = 2, CodecType = "audio", LanguageTag = "swe", Title = "Swedish" },
+        ];
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, audioLanguages = new[] { "English" } };
+
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = response.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ConversionDto>>("/api/conversions");
+        var created = list!.Single(x => x.InputPath == payload.inputPath);
+
+        // Start conversion and inspect command: should map 0:1 for audio
+        var startResp = await client.PostAsync($"/api/conversions/{created.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+        var startPayload = await startResp.Content.ReadFromJsonAsync<RealRunnerTests.StartResponse>();
+        _ = startPayload!.Command.Should().Contain("-map 0:1");
+    }
+
+    [Fact]
+    public async Task Post_with_subtitle_languages_persists_selected_indices_and_propagates()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 0, CodecType = "video", LanguageTag = null, Title = null },
+            new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "eng", Title = "English" },
+            new MediaStream { Index = 3, CodecType = "subtitle", LanguageTag = "eng", Title = "English CC" },
+            new MediaStream { Index = 4, CodecType = "subtitle", LanguageTag = "swe", Title = "Svenska" },
+        ];
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mkv");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, subtitleLanguages = new[] { "Swedish" } };
+
+        var create = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = create.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ConversionDto>>("/api/conversions");
+        var created = list!.Single(x => x.InputPath == payload.inputPath);
+
+        var startResp = await client.PostAsync($"/api/conversions/{created.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+        var startPayload = await startResp.Content.ReadFromJsonAsync<RealRunnerTests.StartResponse>();
+        // Should map subtitles using index 4
+        _ = startPayload!.Command.Should().Contain("-map 0:4");
+        // And set -c:s copy
+        _ = startPayload!.Command.Should().Contain("-c:s copy");
+    }
+
+    [Fact]
+    public async Task Post_with_nonexistent_audio_language_returns_validation_error()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "eng", Title = "English" }
+        ];
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, audioLanguages = new[] { "Swedish" } };
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+
+        _ = response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        _ = problem!.Errors.Should().ContainKey("AudioLanguages");
+    }
+
+    [Fact]
+    public async Task Post_with_nonexistent_subtitle_language_returns_validation_error()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 0, CodecType = "video", LanguageTag = null, Title = null },
+            new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "eng", Title = "English" }
+        ];
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mkv");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, subtitleLanguages = new[] { "Swedish" } };
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+
+        _ = response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        _ = problem!.Errors.Should().ContainKey("SubtitleLanguages");
     }
 
     [Fact]
