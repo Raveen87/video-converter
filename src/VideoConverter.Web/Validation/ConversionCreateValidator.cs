@@ -86,6 +86,16 @@ public sealed class ConversionCreateValidator : IRequestValidator<ConversionCrea
             result.Add(nameof(request.AudioBitrateKbps), "AudioBitrateKbps must be between 1 and 450.");
         }
 
+        // Validate resolution (when provided): allowed values 720, 1080, 2160
+        if (request.Resolution is not null)
+        {
+            var allowed = new[] { 720, 1080, 2160 };
+            if (!allowed.Contains(request.Resolution.Value))
+            {
+                result.Add(nameof(request.Resolution), "Resolution must be one of: 720, 1080, 2160.");
+            }
+        }
+
         // Validate audio language names format (when provided)
         if (request.AudioLanguages is { Count: > 0 })
         {

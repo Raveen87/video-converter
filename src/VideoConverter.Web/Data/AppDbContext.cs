@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         _ = entity.Property(c => c.Crf);
         _ = entity.Property(c => c.AudioBitrateKbps);
+        _ = entity.Property(c => c.Resolution);
         _ = entity.Property(c => c.SelectedAudioStreamIndicesCsv)
             .HasMaxLength(512);
         _ = entity.Property(c => c.SelectedSubtitleStreamIndicesCsv)

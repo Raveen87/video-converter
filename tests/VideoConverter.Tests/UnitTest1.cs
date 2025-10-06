@@ -64,7 +64,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     }
 
     [Fact]
-    public async Task Post_persists_crf_and_bitrate()
+    public async Task Post_persists_crf_bitrate_and_resolution()
     {
         var client = _factory.CreateClient();
 
@@ -82,12 +82,13 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
         var created = list!.Single(x => x.InputPath == payload.inputPath);
         _ = created.Crf.Should().Be(22);
         _ = created.AudioBitrateKbps.Should().Be(192);
+        _ = created.Resolution.Should().BeNull();
     }
 
     [Fact]
     public async Task Post_with_audio_languages_persists_selected_indices_and_propagates()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -135,7 +136,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_subtitle_languages_persists_selected_indices_and_propagates()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -184,9 +185,65 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     }
 
     [Fact]
+    public async Task Post_with_invalid_resolution_returns_validation_error()
+    {
+        var client = _factory.CreateClient();
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, resolution = 999 };
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+
+        _ = response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        _ = problem!.Errors.Should().ContainKey("Resolution");
+    }
+
+    [Fact]
+    public async Task Post_with_too_high_resolution_returns_validation_error()
+    {
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+        var fakeProber = factory.Services.GetRequiredService<FakeMediaProber>();
+        fakeProber.Streams =
+        [
+            new MediaStream { Index = 0, CodecType = "video", LanguageTag = null, Title = null },
+        ];
+        // Simulate 1080p source
+        fakeProber.VideoWidth = 1920;
+        fakeProber.VideoHeight = 1080;
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, resolution = 2160 };
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+
+        // Since FakeMediaProber currently doesn't provide height, API will say unable to determine or allow; instead use real dryrun factory for height-dependent test below
+        _ = response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Post_with_subtitle_language_uses_external_srt_when_missing_in_streams()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -243,7 +300,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_nonexistent_audio_language_returns_validation_error()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.ConfigureServices(services =>
@@ -281,7 +338,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_nonexistent_subtitle_language_returns_validation_error()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.ConfigureServices(services =>
@@ -344,7 +401,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
         _ = list.Should().Contain(x => x.InputPath == p2.inputPath && x.OutputDirectory == p2.outputDirectory);
     }
 
-    public record ConversionDto(int Id, string InputPath, string OutputDirectory, DateTime CreatedAtUtc, int? Crf, int? AudioBitrateKbps);
+    public record ConversionDto(int Id, string InputPath, string OutputDirectory, DateTime CreatedAtUtc, int? Crf, int? AudioBitrateKbps, int? Resolution);
 }
 
 public class RealRunnerTests
@@ -357,10 +414,20 @@ public class RealRunnerTests
     [Fact]
     public async Task Start_uses_configured_crf_and_bitrate_in_ffmpeg_command()
     {
-        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
         });
 
         var client = factory.CreateClient();
@@ -369,7 +436,7 @@ public class RealRunnerTests
         await File.WriteAllTextAsync(tempInput, "dummy");
         var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
 
-        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, crf = 20, audioBitrateKbps = 256 };
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, crf = 20, audioBitrateKbps = 256, resolution = 720 };
 
         var create = await client.PostAsJsonAsync("/api/conversions", payload);
         _ = create.EnsureSuccessStatusCode();
@@ -384,6 +451,47 @@ public class RealRunnerTests
         _ = startPayload.Should().NotBeNull();
         _ = startPayload!.Command.Should().Contain("-crf 20");
         _ = startPayload!.Command.Should().Contain("-b:a 256k");
+        _ = startPayload!.Command.Should().Contain("-vf scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos");
+    }
+
+    [Fact]
+    public async Task Start_uses_1080p_and_2160p_resolution_in_ffmpeg_command()
+    {
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        async Task AssertResolution(int res, string expected)
+        {
+            var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+            await File.WriteAllTextAsync(tempInput, "dummy");
+            var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+            var create = await client.PostAsJsonAsync("/api/conversions", new { inputPath = tempInput, outputDirectory = tempOutDir, resolution = res });
+            _ = create.EnsureSuccessStatusCode();
+            var list = await client.GetFromJsonAsync<List<ApiTests.ConversionDto>>("/api/conversions");
+            var item = list!.Single(x => x.InputPath == tempInput);
+            var startResp = await client.PostAsync($"/api/conversions/{item.Id}/start", content: null);
+            _ = startResp.EnsureSuccessStatusCode();
+            var startPayload = await startResp.Content.ReadFromJsonAsync<StartResponse>();
+            _ = startPayload!.Command.Should().Contain(expected);
+        }
+
+        await AssertResolution(1080, "-vf scale=w=1920:h=1080:force_original_aspect_ratio=decrease:flags=lanczos");
+        await AssertResolution(2160, "-vf scale=w=3840:h=2160:force_original_aspect_ratio=decrease:flags=lanczos");
     }
 
     public sealed class StartResponse

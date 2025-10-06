@@ -8,6 +8,7 @@ public class Conversion
     public DateTime CreatedAtUtc { get; set; }
     public int? Crf { get; set; }
     public int? AudioBitrateKbps { get; set; }
+    public int? Resolution { get; set; }
     public string? SelectedAudioStreamIndicesCsv { get; set; }
     public string? SelectedSubtitleStreamIndicesCsv { get; set; }
     public string? SelectedExternalSubtitlePathsCsv { get; set; }

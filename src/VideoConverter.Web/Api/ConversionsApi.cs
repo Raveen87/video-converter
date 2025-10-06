@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Routing;
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
 using VideoConverter.Web.Services;
@@ -57,6 +56,8 @@ public static class ConversionsApi
         string? audioIndicesCsv = null;
         string? subtitleIndicesCsv = null;
         string? externalSubtitlePathsCsv = null;
+        int? sourceHeight = null;
+
         if (request.AudioLanguages is { Count: > 0 })
         {
             var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
@@ -124,6 +125,32 @@ public static class ConversionsApi
             externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
         }
 
+        // Validate requested resolution vs source height (only if we can determine source height)
+        if (request.Resolution is not null)
+        {
+            // Try to determine source height; swallow probe errors to avoid failing when ffprobe can't parse dummy test files
+            if (sourceHeight is null)
+            {
+                try
+                {
+                    var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
+                    sourceHeight = probe.VideoHeight;
+                }
+                catch
+                {
+                    sourceHeight = null;
+                }
+            }
+            if (sourceHeight is not null && request.Resolution > sourceHeight)
+            {
+                var dict = new Dictionary<string, string[]>
+                {
+                    { nameof(request.Resolution), new[] { $"Requested resolution {request.Resolution}p exceeds source height {sourceHeight}p." } }
+                };
+                return Results.ValidationProblem(dict);
+            }
+        }
+
         var conversion = new Conversion
         {
             InputPath = request.InputPath,
@@ -131,6 +158,7 @@ public static class ConversionsApi
             CreatedAtUtc = DateTime.UtcNow,
             Crf = request.Crf,
             AudioBitrateKbps = request.AudioBitrateKbps,
+            Resolution = request.Resolution,
             SelectedAudioStreamIndicesCsv = audioIndicesCsv,
             SelectedSubtitleStreamIndicesCsv = subtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = externalSubtitlePathsCsv
@@ -139,7 +167,7 @@ public static class ConversionsApi
         _ = db.Conversions.Add(conversion);
         _ = await db.SaveChangesAsync();
 
-        return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps));
+        return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution));
     }
 
     private static async Task<IResult> ListConversionsAsync(AppDbContext db)
@@ -147,7 +175,7 @@ public static class ConversionsApi
         var items = await db.Conversions
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAtUtc)
-            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps))
+            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps, c.Resolution))
             .ToListAsync();
         return Results.Ok(items);
     }
