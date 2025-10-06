@@ -10,5 +10,6 @@ public class Conversion
     public int? AudioBitrateKbps { get; set; }
     public string? SelectedAudioStreamIndicesCsv { get; set; }
     public string? SelectedSubtitleStreamIndicesCsv { get; set; }
+    public string? SelectedExternalSubtitlePathsCsv { get; set; }
 }
 

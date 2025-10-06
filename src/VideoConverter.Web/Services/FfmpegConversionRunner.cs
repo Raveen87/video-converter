@@ -74,7 +74,28 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 outputFile
             };
 
-            // Map subtitles: if specific indices persisted, use them; otherwise include all subtitles
+            // Add external subtitle inputs if any
+            var externalSubtitlePaths = new List<string>();
+            if (!string.IsNullOrWhiteSpace(conversion.SelectedExternalSubtitlePathsCsv))
+            {
+                externalSubtitlePaths.AddRange(conversion.SelectedExternalSubtitlePathsCsv.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+            if (externalSubtitlePaths.Count > 0)
+            {
+                var insertInputAt = args.IndexOf("-map");
+                if (insertInputAt < 0)
+                {
+                    insertInputAt = args.Count;
+                }
+                foreach (var subPath in externalSubtitlePaths)
+                {
+                    args.Insert(insertInputAt, subPath);
+                    args.Insert(insertInputAt, "-i");
+                    insertInputAt += 2;
+                }
+            }
+
+            // Map subtitles: if specific indices persisted, use them; include external .srt inputs; otherwise include all internal subtitles
             var insertAt = args.IndexOf("-c:v");
             if (!string.IsNullOrWhiteSpace(conversion.SelectedSubtitleStreamIndicesCsv))
             {
@@ -88,19 +109,30 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                         insertAt += 2;
                     }
                 }
-                args.Insert(insertAt, "copy");
-                args.Insert(insertAt, "-c:s");
-                insertAt += 2;
             }
             else
             {
                 args.Insert(insertAt, "0:s?");
                 args.Insert(insertAt, "-map");
                 insertAt += 2;
-                args.Insert(insertAt, "copy");
-                args.Insert(insertAt, "-c:s");
-                insertAt += 2;
             }
+
+            // Map external subtitle inputs (each added as a separate input starting at index 1)
+            if (externalSubtitlePaths.Count > 0)
+            {
+                for (var i = 0; i < externalSubtitlePaths.Count; i++)
+                {
+                    var inputIndex = i + 1; // 0 is the main video input
+                    args.Insert(insertAt, $"{inputIndex}:s:0");
+                    args.Insert(insertAt, "-map");
+                    insertAt += 2;
+                }
+            }
+
+            // Ensure we copy subtitles
+            args.Insert(insertAt, "copy");
+            args.Insert(insertAt, "-c:s");
+            insertAt += 2;
 
             // Map audio streams: if specific indices persisted, use them; otherwise include all audio
             if (!string.IsNullOrWhiteSpace(conversion.SelectedAudioStreamIndicesCsv))
