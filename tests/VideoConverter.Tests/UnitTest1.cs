@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using VideoConverter.Web.Services;
 
 namespace VideoConverter.Tests;
 
@@ -12,9 +14,19 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     }
 
     private readonly WebApplicationFactory<Web.Program> _factory =
-      factory.WithWebHostBuilder(builder =>
+  factory.WithWebHostBuilder(builder =>
       {
           _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+          _ = builder.ConfigureServices(services =>
+          {
+              // Replace real conversion runner with a fake for tests
+              var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IConversionRunner));
+              if (descriptor != null)
+              {
+                  _ = services.Remove(descriptor);
+              }
+              _ = services.AddSingleton<IConversionRunner, FakeConversionRunner>();
+          });
       });
 
     [Fact]
@@ -22,7 +34,12 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     {
         var client = _factory.CreateClient();
 
-        var payload = new { inputPath = "C:/videos/input.mp4", outputDirectory = "C:/videos/out" };
+        // Create real temp input file and output directory to satisfy validation
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir };
 
         var response = await client.PostAsJsonAsync("/api/conversions", payload);
         _ = response.EnsureSuccessStatusCode();
@@ -40,8 +57,14 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     {
         var client = _factory.CreateClient();
 
-        var p1 = new { inputPath = "in1.mp4", outputDirectory = "out1" };
-        var p2 = new { inputPath = "in2.mp4", outputDirectory = "out2" };
+        var in1 = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        var in2 = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(in1, "1");
+        await File.WriteAllTextAsync(in2, "2");
+        var out1 = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+        var out2 = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+        var p1 = new { inputPath = in1, outputDirectory = out1 };
+        var p2 = new { inputPath = in2, outputDirectory = out2 };
 
         var r1 = await client.PostAsJsonAsync("/api/conversions", p1);
         _ = r1.EnsureSuccessStatusCode();
