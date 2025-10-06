@@ -5,7 +5,8 @@ public record ConversionCreateDto(
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
-    IReadOnlyList<string>? AudioLanguages);
+    IReadOnlyList<string>? AudioLanguages,
+    IReadOnlyList<string>? SubtitleLanguages);
 
 public record ConversionDto(
     int Id,

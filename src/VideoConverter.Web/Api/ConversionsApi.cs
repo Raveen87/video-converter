@@ -22,7 +22,8 @@ public static class ConversionsApi
         AppDbContext db,
         IRequestValidator<ConversionCreateDto> validator,
         IMediaProber prober,
-        IAudioLanguageMatcher matcher)
+        IAudioLanguageMatcher matcher,
+        ISubtitleLanguageMatcher subtitleMatcher)
     {
         var validation = await validator.ValidateAsync(request, CancellationToken.None);
         if (!validation.IsValid)
@@ -30,8 +31,9 @@ public static class ConversionsApi
             return Results.ValidationProblem(validation.ToDictionary());
         }
 
-        // If audio languages specified, probe and validate before persisting
-        string? indicesCsv = null;
+        // If audio/subtitle languages specified, probe and validate before persisting
+        string? audioIndicesCsv = null;
+        string? subtitleIndicesCsv = null;
         if (request.AudioLanguages is { Count: > 0 })
         {
             var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
@@ -39,13 +41,32 @@ public static class ConversionsApi
             {
                 var requested = request.AudioLanguages.ToList();
                 var matched = matcher.MatchAudioStreams(probe.Streams, requested);
-                indicesCsv = string.Join(",", matched);
+                audioIndicesCsv = string.Join(",", matched);
             }
             catch (InvalidOperationException ex)
             {
                 var dict = new Dictionary<string, string[]>
                 {
                     { nameof(request.AudioLanguages), new[] { ex.Message } }
+                };
+                return Results.ValidationProblem(dict);
+            }
+        }
+
+        if (request.SubtitleLanguages is { Count: > 0 })
+        {
+            var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
+            try
+            {
+                var requested = request.SubtitleLanguages.ToList();
+                var matched = subtitleMatcher.MatchSubtitleStreams(probe.Streams, requested);
+                subtitleIndicesCsv = string.Join(",", matched);
+            }
+            catch (InvalidOperationException ex)
+            {
+                var dict = new Dictionary<string, string[]>
+                {
+                    { nameof(request.SubtitleLanguages), new[] { ex.Message } }
                 };
                 return Results.ValidationProblem(dict);
             }
@@ -58,7 +79,8 @@ public static class ConversionsApi
             CreatedAtUtc = DateTime.UtcNow,
             Crf = request.Crf,
             AudioBitrateKbps = request.AudioBitrateKbps,
-            SelectedAudioStreamIndicesCsv = indicesCsv
+            SelectedAudioStreamIndicesCsv = audioIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv = subtitleIndicesCsv
         };
 
         _ = db.Conversions.Add(conversion);

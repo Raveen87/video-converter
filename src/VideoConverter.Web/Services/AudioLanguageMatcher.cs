@@ -3,7 +3,7 @@ using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Web.Services;
 
-public sealed class AudioLanguageMatcher : IAudioLanguageMatcher
+public sealed class AudioLanguageMatcher : IAudioLanguageMatcher, ISubtitleLanguageMatcher
 {
     private static readonly Dictionary<string, string> FullNameToIso3 = BuildFullNameToIso3();
     private static readonly Dictionary<string, string[]> Aliases = BuildAliases();
@@ -20,6 +20,24 @@ public sealed class AudioLanguageMatcher : IAudioLanguageMatcher
 
             var found = audioStreams.FirstOrDefault(s => MatchesStream(s, candidates))
                         ?? throw new InvalidOperationException($"Requested audio language '{req}' not found in input file.");
+            matched.Add(found.Index);
+        }
+
+        return matched;
+    }
+
+    public IReadOnlyList<int> MatchSubtitleStreams(IReadOnlyList<MediaStream> streams, IReadOnlyList<string> requestedLanguages)
+    {
+        var subStreams = streams.Where(s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var matched = new List<int>();
+        foreach (var req in requestedLanguages)
+        {
+            var reqKey = Normalize(req);
+            var candidates = GetCandidateTokens(reqKey);
+
+            var found = subStreams.FirstOrDefault(s => MatchesStream(s, candidates))
+                        ?? throw new InvalidOperationException($"Requested subtitle language '{req}' not found in input file.");
             matched.Add(found.Index);
         }
 

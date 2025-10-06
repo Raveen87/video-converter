@@ -99,6 +99,19 @@ public sealed class ConversionCreateValidator : IRequestValidator<ConversionCrea
             }
         }
 
+        // Validate subtitle language names format (when provided)
+        if (request.SubtitleLanguages is { Count: > 0 })
+        {
+            foreach (var lang in request.SubtitleLanguages)
+            {
+                if (string.IsNullOrWhiteSpace(lang))
+                {
+                    result.Add(nameof(request.SubtitleLanguages), "Language names must be non-empty.");
+                    break;
+                }
+            }
+        }
+
         return Task.FromResult(result);
     }
 

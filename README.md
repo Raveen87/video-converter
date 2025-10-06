@@ -21,7 +21,8 @@ dotnet test
       "outputDirectory": "C:/videos/out",
       "crf": 40,
       "audioBitrateKbps": 128,
-      "audioLanguages": ["English", "Swedish"]
+      "audioLanguages": ["English", "Swedish"],
+      "subtitleLanguages": ["English", "Swedish"]
     }
     ```
   - Responses:
@@ -89,6 +90,10 @@ Environment/app settings:
     - stream title/name with common aliases/shortenings (e.g., `Deutsch`, `DE`, `Ger`)
   - If any requested language cannot be matched, the API returns 400 with an error.
   - If not provided, all audio tracks are included in the output.
+- `subtitleLanguages` (optional): array of full language names.
+  - When provided, the service probes the input and attempts to match each requested language across subtitle streams by language tag and title (with common aliases), similar to audio.
+  - If any requested language cannot be matched, the API returns 400 with an error.
+  - If not provided, all subtitle tracks are included and copied.
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.
