@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Web.Services;
@@ -52,6 +50,8 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
 
         using var doc = JsonDocument.Parse(stdout);
         var streams = new List<MediaStream>();
+        int? width = null;
+        int? height = null;
         if (doc.RootElement.TryGetProperty("streams", out var streamsEl) && streamsEl.ValueKind == JsonValueKind.Array)
         {
             foreach (var s in streamsEl.EnumerateArray())
@@ -78,6 +78,18 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
                     }
                 }
 
+                if (codecType == "video")
+                {
+                    if (s.TryGetProperty("width", out var wEl) && wEl.ValueKind == JsonValueKind.Number)
+                    {
+                        width = wEl.GetInt32();
+                    }
+                    if (s.TryGetProperty("height", out var hEl) && hEl.ValueKind == JsonValueKind.Number)
+                    {
+                        height = hEl.GetInt32();
+                    }
+                }
+
                 streams.Add(new MediaStream
                 {
                     Index = index,
@@ -90,7 +102,9 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
 
         return new MediaProbeResult
         {
-            Streams = streams
+            Streams = streams,
+            VideoWidth = width,
+            VideoHeight = height
         };
     }
 }

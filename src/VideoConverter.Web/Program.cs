@@ -22,7 +22,7 @@ public class Program
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, AudioLanguageMatcher>();
-        _ = builder.Services.AddScoped<IRequestValidator<VideoConverter.Web.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
 
         var app = builder.Build();
 

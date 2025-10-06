@@ -5,6 +5,7 @@ public record ConversionCreateDto(
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
+    int? Resolution,
     IReadOnlyList<string>? AudioLanguages,
     IReadOnlyList<string>? SubtitleLanguages);
 
@@ -14,4 +15,5 @@ public record ConversionDto(
     string OutputDirectory,
     DateTime CreatedAtUtc,
     int? Crf,
-    int? AudioBitrateKbps);
+    int? AudioBitrateKbps,
+    int? Resolution);

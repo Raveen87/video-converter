@@ -21,6 +21,7 @@ dotnet test
       "outputDirectory": "C:/videos/out",
       "crf": 40,
       "audioBitrateKbps": 128,
+      "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"]
     }
@@ -40,7 +41,8 @@ dotnet test
         "outputDirectory": "...",
         "createdAtUtc": "2025-10-06T12:00:00Z",
         "crf": 40,
-        "audioBitrateKbps": 128
+        "audioBitrateKbps": 128,
+        "resolution": 720
       }
     ]
     ```
@@ -84,6 +86,7 @@ Environment/app settings:
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
 - `crf` (optional): integer 0–63. If omitted, defaults to 40.
 - `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128.
+- `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
 - `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
   - When provided, the service probes the input with ffprobe and attempts to match each requested language using:
     - language tag metadata (e.g., `eng`, `en`, `swe`, `sv`)
@@ -116,7 +119,7 @@ Environment/app settings:
 - Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `4`, GOP `150`, configurable CRF (`-crf <0..63>`, default 40)
 - Audio: Opus `-c:a libopus -b:a <kbps>k` (default 128k)
 - Subtitles: copied `-c:s copy`
-- Scaling: downscale to 720p if larger, keep if ≤720p; uses Lanczos scaling filter
+- Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 
 Example effective flags (simplified):
 ```bash

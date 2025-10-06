@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using VideoConverter.Web.Data;
 
 namespace VideoConverter.Web.Services;
@@ -57,7 +55,9 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
             var outputFile = Path.Combine(conversion.OutputDirectory, Path.GetFileNameWithoutExtension(conversion.InputPath) + ".mkv");
 
-            var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
+            var targetHeight = conversion.Resolution ?? 720;
+            var targetWidth = targetHeight switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
+            var vf = $"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos";
             var args = new List<string>
             {
                 "-y",
@@ -250,48 +250,57 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 return true;
             }
 
-            var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
-            var preflightArgs = new List<string>
+            try
             {
-                "-hide_banner",
-                "-loglevel", "error",
-                "-f", "lavfi",
-                "-i", "color=c=black:s=1280x720:d=0.1",
-                "-c:v", "libsvtav1",
-                "-pix_fmt", "yuv420p10le",
-                "-vf", vf,
-                "-t", "0.05",
-                "-f", "null",
-                "-"
-            };
+                var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
+                var preflightArgs = new List<string>
+                {
+                    "-hide_banner",
+                    "-loglevel", "error",
+                    "-f", "lavfi",
+                    "-i", "color=c=black:s=1280x720:d=0.1",
+                    "-c:v", "libsvtav1",
+                    "-pix_fmt", "yuv420p10le",
+                    "-vf", vf,
+                    "-t", "0.05",
+                    "-f", "null",
+                    "-"
+                };
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = _ffmpegPath,
-                ArgumentList = { },
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
-            };
-            foreach (var a in preflightArgs)
-            {
-                psi.ArgumentList.Add(a);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = _ffmpegPath,
+                    ArgumentList = { },
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+                foreach (var a in preflightArgs)
+                {
+                    psi.ArgumentList.Add(a);
+                }
+
+                var proc = new Process { StartInfo = psi };
+                if (!proc.Start())
+                {
+                    _preflightError = "Failed to start ffmpeg preflight";
+                    return false;
+                }
+                var stderr = await proc.StandardError.ReadToEndAsync();
+                _ = await proc.StandardOutput.ReadToEndAsync();
+                await proc.WaitForExitAsync();
+
+                if (proc.ExitCode != 0)
+                {
+                    _preflightError = string.IsNullOrWhiteSpace(stderr) ? $"ffmpeg preflight failed with exit code {proc.ExitCode}" : stderr;
+                    _logger.LogError("FFmpeg preflight failed: {Error}", _preflightError);
+                    return false;
+                }
             }
-
-            var proc = new Process { StartInfo = psi };
-            if (!proc.Start())
+            catch (Exception ex)
             {
-                _preflightError = "Failed to start ffmpeg preflight";
-                return false;
-            }
-            var stderr = await proc.StandardError.ReadToEndAsync();
-            _ = await proc.StandardOutput.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-
-            if (proc.ExitCode != 0)
-            {
-                _preflightError = string.IsNullOrWhiteSpace(stderr) ? $"ffmpeg preflight failed with exit code {proc.ExitCode}" : stderr;
-                _logger.LogError("FFmpeg preflight failed: {Error}", _preflightError);
+                _preflightError = ex.Message;
+                _logger.LogError(ex, "FFmpeg preflight threw an exception");
                 return false;
             }
 
