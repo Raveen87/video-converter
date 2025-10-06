@@ -1,0 +1,69 @@
+## Cursor rules for `video-converter`
+
+These rules guide the AI assistant working in this repo. They encode tech choices, conventions, and guardrails so future changes are consistent.
+
+### Scope and goals
+- Build a cross-platform video conversion service in C#/.NET 10 RC that exposes a Web UI and runs in Docker.
+- Use `ffmpeg` for media processing (either installed in the Docker image or mounted into the container at runtime).
+
+### Tech stack and runtime
+- C# on .NET 10 RC initially; migrate to stable .NET 10 when released.
+- Target OS: Windows and Linux.
+- Web UI served by the service.
+
+### Build, run, and test commands
+- Build: `dotnet build`
+- Run: `dotnet run`
+- Test: `dotnet test`
+- Code coverage: Aim for ≥ 85% overall and enforce ≥ 85% on new/changed code.
+
+### Linting, analyzers, and code quality
+- Use `dotnet format` and enable analyzers.
+- Treat compiler/analyzer warnings as errors.
+- Enable nullable reference types and write null-safe code.
+
+### Docker and `ffmpeg`
+- The service runs in a container. `ffmpeg` may be:
+  - Installed during image build in the `Dockerfile`, or
+  - Mounted into the container at runtime.
+- Prefer a reproducible image (install in `Dockerfile`) unless a compelling reason exists to mount.
+
+### Secrets and config
+- Use an `.env` file for local development; do not commit it. Provide `.env.example` for required variables.
+- Redact and avoid committing any secrets, API keys, or connection strings.
+- Ensure `.gitignore` and `.dockerignore` exclude build outputs, user files, local caches, and secrets.
+
+### Git, branches, commits, and PRs
+- Branch naming: `feat/<slug>`, `fix/<slug>`, `chore/<slug>`.
+- Commit style: Conventional Commits (e.g., `feat: ...`, `fix: ...`, `chore: ...`).
+- Pull requests: Open as draft by default; base branch is `main`. No required reviewers.
+
+### CI expectations (GitHub Actions)
+- CI should build, run tests, enforce analyzers/warnings-as-errors, check formatting, and build Docker images.
+- Enforce ≥ 85% coverage for new/changed code in CI.
+
+### Documentation
+- Always update `README.md` when adding features, changing setup steps, or altering end-user behavior.
+- XML docs for public APIs are not required.
+
+### Assistant autonomy and safety
+- Ask for approval before risky or destructive changes (schema changes, data loss potential, major rewrites).
+- It is OK to run safe commands non-interactively with `--yes` flags when appropriate.
+- Prefer proposing commands and edits clearly; summarize intent and impact.
+
+### File conventions and guardrails
+- Prefer adding `.gitignore`, `.dockerignore`, and `.env.example` early if they are missing.
+- Do not commit `.env` or any secrets.
+- Avoid modifying legal or licensing files unless explicitly requested.
+
+### PR checklist (include in each PR description)
+- [ ] Lint passes (`dotnet format`), analyzers clean, warnings-as-errors satisfied
+- [ ] Tests added/updated and pass locally and in CI
+- [ ] Coverage for new/changed code ≥ 85%
+- [ ] Documentation updated (`README.md` as needed)
+- [ ] Docker build succeeds locally or via CI
+
+### Notes for future migrations
+- When .NET 10 becomes stable, plan a small PR to upgrade the SDK, Docker base image, and CI.
+
+
