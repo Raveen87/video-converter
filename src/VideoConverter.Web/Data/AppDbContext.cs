@@ -19,5 +19,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         _ = entity.Property(c => c.CreatedAtUtc)
             .IsRequired();
+
+        _ = entity.Property(c => c.Crf);
+        _ = entity.Property(c => c.AudioBitrateKbps);
     }
 }

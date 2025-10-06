@@ -53,6 +53,27 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     }
 
     [Fact]
+    public async Task Post_persists_crf_and_bitrate()
+    {
+        var client = _factory.CreateClient();
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, crf = 22, audioBitrateKbps = 192 };
+
+        var response = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = response.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ConversionDto>>("/api/conversions");
+        _ = list.Should().NotBeNull();
+        var created = list!.Single(x => x.InputPath == payload.inputPath);
+        _ = created.Crf.Should().Be(22);
+        _ = created.AudioBitrateKbps.Should().Be(192);
+    }
+
+    [Fact]
     public async Task Get_returns_all_rows()
     {
         var client = _factory.CreateClient();
@@ -79,5 +100,52 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
         _ = list.Should().Contain(x => x.InputPath == p2.inputPath && x.OutputDirectory == p2.outputDirectory);
     }
 
-    public record ConversionDto(int Id, string InputPath, string OutputDirectory, DateTime CreatedAtUtc);
+    public record ConversionDto(int Id, string InputPath, string OutputDirectory, DateTime CreatedAtUtc, int? Crf, int? AudioBitrateKbps);
+}
+
+public class RealRunnerTests
+{
+    private static string CreateTempDbPath()
+    {
+        return Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")) + ".db";
+    }
+
+    [Fact]
+    public async Task Start_uses_configured_crf_and_bitrate_in_ffmpeg_command()
+    {
+        var factory = new WebApplicationFactory<VideoConverter.Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+        });
+
+        var client = factory.CreateClient();
+
+        var tempInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, crf = 20, audioBitrateKbps = 256 };
+
+        var create = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = create.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ApiTests.ConversionDto>>("/api/conversions");
+        var item = list!.Single(x => x.InputPath == payload.inputPath);
+
+        var startResp = await client.PostAsync($"/api/conversions/{item.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+
+        var startPayload = await startResp.Content.ReadFromJsonAsync<StartResponse>();
+        _ = startPayload.Should().NotBeNull();
+        _ = startPayload!.Command.Should().Contain("-crf 20");
+        _ = startPayload!.Command.Should().Contain("-b:a 256k");
+    }
+
+    public sealed class StartResponse
+    {
+        public string Message { get; set; } = string.Empty;
+        public int ProcessId { get; set; }
+        public string Command { get; set; } = string.Empty;
+    }
 }

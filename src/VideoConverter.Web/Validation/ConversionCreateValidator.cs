@@ -74,6 +74,18 @@ public sealed class ConversionCreateValidator : IRequestValidator<ConversionCrea
             }
         }
 
+        // Validate CRF range when provided
+        if (request.Crf is < 0 or > 63)
+        {
+            result.Add(nameof(request.Crf), "CRF must be between 0 and 63.");
+        }
+
+        // Validate audio bitrate range when provided (kbps)
+        if (request.AudioBitrateKbps is <= 0 or > 450)
+        {
+            result.Add(nameof(request.AudioBitrateKbps), "AudioBitrateKbps must be between 1 and 450.");
+        }
+
         return Task.FromResult(result);
     }
 

@@ -32,13 +32,15 @@ public static class ConversionsApi
         {
             InputPath = request.InputPath,
             OutputDirectory = request.OutputDirectory,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            Crf = request.Crf,
+            AudioBitrateKbps = request.AudioBitrateKbps
         };
 
         _ = db.Conversions.Add(conversion);
         _ = await db.SaveChangesAsync();
 
-        return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc));
+        return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps));
     }
 
     private static async Task<IResult> ListConversionsAsync(AppDbContext db)
@@ -46,7 +48,7 @@ public static class ConversionsApi
         var items = await db.Conversions
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAtUtc)
-            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc))
+            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps))
             .ToListAsync();
         return Results.Ok(items);
     }
