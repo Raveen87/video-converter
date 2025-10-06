@@ -86,6 +86,19 @@ public sealed class ConversionCreateValidator : IRequestValidator<ConversionCrea
             result.Add(nameof(request.AudioBitrateKbps), "AudioBitrateKbps must be between 1 and 450.");
         }
 
+        // Validate audio language names format (when provided)
+        if (request.AudioLanguages is { Count: > 0 })
+        {
+            foreach (var lang in request.AudioLanguages)
+            {
+                if (string.IsNullOrWhiteSpace(lang))
+                {
+                    result.Add(nameof(request.AudioLanguages), "Language names must be non-empty.");
+                    break;
+                }
+            }
+        }
+
         return Task.FromResult(result);
     }
 

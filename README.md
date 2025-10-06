@@ -19,8 +19,9 @@ dotnet test
     {
       "inputPath": "C:/videos/input.mp4",
       "outputDirectory": "C:/videos/out",
-      "crf": 40,                      // optional, 0-63 (defaults to 40)
-      "audioBitrateKbps": 128         // optional, 1-450 (defaults to 128)
+      "crf": 40,
+      "audioBitrateKbps": 128,
+      "audioLanguages": ["English", "Swedish"]
     }
     ```
   - Responses:
@@ -82,6 +83,12 @@ Environment/app settings:
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
 - `crf` (optional): integer 0–63. If omitted, defaults to 40.
 - `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128.
+- `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
+  - When provided, the service probes the input with ffprobe and attempts to match each requested language using:
+    - language tag metadata (e.g., `eng`, `en`, `swe`, `sv`)
+    - stream title/name with common aliases/shortenings (e.g., `Deutsch`, `DE`, `Ger`)
+  - If any requested language cannot be matched, the API returns 400 with an error.
+  - If not provided, all audio tracks are included in the output.
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.

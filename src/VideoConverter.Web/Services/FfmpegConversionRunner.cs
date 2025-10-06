@@ -63,7 +63,6 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 "-y",
                 "-i", conversion.InputPath,
                 "-map", "0:v:0",
-                "-map", "0:a?",
                 "-map", "0:s?",
                 "-c:v", "libsvtav1",
                 "-pix_fmt", "yuv420p10le",
@@ -76,6 +75,27 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 "-c:s", "copy",
                 outputFile
             };
+
+            // Map audio streams: if specific indices persisted, use them; otherwise include all audio
+            var insertAt = args.IndexOf("-c:v");
+            if (!string.IsNullOrWhiteSpace(conversion.SelectedAudioStreamIndicesCsv))
+            {
+                var parts = conversion.SelectedAudioStreamIndicesCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var p in parts)
+                {
+                    if (int.TryParse(p, out var idx))
+                    {
+                        args.Insert(insertAt, $"0:{idx}");
+                        args.Insert(insertAt, "-map");
+                        insertAt += 2;
+                    }
+                }
+            }
+            else
+            {
+                args.Insert(insertAt, "0:a?");
+                args.Insert(insertAt, "-map");
+            }
 
             var cmdString = BuildDisplayCommand(_ffmpegPath, args);
 

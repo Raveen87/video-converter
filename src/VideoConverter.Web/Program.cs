@@ -19,6 +19,8 @@ public class Program
         });
 
         _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
+        _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
+        _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = builder.Services.AddScoped<IRequestValidator<VideoConverter.Web.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
 
         var app = builder.Build();

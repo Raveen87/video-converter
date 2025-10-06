@@ -20,12 +20,35 @@ public static class ConversionsApi
     private static async Task<IResult> CreateConversionAsync(
         ConversionCreateDto request,
         AppDbContext db,
-        IRequestValidator<ConversionCreateDto> validator)
+        IRequestValidator<ConversionCreateDto> validator,
+        IMediaProber prober,
+        IAudioLanguageMatcher matcher)
     {
         var validation = await validator.ValidateAsync(request, CancellationToken.None);
         if (!validation.IsValid)
         {
             return Results.ValidationProblem(validation.ToDictionary());
+        }
+
+        // If audio languages specified, probe and validate before persisting
+        string? indicesCsv = null;
+        if (request.AudioLanguages is { Count: > 0 })
+        {
+            var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
+            try
+            {
+                var requested = request.AudioLanguages.ToList();
+                var matched = matcher.MatchAudioStreams(probe.Streams, requested);
+                indicesCsv = string.Join(",", matched);
+            }
+            catch (InvalidOperationException ex)
+            {
+                var dict = new Dictionary<string, string[]>
+                {
+                    { nameof(request.AudioLanguages), new[] { ex.Message } }
+                };
+                return Results.ValidationProblem(dict);
+            }
         }
 
         var conversion = new Conversion
@@ -34,7 +57,8 @@ public static class ConversionsApi
             OutputDirectory = request.OutputDirectory,
             CreatedAtUtc = DateTime.UtcNow,
             Crf = request.Crf,
-            AudioBitrateKbps = request.AudioBitrateKbps
+            AudioBitrateKbps = request.AudioBitrateKbps,
+            SelectedAudioStreamIndicesCsv = indicesCsv
         };
 
         _ = db.Conversions.Add(conversion);
