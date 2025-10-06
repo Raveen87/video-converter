@@ -1,0 +1,96 @@
+using VideoConverter.Web.Dtos;
+
+namespace VideoConverter.Web.Validation;
+
+public sealed class ConversionCreateValidator : IRequestValidator<ConversionCreateDto>
+{
+    public Task<ValidationResult> ValidateAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    {
+        var result = new ValidationResult();
+
+        if (string.IsNullOrWhiteSpace(request.InputPath))
+        {
+            result.Add(nameof(request.InputPath), "InputPath is required.");
+        }
+        if (string.IsNullOrWhiteSpace(request.OutputDirectory))
+        {
+            result.Add(nameof(request.OutputDirectory), "OutputDirectory is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.InputPath))
+        {
+            try
+            {
+                var full = Path.GetFullPath(request.InputPath);
+                if (!File.Exists(full))
+                {
+                    result.Add(nameof(request.InputPath), "Input file does not exist.");
+                }
+                else
+                {
+                    var attr = File.GetAttributes(full);
+                    if (attr.HasFlag(FileAttributes.Directory))
+                    {
+                        result.Add(nameof(request.InputPath), "InputPath must be a file, not a directory.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Add(nameof(request.InputPath), $"Invalid path: {ex.Message}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.OutputDirectory))
+        {
+            try
+            {
+                var fullDir = Path.GetFullPath(request.OutputDirectory);
+                // Ensure directory exists or can be created and is writable
+                if (!Directory.Exists(fullDir))
+                {
+                    try
+                    {
+                        _ = Directory.CreateDirectory(fullDir);
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Add(nameof(request.OutputDirectory), $"Cannot create output directory: {ex.Message}");
+                    }
+                }
+
+                if (Directory.Exists(fullDir))
+                {
+                    var canWrite = CanWrite(fullDir);
+                    if (!canWrite)
+                    {
+                        result.Add(nameof(request.OutputDirectory), "OutputDirectory is not writable.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Add(nameof(request.OutputDirectory), $"Invalid path: {ex.Message}");
+            }
+        }
+
+        return Task.FromResult(result);
+    }
+
+    private static bool CanWrite(string directory)
+    {
+        try
+        {
+            var testFile = Path.Combine(directory, ".write_test_" + Guid.NewGuid().ToString("N") + ".tmp");
+            File.WriteAllText(testFile, "test");
+            File.Delete(testFile);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
+
+

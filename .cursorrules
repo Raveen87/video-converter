@@ -66,6 +66,7 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - Prefer adding `.gitignore`, `.dockerignore`, and `.env.example` early if they are missing.
 - Do not commit `.env` or any secrets.
 - Avoid modifying legal or licensing files unless explicitly requested.
+- Never have more than one empty line in a row. Use one empty line between methods, properties groups of fields etc, but never more.
 
 ### PR checklist (include in each PR description)
 - [ ] Lint passes (`dotnet format`), analyzers clean, warnings-as-errors satisfied

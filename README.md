@@ -20,7 +20,7 @@ dotnet test
     ```
   - Responses:
     - 201 Created with created item
-    - 400 Bad Request if `inputPath` or `outputDirectory` is missing/empty
+    - 400 Bad Request if validation fails (see Validation section)
 
 - GET `/api/conversions`
   - Returns all queued conversions, newest first
@@ -60,6 +60,14 @@ dotnet test
 - `tests/VideoConverter.Tests`: xUnit test project
 
 ### Config
+### Validation
+- `inputPath` must be a non-empty string and point to an existing file (not a directory).
+- `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
+- Additional improvements suggested for future hardening:
+  - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
+  - Verify sufficient free disk space in `outputDirectory` before starting a conversion.
+  - Health endpoint to proactively verify `ffmpeg` availability.
+
 - Copy required environment variables from `.env.example` to `.env` (if present). The service uses `ASPNETCORE_ENVIRONMENT` and may use `FFMPEG_PATH` when FFmpeg is not installed in the image.
 
 ### Notes
