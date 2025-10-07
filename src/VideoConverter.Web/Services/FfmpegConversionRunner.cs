@@ -57,7 +57,13 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
             var targetHeight = conversion.Resolution ?? 720;
             var targetWidth = targetHeight switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
-            var vf = $"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos";
+            var filters = new List<string>();
+            if (!string.IsNullOrWhiteSpace(conversion.DetectedCrop))
+            {
+                filters.Add("crop=" + conversion.DetectedCrop);
+            }
+            filters.Add($"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos");
+            var vf = string.Join(",", filters);
             var args = new List<string>
             {
                 "-y",

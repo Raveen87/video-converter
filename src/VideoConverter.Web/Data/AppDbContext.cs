@@ -29,5 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(512);
         _ = entity.Property(c => c.SelectedExternalSubtitlePathsCsv)
             .HasMaxLength(4096);
+        _ = entity.Property(c => c.DetectedCrop)
+            .HasMaxLength(64);
     }
 }
