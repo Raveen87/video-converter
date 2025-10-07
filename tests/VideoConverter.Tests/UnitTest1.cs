@@ -494,6 +494,111 @@ public class RealRunnerTests
         await AssertResolution(2160, "-vf scale=w=3840:h=2160:force_original_aspect_ratio=decrease:flags=lanczos");
     }
 
+    [Fact]
+    public async Task Start_includes_metadata_in_ffmpeg_command()
+    {
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var tempInput = Path.Combine(Path.GetTempPath(), "test_video.mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        var payload = new { inputPath = tempInput, outputDirectory = tempOutDir, crf = 20, audioBitrateKbps = 256, resolution = 720 };
+
+        var create = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = create.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ApiTests.ConversionDto>>("/api/conversions");
+        var item = list!.Single(x => x.InputPath == payload.inputPath);
+
+        var startResp = await client.PostAsync($"/api/conversions/{item.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+
+        var startPayload = await startResp.Content.ReadFromJsonAsync<StartResponse>();
+
+        // Verify metadata preservation is included in the command
+        _ = startPayload!.Command.Should().Contain("-metadata");
+        _ = startPayload!.Command.Should().Contain("title=test_video");
+        _ = startPayload!.Command.Should().Contain("-map_metadata");
+        _ = startPayload!.Command.Should().Contain("0");
+    }
+
+    [Fact]
+    public async Task Start_includes_external_subtitle_metadata_in_ffmpeg_command()
+    {
+        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        {
+            _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
+            _ = builder.UseSetting("Ffmpeg:DryRun", "true");
+            _ = builder.ConfigureServices(services =>
+            {
+                var proberDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediaProber));
+                if (proberDescriptor != null)
+                {
+                    _ = services.Remove(proberDescriptor);
+                }
+                _ = services.AddSingleton<FakeMediaProber>();
+                _ = services.AddSingleton<IMediaProber>(sp => sp.GetRequiredService<FakeMediaProber>());
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var tempInput = Path.Combine(Path.GetTempPath(), "test_video.mp4");
+        await File.WriteAllTextAsync(tempInput, "dummy");
+        var tempOutDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "vc_out_" + Guid.NewGuid().ToString("N"))).FullName;
+
+        // Create external subtitle files
+        var subtitleDir = Path.GetDirectoryName(tempInput)!;
+        var subtitleEn = Path.Combine(subtitleDir, "test_video.en.srt");
+        var subtitleSv = Path.Combine(subtitleDir, "test_video.sv.srt");
+        await File.WriteAllTextAsync(subtitleEn, "1\n00:00:01,000 --> 00:00:02,000\nEnglish subtitle");
+        await File.WriteAllTextAsync(subtitleSv, "1\n00:00:01,000 --> 00:00:02,000\nSwedish subtitle");
+
+        var payload = new
+        {
+            inputPath = tempInput,
+            outputDirectory = tempOutDir,
+            crf = 20,
+            audioBitrateKbps = 256,
+            resolution = 720,
+            subtitleLanguages = new[] { "English", "Swedish" }
+        };
+
+        var create = await client.PostAsJsonAsync("/api/conversions", payload);
+        _ = create.EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ApiTests.ConversionDto>>("/api/conversions");
+        var item = list!.Single(x => x.InputPath == payload.inputPath);
+
+        var startResp = await client.PostAsync($"/api/conversions/{item.Id}/start", content: null);
+        _ = startResp.EnsureSuccessStatusCode();
+
+        var startPayload = await startResp.Content.ReadFromJsonAsync<StartResponse>();
+
+        // Verify external subtitle metadata is included in the command
+        _ = startPayload!.Command.Should().Contain("-metadata:s:s:0");
+        _ = startPayload!.Command.Should().Contain("language=en");
+        _ = startPayload!.Command.Should().Contain("-metadata:s:s:1");
+        _ = startPayload!.Command.Should().Contain("language=sv");
+    }
+
     public sealed class StartResponse
     {
         public string Message { get; set; } = string.Empty;

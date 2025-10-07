@@ -122,6 +122,15 @@ Environment/app settings:
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 - Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
 
+### Metadata preservation
+- **Video title**: Automatically set to the input filename (without extension) using `-metadata title=<filename>`
+- **Audio metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
+- **Subtitle metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
+- **External subtitle metadata**: Language tags are automatically extracted from external subtitle filenames and set using `-metadata:s:s:<index> language=<tag>`
+  - External subtitle files should be named `<video-name>.<language-tag>.srt` (e.g., `movie.en.srt`, `movie.sv.srt`)
+  - The language tag from the filename is used as the subtitle track language metadata
+- This ensures that media players and other tools can properly identify and display stream information
+
 ### Automatic crop detection
 - When a new conversion is created, the service runs `ffmpeg` cropdetect to infer optimal cropping.
 - It samples 15 timestamps evenly across the video duration (skipping the first/last ~2s when possible).
@@ -130,7 +139,7 @@ Environment/app settings:
 
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
+ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:s? -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
 ```
 
 ### CI/Quality

@@ -65,6 +65,10 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
             var outputFile = Path.Combine(conversion.OutputDirectory, Path.GetFileNameWithoutExtension(conversion.InputPath) + ".mkv");
             _logger.LogDebug("Output file: {OutputFile}", outputFile);
 
+            // Extract video title from filename for metadata
+            var videoTitle = Path.GetFileNameWithoutExtension(conversion.InputPath);
+            _logger.LogDebug("Video title metadata: {VideoTitle}", videoTitle);
+
             var targetHeight = conversion.Resolution ?? 720;
             var targetWidth = targetHeight switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
             _logger.LogDebug("Target resolution: {Width}x{Height}", targetWidth, targetHeight);
@@ -151,9 +155,32 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 }
             }
 
+            // Add language metadata for external subtitle files
+            if (externalSubtitlePaths.Count > 0)
+            {
+                for (var i = 0; i < externalSubtitlePaths.Count; i++)
+                {
+                    var subPath = externalSubtitlePaths[i];
+                    var languageTag = ExtractLanguageTagFromSubtitlePath(subPath);
+                    if (!string.IsNullOrEmpty(languageTag))
+                    {
+                        // Add metadata for the subtitle stream (stream index will be determined by FFmpeg)
+                        args.Insert(insertAt, $"-metadata:s:s:{i}");
+                        args.Insert(insertAt, $"language={languageTag}");
+                        insertAt += 2;
+                        _logger.LogDebug("Adding language metadata for external subtitle {Path}: {Language}", subPath, languageTag);
+                    }
+                }
+            }
+
             // Ensure we copy subtitles
             args.Insert(insertAt, "copy");
             args.Insert(insertAt, "-c:s");
+            insertAt += 2;
+
+            // Add metadata for video title
+            args.Insert(insertAt, "-metadata");
+            args.Insert(insertAt, "title=" + videoTitle);
             insertAt += 2;
 
             // Map audio streams: if specific indices persisted, use them; otherwise include all audio
@@ -175,6 +202,12 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 args.Insert(insertAt, "0:a?");
                 args.Insert(insertAt, "-map");
             }
+
+            // Add metadata preservation for audio and subtitle streams
+            // This ensures language and title metadata from input streams are preserved
+            args.Insert(insertAt, "-map_metadata");
+            args.Insert(insertAt, "0");
+            insertAt += 2;
 
             var cmdString = BuildDisplayCommand(_ffmpegPath, args);
             _logger.LogInformation("FFmpeg command: {Command}", cmdString);
@@ -377,5 +410,29 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
 
         return Quote(ffmpegPath) + " " + string.Join(" ", displayArgs);
+    }
+
+    private string? ExtractLanguageTagFromSubtitlePath(string subtitlePath)
+    {
+        try
+        {
+            var fileName = Path.GetFileNameWithoutExtension(subtitlePath);
+            var parts = fileName.Split('.');
+
+            // Expected format: <video-name>.<language-tag>.srt
+            // So we want the second-to-last part (before .srt)
+            if (parts.Length >= 2)
+            {
+                var languageTag = parts[^1]; // Last part before extension
+                _logger.LogDebug("Extracted language tag '{LanguageTag}' from subtitle path '{Path}'", languageTag, subtitlePath);
+                return languageTag;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to extract language tag from subtitle path '{Path}': {Error}", subtitlePath, ex.Message);
+        }
+
+        return null;
     }
 }
