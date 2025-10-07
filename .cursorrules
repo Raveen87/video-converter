@@ -4,15 +4,27 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 
 ### Scope and goals
 - Build a cross-platform video conversion service in C#/.NET 10 RC that exposes a Web UI and runs in Docker.
-- Use `ffmpeg` for media processing (either installed in the Docker image or mounted into the container at runtime).
+- Use `ffmpeg` for media processing
 
 ### Tech stack and runtime
-- C# on .NET 10 RC initially; migrate to stable .NET 10 when released.
+- C# (.NET 10)
 - Target OS: Windows and Linux.
 - Web UI served by the service.
 
+### Agent workflow
+- Create branch
+- Solve task
+- Add tests
+- Update readme
+- Commit and push
+- Analyze if any of the changes warrant a refactor of the code
+  - If it does, refactor, update tests and readme (if required(
+  - Create a new commit with only the refactor
+  - Push
+
 ### Build, run, and test commands
 - Build: `dotnet build`
+- Format: `dotnet format`
 - Run: `dotnet run`
 - Test: `dotnet test`
 - Code coverage: Aim for ≥ 85% overall and enforce ≥ 85% on new/changed code.
