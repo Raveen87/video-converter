@@ -88,11 +88,11 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 "-preset", "6",
                 "-tune", "0",
                 "-g", "120",
-                "-crf", conversion.Crf?.ToString() ?? "25",
+                "-crf", conversion.Crf?.ToString() ?? "40",
                 "-svtav1-params", "film-grain=8:film-grain-denoise=0",
                 "-vf", vf,
                 "-c:a", "libopus",
-                "-b:a", (conversion.AudioBitrateKbps ?? 192) + "k",
+                "-b:a", (conversion.AudioBitrateKbps ?? 128) + "k",
                 outputFile
             };
 
@@ -293,7 +293,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                     "-pix_fmt", "yuv420p10le",
                     "-preset", "6",
                     "-tune", "0",
-                    "-crf", "25",
+                    "-crf", "40",
                     "-svtav1-params", "film-grain=8:film-grain-denoise=0",
                     "-vf", vf,
                     "-t", "0.05",

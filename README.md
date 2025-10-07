@@ -116,8 +116,8 @@ Environment/app settings:
 - Target framework is `net10.0`.
 
 ### FFmpeg settings used
-- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `6` (optimized for quality), GOP `120`, configurable CRF (`-crf <0..63>`, default 25 for high quality)
-- Audio: Opus `-c:a libopus -b:a <kbps>k` (default 192k for high quality)
+- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `6` (optimized for quality), GOP `120`, configurable CRF (`-crf <0..63>`, default 40)
+- Audio: Opus `-c:a libopus -b:a <kbps>k` (default 128k)
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 - Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
