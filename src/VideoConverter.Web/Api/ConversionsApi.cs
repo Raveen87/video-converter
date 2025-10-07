@@ -46,7 +46,7 @@ public static class ConversionsApi
         IAudioLanguageMatcher matcher,
         ISubtitleLanguageMatcher subtitleMatcher,
         ICropDetector cropDetector,
-        ILogger<Program> logger)
+        ILogger logger)
     {
         logger.LogInformation("Creating conversion for input: {InputPath}, output: {OutputDirectory}",
             request.InputPath, request.OutputDirectory);
@@ -84,7 +84,7 @@ public static class ConversionsApi
             }
             catch (InvalidOperationException ex)
             {
-                logger.LogWarning("Audio language matching failed: {Error}", ex.Message);
+                logger.LogWarning(ex, "Audio language matching failed: {Error}", ex.Message);
                 var dict = new Dictionary<string, string[]>
                 {
                     { nameof(request.AudioLanguages), new[] { ex.Message } }
@@ -112,9 +112,9 @@ public static class ConversionsApi
                     logger.LogDebug("Found subtitle stream for language '{Language}': indices {Indices}",
                         lang, string.Join(",", idx));
                 }
-                catch
+                catch (Exception ex)
                 {
-                    logger.LogDebug("Subtitle language '{Language}' not found in streams, checking external files", lang);
+                    logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
                     // Not found in streams → try filesystem in same folder: <video-name>.<tag>.srt
                     var videoDir = Path.GetDirectoryName(request.InputPath) ?? string.Empty;
                     var videoBase = Path.GetFileNameWithoutExtension(request.InputPath) ?? string.Empty;
@@ -169,7 +169,7 @@ public static class ConversionsApi
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug("Could not determine source height: {Error}", ex.Message);
+                    logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
                     sourceHeight = null;
                 }
             }
@@ -198,7 +198,7 @@ public static class ConversionsApi
             }
             catch (Exception ex)
             {
-                logger.LogDebug("Could not determine video duration: {Error}", ex.Message);
+                logger.LogDebug(ex, "Could not determine video duration: {Error}", ex.Message);
             }
         }
 
@@ -218,7 +218,7 @@ public static class ConversionsApi
         }
         catch (Exception ex)
         {
-            logger.LogWarning("Crop detection failed: {Error}", ex.Message);
+            logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
         }
 
         var conversion = new Conversion
@@ -246,7 +246,7 @@ public static class ConversionsApi
         return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution));
     }
 
-    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILogger<Program> logger)
+    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILogger logger)
     {
         logger.LogDebug("Listing all conversions");
 
@@ -264,7 +264,7 @@ public static class ConversionsApi
         int id,
         AppDbContext db,
         IConversionRunner runner,
-        ILogger<Program> logger)
+        ILogger logger)
     {
         logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
 
@@ -293,7 +293,7 @@ public static class ConversionsApi
     private static async Task<IResult> StartNextConversionAsync(
         AppDbContext db,
         IConversionRunner runner,
-        ILogger<Program> logger)
+        ILogger logger)
     {
         logger.LogDebug("Starting next conversion from queue");
 

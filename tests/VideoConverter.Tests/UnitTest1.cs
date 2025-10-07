@@ -8,15 +8,15 @@ using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Tests;
 
-public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixture<WebApplicationFactory<Web.Program>>
+public class ApiTests(WebApplicationFactory<object> appFactory) : IClassFixture<WebApplicationFactory<object>>
 {
     private static string CreateTempDbPath()
     {
         return Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")) + ".db";
     }
 
-    private readonly WebApplicationFactory<Web.Program> _factory =
-  factory.WithWebHostBuilder(builder =>
+    private readonly WebApplicationFactory<object> _factory =
+  appFactory.WithWebHostBuilder(builder =>
       {
           _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
           _ = builder.ConfigureServices(services =>
@@ -88,7 +88,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_audio_languages_persists_selected_indices_and_propagates()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -136,7 +136,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_subtitle_languages_persists_selected_indices_and_propagates()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -204,7 +204,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_too_high_resolution_returns_validation_error()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.ConfigureServices(services =>
@@ -243,7 +243,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_subtitle_language_uses_external_srt_when_missing_in_streams()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -300,7 +300,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_nonexistent_audio_language_returns_validation_error()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.ConfigureServices(services =>
@@ -338,7 +338,7 @@ public class ApiTests(WebApplicationFactory<Web.Program> factory) : IClassFixtur
     [Fact]
     public async Task Post_with_nonexistent_subtitle_language_returns_validation_error()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.ConfigureServices(services =>
@@ -414,7 +414,7 @@ public class RealRunnerTests
     [Fact]
     public async Task Start_uses_configured_crf_and_bitrate_in_ffmpeg_command()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -457,7 +457,7 @@ public class RealRunnerTests
     [Fact]
     public async Task Start_uses_1080p_and_2160p_resolution_in_ffmpeg_command()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -497,7 +497,7 @@ public class RealRunnerTests
     [Fact]
     public async Task Start_includes_metadata_in_ffmpeg_command()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
@@ -542,7 +542,7 @@ public class RealRunnerTests
     [Fact]
     public async Task Start_includes_external_subtitle_metadata_in_ffmpeg_command()
     {
-        var factory = new WebApplicationFactory<Web.Program>().WithWebHostBuilder(builder =>
+        var factory = new WebApplicationFactory<object>().WithWebHostBuilder(builder =>
         {
             _ = builder.UseSetting("ConnectionStrings:Default", $"Data Source={CreateTempDbPath()}");
             _ = builder.UseSetting("Ffmpeg:DryRun", "true");
