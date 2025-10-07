@@ -3,7 +3,7 @@ using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Web.Services;
 
-public sealed class AudioLanguageMatcher(ILogger<AudioLanguageMatcher> logger) : IAudioLanguageMatcher, ISubtitleLanguageMatcher
+public sealed class AudioLanguageMatcher(ILogger<AudioLanguageMatcher> logger) : IAudioLanguageMatcher
 {
     private static readonly Dictionary<string, string> FullNameToIso3 = BuildFullNameToIso3();
     private static readonly Dictionary<string, string[]> Aliases = BuildAliases();
@@ -41,37 +41,6 @@ public sealed class AudioLanguageMatcher(ILogger<AudioLanguageMatcher> logger) :
         return matched;
     }
 
-    public IReadOnlyList<int> MatchSubtitleStreams(IReadOnlyList<MediaStream> streams, IReadOnlyList<string> requestedLanguages)
-    {
-        _logger.LogDebug("Matching subtitle streams for languages: {RequestedLanguages}",
-            string.Join(", ", requestedLanguages));
-
-        var subStreams = streams.Where(s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)).ToList();
-        _logger.LogDebug("Found {SubtitleStreamCount} subtitle streams", subStreams.Count);
-
-        var matched = new List<int>();
-        foreach (var req in requestedLanguages)
-        {
-            var reqKey = Normalize(req);
-            var candidates = GetCandidateTokens(reqKey);
-            _logger.LogDebug("Searching for subtitle language '{RequestedLanguage}' with candidates: {Candidates}",
-                req, string.Join(", ", candidates));
-
-            var found = subStreams.Find(s => MatchesStream(s, candidates));
-            if (found is null)
-            {
-                _logger.LogWarning("Subtitle language '{RequestedLanguage}' not found in available streams", req);
-                throw new InvalidOperationException($"Requested subtitle language '{req}' not found in input file.");
-            }
-
-            _logger.LogDebug("Matched subtitle language '{RequestedLanguage}' to stream index {StreamIndex}",
-                req, found.Index);
-            matched.Add(found.Index);
-        }
-
-        _logger.LogInformation("Subtitle language matching completed: {MatchedIndices}", string.Join(", ", matched));
-        return matched;
-    }
 
     private static bool MatchesStream(MediaStream stream, HashSet<string> candidates)
     {

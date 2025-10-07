@@ -73,7 +73,12 @@ dotnet test
 
 ### Project layout
 - `src/VideoConverter.Web`: Minimal ASP.NET Core web app
-- `tests/VideoConverter.Tests`: xUnit test project
+  - `Api/`: API endpoint definitions
+  - `Services/`: Business logic services (conversion, media probing, language matching, etc.)
+  - `Data/`: Entity Framework models and database context
+  - `Dtos/`: Data transfer objects for API requests/responses
+  - `Validation/`: Input validation logic and helpers
+- `tests/VideoConverter.Tests`: xUnit test project with unit tests for core functionality
 
 ### Config
 Environment/app settings:
@@ -193,6 +198,15 @@ sonar.cs.rules.S1001.enabled=false
 - Build-time: Warnings and errors shown in build output
 - Standalone: Detailed report in `analysis-results/analysis-report.md`
 - Test coverage: Integrated with test results
+
+### Recent Improvements
+The codebase has been refactored to improve maintainability and reduce complexity:
+
+- **Service Layer**: Business logic extracted from API controllers into dedicated services (`ConversionService`, `ProcessManager`)
+- **Separation of Concerns**: Audio and subtitle language matching split into separate services
+- **Validation Helpers**: Common validation logic centralized in reusable helper methods
+- **Process Management**: Unified process execution and output handling across FFmpeg operations
+- **Test Organization**: Tests split into focused unit test classes for better maintainability
 
 ### CI/Quality
 - Warnings-as-errors enforced; code style and analyzers enabled.

@@ -18,11 +18,13 @@ public static class Program
             _ = options.UseSqlite(connectionString);
         });
 
+        _ = builder.Services.AddSingleton<ProcessManager>();
         _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
-        _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, AudioLanguageMatcher>();
+        _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
         _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
+        _ = builder.Services.AddScoped<IConversionService, ConversionService>();
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
 
         var app = builder.Build();
