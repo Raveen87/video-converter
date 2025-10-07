@@ -22,6 +22,7 @@ public class Program
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, AudioLanguageMatcher>();
+        _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
 
         var app = builder.Build();

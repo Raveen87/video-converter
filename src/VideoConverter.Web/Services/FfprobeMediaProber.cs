@@ -18,6 +18,7 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
             "-v", "error",
             "-print_format", "json",
             "-show_streams",
+            "-show_format",
             inputPath
         };
 
@@ -52,6 +53,7 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
         var streams = new List<MediaStream>();
         int? width = null;
         int? height = null;
+        double? durationSeconds = null;
         if (doc.RootElement.TryGetProperty("streams", out var streamsEl) && streamsEl.ValueKind == JsonValueKind.Array)
         {
             foreach (var s in streamsEl.EnumerateArray())
@@ -100,11 +102,23 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
             }
         }
 
+        if (doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind == JsonValueKind.Object)
+        {
+            if (formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind == JsonValueKind.String)
+            {
+                if (double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dur))
+                {
+                    durationSeconds = dur;
+                }
+            }
+        }
+
         return new MediaProbeResult
         {
             Streams = streams,
             VideoWidth = width,
-            VideoHeight = height
+            VideoHeight = height,
+            DurationSeconds = durationSeconds
         };
     }
 }

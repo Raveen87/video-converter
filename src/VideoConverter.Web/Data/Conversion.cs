@@ -12,5 +12,6 @@ public class Conversion
     public string? SelectedAudioStreamIndicesCsv { get; set; }
     public string? SelectedSubtitleStreamIndicesCsv { get; set; }
     public string? SelectedExternalSubtitlePathsCsv { get; set; }
+    public string? DetectedCrop { get; set; } // format: "w:h:x:y"
 }
 

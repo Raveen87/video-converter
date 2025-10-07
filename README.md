@@ -121,9 +121,15 @@ Environment/app settings:
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 
+### Automatic crop detection
+- When a new conversion is created, the service runs `ffmpeg` cropdetect to infer optimal cropping.
+- It samples 15 timestamps evenly across the video duration (skipping the first/last ~2s when possible).
+- It selects the crop with the largest area (`w*h`) among samples and persists it.
+- If a crop is detected, it is applied before scaling in the filter chain: `-vf "crop=w:h:x:y,scale=..."`.
+
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf <crf> -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=increase:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
+ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf <crf> -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
 ```
 
 ### CI/Quality

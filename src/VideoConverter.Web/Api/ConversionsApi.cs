@@ -44,7 +44,8 @@ public static class ConversionsApi
         IRequestValidator<ConversionCreateDto> validator,
         IMediaProber prober,
         IAudioLanguageMatcher matcher,
-        ISubtitleLanguageMatcher subtitleMatcher)
+        ISubtitleLanguageMatcher subtitleMatcher,
+        ICropDetector cropDetector)
     {
         var validation = await validator.ValidateAsync(request, CancellationToken.None);
         if (!validation.IsValid)
@@ -57,6 +58,7 @@ public static class ConversionsApi
         string? subtitleIndicesCsv = null;
         string? externalSubtitlePathsCsv = null;
         int? sourceHeight = null;
+        double? durationSeconds = null;
 
         if (request.AudioLanguages is { Count: > 0 })
         {
@@ -135,6 +137,7 @@ public static class ConversionsApi
                 {
                     var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
                     sourceHeight = probe.VideoHeight;
+                    durationSeconds = probe.DurationSeconds;
                 }
                 catch
                 {
@@ -151,6 +154,28 @@ public static class ConversionsApi
             }
         }
 
+        // Perform crop detection before persisting
+        if (durationSeconds is null)
+        {
+            try
+            {
+                var probe = await prober.ProbeAsync(request.InputPath, CancellationToken.None);
+                durationSeconds = probe.DurationSeconds;
+                sourceHeight ??= probe.VideoHeight;
+            }
+            catch
+            {
+            }
+        }
+        string? detectedCrop = null;
+        try
+        {
+            detectedCrop = await cropDetector.DetectAsync(request.InputPath, durationSeconds, CancellationToken.None);
+        }
+        catch
+        {
+        }
+
         var conversion = new Conversion
         {
             InputPath = request.InputPath,
@@ -161,7 +186,8 @@ public static class ConversionsApi
             Resolution = request.Resolution,
             SelectedAudioStreamIndicesCsv = audioIndicesCsv,
             SelectedSubtitleStreamIndicesCsv = subtitleIndicesCsv,
-            SelectedExternalSubtitlePathsCsv = externalSubtitlePathsCsv
+            SelectedExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
+            DetectedCrop = detectedCrop
         };
 
         _ = db.Conversions.Add(conversion);
