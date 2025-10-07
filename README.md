@@ -142,7 +142,60 @@ Example effective flags (simplified):
 ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:s? -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
 ```
 
+### Static Analysis
+
+The project includes comprehensive static analysis using SonarAnalyzer for C# with configurable rules.
+
+#### Build Integration
+Static analysis runs automatically during build:
+```bash
+dotnet build  # Analysis runs as part of build
+```
+
+#### Standalone Analysis
+Run analysis as a separate command:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\analyze.ps1
+.\scripts\analyze.ps1 -Verbose -Configuration Release
+```
+
+**Linux/macOS (Bash):**
+```bash
+./scripts/analyze.sh
+./scripts/analyze.sh --verbose --configuration Release
+```
+
+#### Configuration
+Static analysis rules can be configured in:
+
+- **`sonar-project.properties`** - SonarQube rules and project settings
+- **`.editorconfig`** - Code style and formatting rules  
+- **`Directory.Build.props`** - Build-time analysis settings
+
+#### Analysis Features
+- **Security**: Vulnerability and security hotspot detection
+- **Reliability**: Bug detection and potential issues
+- **Maintainability**: Code smells and complexity analysis
+- **Code Style**: Enforced via .editorconfig
+- **Coverage**: Integration with test coverage reporting
+
+#### Customizing Rules
+To disable specific rules, add to `sonar-project.properties`:
+```properties
+# Example: Disable specific rules
+sonar.cs.rules.S1000.enabled=false
+sonar.cs.rules.S1001.enabled=false
+```
+
+#### Analysis Output
+- Build-time: Warnings and errors shown in build output
+- Standalone: Detailed report in `analysis-results/analysis-report.md`
+- Test coverage: Integrated with test results
+
 ### CI/Quality
 - Warnings-as-errors enforced; code style and analyzers enabled.
 - Target code coverage ≥ 85% overall; new/changed code should meet ≥ 85%.
+- Static analysis runs automatically in CI/CD pipelines.
 
