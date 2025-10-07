@@ -1,9 +1,8 @@
-using System.Diagnostics;
 using VideoConverter.Web.Data;
 
 namespace VideoConverter.Web.Services;
 
-public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(IConfiguration configuration, ProcessManager processManager, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
 {
     private static readonly HashSet<string> RunningKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
@@ -11,6 +10,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         ?? "ffmpeg";
     private readonly bool _dryRun = string.Equals(configuration["Ffmpeg:DryRun"], "true", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
+    private readonly ProcessManager _processManager = processManager;
     private readonly ILogger<FfmpegConversionRunner> _logger = logger;
 
     private static readonly SemaphoreSlim _preflightLock = new(1, 1);
@@ -24,7 +24,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
         await Task.Yield();
 
-        var preflightOk = _dryRun || await EnsurePreflightAsync(_ffmpegPath);
+        var preflightOk = _dryRun || await EnsurePreflightAsync(_ffmpegPath, _processManager);
         if (!preflightOk)
         {
             _logger.LogError("FFmpeg preflight failed: {PreflightError}", _preflightError ?? "Unknown error");
@@ -208,7 +208,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
             args.Insert(insertAt, "-map_metadata");
             args.Insert(insertAt, "0");
 
-            var cmdString = BuildDisplayCommand(_ffmpegPath, args);
+            var cmdString = ProcessManager.BuildDisplayCommand(_ffmpegPath, args);
             _logger.LogInformation("FFmpeg command: {Command}", cmdString);
 
             if (_dryRun)
@@ -217,72 +217,28 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 return new ConversionStartResult { IsSuccess = true, ProcessId = 0, Command = cmdString };
             }
 
-            var startInfo = new ProcessStartInfo
+            var result = await _processManager.RunProcessWithOutputHandlingAsync(
+                _ffmpegPath,
+                args,
+                onOutput: data => _logger.LogInformation("[ffmpeg] {Line}", data),
+                onError: data => _logger.LogInformation("[ffmpeg] {Line}", data),
+                CancellationToken.None);
+
+            lock (RunningKeys)
             {
-                FileName = _ffmpegPath,
-                ArgumentList = { },
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
-            };
-            foreach (var a in args)
-            {
-                startInfo.ArgumentList.Add(a);
+                _ = RunningKeys.Remove(key);
             }
 
-            var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-            process.Exited += (_, _) =>
+            if (result.IsSuccess)
             {
-                lock (RunningKeys)
-                {
-                    _ = RunningKeys.Remove(key);
-                }
-                process.Dispose();
-            };
-
-            if (!process.Start())
-            {
-                _logger.LogError("Failed to start ffmpeg process for conversion");
-                lock (RunningKeys)
-                {
-                    _ = RunningKeys.Remove(key);
-                }
-                return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Failed to start ffmpeg process" };
+                _logger.LogInformation("[Converter] Completed successfully: {Cmd}", cmdString);
+                return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString };
             }
-
-            _logger.LogInformation("[Converter] Started PID {Pid}: {Cmd}", process.Id, cmdString);
-
-            process.OutputDataReceived += (_, e) =>
+            else
             {
-                if (!string.IsNullOrWhiteSpace(e.Data))
-                {
-                    _logger.LogInformation("[ffmpeg:{Pid}] {Line}", process.Id, e.Data);
-                }
-            };
-            process.ErrorDataReceived += (_, e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data))
-                {
-                    _logger.LogInformation("[ffmpeg:{Pid}] {Line}", process.Id, e.Data);
-                }
-            };
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await process.WaitForExitAsync();
-                }
-                catch (Exception ex)
-                {
-                    // Process cleanup is handled by the Exited event handler
-                    _logger.LogDebug(ex, "Process wait completed with exception");
-                }
-            });
-
-            return new ConversionStartResult { IsSuccess = true, ProcessId = process.Id, Command = cmdString };
+                _logger.LogError("FFmpeg conversion failed with exit code {ExitCode}", result.ExitCode);
+                return new ConversionStartResult { IsSuccess = false, ErrorMessage = $"FFmpeg conversion failed with exit code {result.ExitCode}" };
+            }
         }
         catch (Exception ex)
         {
@@ -295,7 +251,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
     }
 
-    private static async Task<bool> EnsurePreflightAsync(string ffmpegPath)
+    private static async Task<bool> EnsurePreflightAsync(string ffmpegPath, ProcessManager processManager)
     {
         if (_preflightDone)
         {
@@ -331,32 +287,13 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                     "-"
                 };
 
-                var psi = new ProcessStartInfo
-                {
-                    FileName = ffmpegPath,
-                    ArgumentList = { },
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                };
-                foreach (var a in preflightArgs)
-                {
-                    psi.ArgumentList.Add(a);
-                }
+                var result = await processManager.RunProcessAsync(ffmpegPath, preflightArgs, CancellationToken.None);
 
-                using var proc = new Process { StartInfo = psi };
-                if (!proc.Start())
+                if (!result.IsSuccess)
                 {
-                    _preflightError = "Failed to start ffmpeg preflight";
-                    return false;
-                }
-                var stderr = await proc.StandardError.ReadToEndAsync();
-                _ = await proc.StandardOutput.ReadToEndAsync();
-                await proc.WaitForExitAsync();
-
-                if (proc.ExitCode != 0)
-                {
-                    _preflightError = string.IsNullOrWhiteSpace(stderr) ? $"ffmpeg preflight failed with exit code {proc.ExitCode}" : stderr;
+                    _preflightError = string.IsNullOrWhiteSpace(result.StandardError)
+                        ? $"ffmpeg preflight failed with exit code {result.ExitCode}"
+                        : result.StandardError;
                     return false;
                 }
             }
@@ -375,38 +312,6 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
     }
 
-    private static string BuildDisplayCommand(string ffmpegPath, List<string> args)
-    {
-        static string Quote(string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return s;
-            }
-            var needsQuotes = s.Any(ch => char.IsWhiteSpace(ch) || "&|><^()'\"".Contains(ch));
-            return needsQuotes ? "\"" + s.Replace("\"", "\\\"") + "\"" : s;
-        }
-
-        var displayArgs = new List<string>();
-        var i = 0;
-        while (i < args.Count)
-        {
-            var a = args[i];
-            if (a == "-vf" && i + 1 < args.Count)
-            {
-                displayArgs.Add(a);
-                displayArgs.Add(Quote(args[i + 1]));
-                i += 2; // Skip both the current and next argument
-            }
-            else
-            {
-                displayArgs.Add(Quote(a));
-                i++;
-            }
-        }
-
-        return Quote(ffmpegPath) + " " + string.Join(" ", displayArgs);
-    }
 
     private string? ExtractLanguageTagFromSubtitlePath(string subtitlePath)
     {
