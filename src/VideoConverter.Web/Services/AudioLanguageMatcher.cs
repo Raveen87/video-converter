@@ -25,7 +25,7 @@ public sealed class AudioLanguageMatcher(ILogger<AudioLanguageMatcher> logger) :
             _logger.LogDebug("Searching for audio language '{RequestedLanguage}' with candidates: {Candidates}",
                 req, string.Join(", ", candidates));
 
-            var found = audioStreams.FirstOrDefault(s => MatchesStream(s, candidates));
+            var found = audioStreams.Find(s => MatchesStream(s, candidates));
             if (found is null)
             {
                 _logger.LogWarning("Audio language '{RequestedLanguage}' not found in available streams", req);
@@ -57,7 +57,7 @@ public sealed class AudioLanguageMatcher(ILogger<AudioLanguageMatcher> logger) :
             _logger.LogDebug("Searching for subtitle language '{RequestedLanguage}' with candidates: {Candidates}",
                 req, string.Join(", ", candidates));
 
-            var found = subStreams.FirstOrDefault(s => MatchesStream(s, candidates));
+            var found = subStreams.Find(s => MatchesStream(s, candidates));
             if (found is null)
             {
                 _logger.LogWarning("Subtitle language '{RequestedLanguage}' not found in available streams", req);

@@ -111,15 +111,11 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
             }
         }
 
-        if (doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind == JsonValueKind.Object)
+        if (doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind == JsonValueKind.Object &&
+            formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind == JsonValueKind.String &&
+            double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dur))
         {
-            if (formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind == JsonValueKind.String)
-            {
-                if (double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dur))
-                {
-                    durationSeconds = dur;
-                }
-            }
+            durationSeconds = dur;
         }
 
         var result = new MediaProbeResult

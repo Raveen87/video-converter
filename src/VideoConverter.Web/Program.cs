@@ -6,7 +6,7 @@ using VideoConverter.Web.Validation;
 
 namespace VideoConverter.Web;
 
-public class Program
+public static class Program
 {
     public static void Main(string[] args)
     {
@@ -28,7 +28,7 @@ public class Program
         var app = builder.Build();
 
         // Log service initialization
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        var logger = app.Services.GetRequiredService<ILogger<object>>();
         logger.LogInformation("Video Converter service starting up");
 
         // Ensure database exists

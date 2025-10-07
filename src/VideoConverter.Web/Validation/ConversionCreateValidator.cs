@@ -121,28 +121,22 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
         // Validate audio language names format (when provided)
         if (request.AudioLanguages is { Count: > 0 })
         {
-            foreach (var lang in request.AudioLanguages)
+            var emptyLanguages = request.AudioLanguages.Where(string.IsNullOrWhiteSpace).ToList();
+            if (emptyLanguages.Any())
             {
-                if (string.IsNullOrWhiteSpace(lang))
-                {
-                    _logger.LogWarning("Validation failed: Empty audio language name provided");
-                    result.Add(nameof(request.AudioLanguages), "Language names must be non-empty.");
-                    break;
-                }
+                _logger.LogWarning("Validation failed: Empty audio language name provided");
+                result.Add(nameof(request.AudioLanguages), "Language names must be non-empty.");
             }
         }
 
         // Validate subtitle language names format (when provided)
         if (request.SubtitleLanguages is { Count: > 0 })
         {
-            foreach (var lang in request.SubtitleLanguages)
+            var emptyLanguages = request.SubtitleLanguages.Where(string.IsNullOrWhiteSpace).ToList();
+            if (emptyLanguages.Any())
             {
-                if (string.IsNullOrWhiteSpace(lang))
-                {
-                    _logger.LogWarning("Validation failed: Empty subtitle language name provided");
-                    result.Add(nameof(request.SubtitleLanguages), "Language names must be non-empty.");
-                    break;
-                }
+                _logger.LogWarning("Validation failed: Empty subtitle language name provided");
+                result.Add(nameof(request.SubtitleLanguages), "Language names must be non-empty.");
             }
         }
 

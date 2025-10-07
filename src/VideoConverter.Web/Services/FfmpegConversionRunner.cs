@@ -24,7 +24,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
         await Task.Yield();
 
-        var preflightOk = _dryRun || await EnsurePreflightAsync();
+        var preflightOk = _dryRun || await EnsurePreflightAsync(_ffmpegPath);
         if (!preflightOk)
         {
             _logger.LogError("FFmpeg preflight failed: {PreflightError}", _preflightError ?? "Unknown error");
@@ -207,7 +207,6 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
             // This ensures language and title metadata from input streams are preserved
             args.Insert(insertAt, "-map_metadata");
             args.Insert(insertAt, "0");
-            insertAt += 2;
 
             var cmdString = BuildDisplayCommand(_ffmpegPath, args);
             _logger.LogInformation("FFmpeg command: {Command}", cmdString);
@@ -276,8 +275,10 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 {
                     await process.WaitForExitAsync();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // Process cleanup is handled by the Exited event handler
+                    _logger.LogDebug(ex, "Process wait completed with exception");
                 }
             });
 
@@ -294,27 +295,23 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
     }
 
-    private async Task<bool> EnsurePreflightAsync()
+    private static async Task<bool> EnsurePreflightAsync(string ffmpegPath)
     {
         if (_preflightDone)
         {
-            _logger.LogDebug("FFmpeg preflight already completed successfully");
             return true;
         }
 
-        _logger.LogDebug("Starting FFmpeg preflight check");
         await _preflightLock.WaitAsync();
         try
         {
             if (_preflightDone)
             {
-                _logger.LogDebug("FFmpeg preflight completed by another thread");
                 return true;
             }
 
             try
             {
-                _logger.LogDebug("Running FFmpeg preflight with libsvtav1 encoder and scale filter");
                 var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
                 var preflightArgs = new List<string>
                 {
@@ -336,7 +333,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = ffmpegPath,
                     ArgumentList = { },
                     UseShellExecute = false,
                     RedirectStandardError = true,
@@ -347,7 +344,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                     psi.ArgumentList.Add(a);
                 }
 
-                var proc = new Process { StartInfo = psi };
+                using var proc = new Process { StartInfo = psi };
                 if (!proc.Start())
                 {
                     _preflightError = "Failed to start ffmpeg preflight";
@@ -360,19 +357,16 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 if (proc.ExitCode != 0)
                 {
                     _preflightError = string.IsNullOrWhiteSpace(stderr) ? $"ffmpeg preflight failed with exit code {proc.ExitCode}" : stderr;
-                    _logger.LogError("FFmpeg preflight failed: {Error}", _preflightError);
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 _preflightError = ex.Message;
-                _logger.LogError(ex, "FFmpeg preflight threw an exception");
                 return false;
             }
 
             _preflightDone = true;
-            _logger.LogInformation("FFmpeg preflight passed. ffmpeg is available and filters/encoders look good.");
             return true;
         }
         finally
@@ -394,18 +388,20 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
 
         var displayArgs = new List<string>();
-        for (var i = 0; i < args.Count; i++)
+        var i = 0;
+        while (i < args.Count)
         {
             var a = args[i];
             if (a == "-vf" && i + 1 < args.Count)
             {
                 displayArgs.Add(a);
                 displayArgs.Add(Quote(args[i + 1]));
-                i++;
+                i += 2; // Skip both the current and next argument
             }
             else
             {
                 displayArgs.Add(Quote(a));
+                i++;
             }
         }
 
@@ -430,7 +426,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to extract language tag from subtitle path '{Path}': {Error}", subtitlePath, ex.Message);
+            _logger.LogWarning(ex, "Failed to extract language tag from subtitle path '{Path}': {Error}", subtitlePath, ex.Message);
         }
 
         return null;
