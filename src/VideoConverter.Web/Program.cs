@@ -27,16 +27,23 @@ public class Program
 
         var app = builder.Build();
 
+        // Log service initialization
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Video Converter service starting up");
+
         // Ensure database exists
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             _ = db.Database.EnsureCreated();
+            logger.LogInformation("Database initialized successfully");
         }
 
         _ = app.MapGet("/", () => "OK");
         ConversionsApi.MapEndpoints(app);
+        logger.LogInformation("API endpoints mapped successfully");
 
+        logger.LogInformation("Video Converter service started successfully");
         app.Run();
     }
 }
