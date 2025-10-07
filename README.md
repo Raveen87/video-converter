@@ -116,10 +116,11 @@ Environment/app settings:
 - Target framework is `net10.0`.
 
 ### FFmpeg settings used
-- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `4`, GOP `150`, configurable CRF (`-crf <0..63>`, default 40)
+- Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `6` (optimized for quality), GOP `120`, configurable CRF (`-crf <0..63>`, default 40)
 - Audio: Opus `-c:a libopus -b:a <kbps>k` (default 128k)
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
+- Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
 
 ### Automatic crop detection
 - When a new conversion is created, the service runs `ffmpeg` cropdetect to infer optimal cropping.
@@ -129,7 +130,7 @@ Environment/app settings:
 
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 4 -g 150 -crf <crf> -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
+ffmpeg -y -i <input> -map 0:v:0 -map 0:a? -map 0:s? -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy <output>.mkv
 ```
 
 ### CI/Quality
