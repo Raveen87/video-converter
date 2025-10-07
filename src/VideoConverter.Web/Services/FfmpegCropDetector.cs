@@ -11,8 +11,14 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
 
     public async Task<string?> DetectAsync(string inputPath, double? durationSeconds, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Starting crop detection for {InputPath} with duration {Duration}s",
+            inputPath, durationSeconds);
+
         // Choose 15 timestamps evenly across duration, skipping the very start and end
         var timestamps = BuildTimestamps(durationSeconds, sampleCount: 15);
+        _logger.LogDebug("Generated {TimestampCount} timestamps for crop detection: {Timestamps}",
+            timestamps.Count(), string.Join(", ", timestamps.Select(t => $"{t:F1}s")));
+
         string? bestCrop = null;
         long bestArea = -1;
 
@@ -21,9 +27,21 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
             var crop = await DetectAtAsync(inputPath, ts, cancellationToken);
             if (TryParseArea(crop, out var area) && area > bestArea)
             {
+                _logger.LogDebug("New best crop found at {Timestamp}s: {Crop} (area: {Area})",
+                    ts, crop, area);
                 bestArea = area;
                 bestCrop = crop;
             }
+        }
+
+        if (bestCrop is not null)
+        {
+            _logger.LogInformation("Crop detection completed for {InputPath}: {BestCrop} (area: {BestArea})",
+                inputPath, bestCrop, bestArea);
+        }
+        else
+        {
+            _logger.LogDebug("No crop detected for {InputPath}", inputPath);
         }
 
         return bestCrop;
@@ -49,6 +67,8 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
 
     private async Task<string?> DetectAtAsync(string inputPath, double timestampSeconds, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Detecting crop at {Timestamp}s for {InputPath}", timestampSeconds, inputPath);
+
         // Use cropdetect filter for a short segment around the timestamp
         var filter = "cropdetect=24:16:0"; // 24 dB threshold, 16 round value, 0 resets
         var args = new List<string>
@@ -77,11 +97,21 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         using var proc = new Process { StartInfo = psi };
         if (!proc.Start())
         {
+            _logger.LogWarning("Failed to start ffmpeg for crop detection at {Timestamp}s", timestampSeconds);
             return null;
         }
+
+        _logger.LogDebug("ffmpeg crop detection process started with PID: {ProcessId}", proc.Id);
+
         var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
         _ = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
         await proc.WaitForExitAsync(cancellationToken);
+
+        if (proc.ExitCode != 0)
+        {
+            _logger.LogDebug("ffmpeg crop detection failed at {Timestamp}s with exit code {ExitCode}: {Error}",
+                timestampSeconds, proc.ExitCode, stderr);
+        }
 
         // Parse last crop= line; ffmpeg prints lines like: crop=w:h:x:y
         string? best = null;

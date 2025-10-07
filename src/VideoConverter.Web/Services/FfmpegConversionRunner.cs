@@ -19,11 +19,15 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
     public async Task<ConversionStartResult> StartAsync(Conversion conversion)
     {
+        _logger.LogInformation("Starting conversion for input: {InputPath}, output: {OutputDirectory}",
+            conversion.InputPath, conversion.OutputDirectory);
+
         await Task.Yield();
 
         var preflightOk = _dryRun || await EnsurePreflightAsync();
         if (!preflightOk)
         {
+            _logger.LogError("FFmpeg preflight failed: {PreflightError}", _preflightError ?? "Unknown error");
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = _preflightError ?? "FFmpeg preflight failed" };
         }
 
@@ -34,9 +38,11 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
             {
                 if (RunningKeys.Contains(key))
                 {
+                    _logger.LogWarning("Conversion already running for key: {Key}", key);
                     return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Conversion already running for this input/output." };
                 }
                 _ = RunningKeys.Add(key);
+                _logger.LogDebug("Added conversion key to running set: {Key}", key);
             }
         }
 
@@ -44,6 +50,8 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         {
             if (string.IsNullOrWhiteSpace(conversion.OutputDirectory) || string.IsNullOrWhiteSpace(conversion.InputPath))
             {
+                _logger.LogError("Invalid conversion parameters - InputPath: {InputPath}, OutputDirectory: {OutputDirectory}",
+                    conversion.InputPath, conversion.OutputDirectory);
                 lock (RunningKeys)
                 {
                     _ = RunningKeys.Remove(key);
@@ -51,19 +59,25 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
                 return new ConversionStartResult { IsSuccess = false, ErrorMessage = "InputPath and OutputDirectory are required." };
             }
 
+            _logger.LogDebug("Creating output directory: {OutputDirectory}", conversion.OutputDirectory);
             _ = Directory.CreateDirectory(conversion.OutputDirectory);
 
             var outputFile = Path.Combine(conversion.OutputDirectory, Path.GetFileNameWithoutExtension(conversion.InputPath) + ".mkv");
+            _logger.LogDebug("Output file: {OutputFile}", outputFile);
 
             var targetHeight = conversion.Resolution ?? 720;
             var targetWidth = targetHeight switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
+            _logger.LogDebug("Target resolution: {Width}x{Height}", targetWidth, targetHeight);
+
             var filters = new List<string>();
             if (!string.IsNullOrWhiteSpace(conversion.DetectedCrop))
             {
                 filters.Add("crop=" + conversion.DetectedCrop);
+                _logger.LogDebug("Using detected crop: {DetectedCrop}", conversion.DetectedCrop);
             }
             filters.Add($"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos");
             var vf = string.Join(",", filters);
+            _logger.LogDebug("Video filters: {VideoFilters}", vf);
             var args = new List<string>
             {
                 "-y",
@@ -161,9 +175,11 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
             }
 
             var cmdString = BuildDisplayCommand(_ffmpegPath, args);
+            _logger.LogInformation("FFmpeg command: {Command}", cmdString);
 
             if (_dryRun)
             {
+                _logger.LogInformation("Dry run mode - conversion would execute: {Command}", cmdString);
                 return new ConversionStartResult { IsSuccess = true, ProcessId = 0, Command = cmdString };
             }
 
@@ -192,6 +208,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
 
             if (!process.Start())
             {
+                _logger.LogError("Failed to start ffmpeg process for conversion");
                 lock (RunningKeys)
                 {
                     _ = RunningKeys.Remove(key);
@@ -233,6 +250,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Exception occurred during conversion setup for {InputPath}", conversion.InputPath);
             lock (RunningKeys)
             {
                 _ = RunningKeys.Remove(key);
@@ -245,19 +263,23 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, ILogger
     {
         if (_preflightDone)
         {
+            _logger.LogDebug("FFmpeg preflight already completed successfully");
             return true;
         }
 
+        _logger.LogDebug("Starting FFmpeg preflight check");
         await _preflightLock.WaitAsync();
         try
         {
             if (_preflightDone)
             {
+                _logger.LogDebug("FFmpeg preflight completed by another thread");
                 return true;
             }
 
             try
             {
+                _logger.LogDebug("Running FFmpeg preflight with libsvtav1 encoder and scale filter");
                 var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
                 var preflightArgs = new List<string>
                 {

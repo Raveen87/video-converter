@@ -13,6 +13,8 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
 
     public async Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken)
     {
+        _logger.LogDebug("Starting media probe for: {InputPath}", inputPath);
+
         var args = new[]
         {
             "-v", "error",
@@ -37,17 +39,24 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
         using var proc = new Process { StartInfo = psi };
         if (!proc.Start())
         {
+            _logger.LogError("Failed to start ffprobe process for: {InputPath}", inputPath);
             throw new InvalidOperationException("Failed to start ffprobe");
         }
+
+        _logger.LogDebug("ffprobe process started with PID: {ProcessId}", proc.Id);
+
         var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
         await proc.WaitForExitAsync(cancellationToken);
 
         if (proc.ExitCode != 0)
         {
-            _logger.LogError("ffprobe failed: {Error}", stderr);
+            _logger.LogError("ffprobe failed for {InputPath} with exit code {ExitCode}: {Error}",
+                inputPath, proc.ExitCode, stderr);
             throw new InvalidOperationException("ffprobe failed: " + stderr);
         }
+
+        _logger.LogDebug("ffprobe completed successfully for: {InputPath}", inputPath);
 
         using var doc = JsonDocument.Parse(stdout);
         var streams = new List<MediaStream>();
@@ -113,13 +122,18 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
             }
         }
 
-        return new MediaProbeResult
+        var result = new MediaProbeResult
         {
             Streams = streams,
             VideoWidth = width,
             VideoHeight = height,
             DurationSeconds = durationSeconds
         };
+
+        _logger.LogInformation("Media probe completed for {InputPath}: {StreamCount} streams, {Width}x{Height}, {Duration}s",
+            inputPath, streams.Count, width, height, durationSeconds);
+
+        return result;
     }
 }
 
