@@ -290,4 +290,247 @@ public class MetadataTests
         _ = result.Year.Should().Be(expectedYear);
         _ = result.DetectedType.Should().Be(expectedType);
     }
+
+    #region Edge Case Tests
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithSpecialCharacters_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "The.Matrix: Reloaded (2003) [Special.Edition].1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("The Matrix: Reloaded");
+        _ = result.Year.Should().Be(2003);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithVeryLongTitle_HandlesCorrectly()
+    {
+        // Arrange
+        var longTitle = new string('A', 200);
+        var filename = $"{longTitle}.2023.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be(longTitle);
+        _ = result.Year.Should().Be(2023);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithUnicodeCharacters_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "Café.2023.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Café");
+        _ = result.Year.Should().Be(2023);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithNumbersInTitle_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "Movie.2.2023.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Movie.2");
+        _ = result.Year.Should().Be(2023);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithInvalidYear_ReturnsNullYear()
+    {
+        // Arrange
+        var filename = "Movie.9999.1080p.mkv"; // Year too far in future
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Movie.9999");
+        _ = result.Year.Should().BeNull(); // Should be null for invalid year
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithVeryOldYear_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "Old.Movie.1920.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Old Movie");
+        _ = result.Year.Should().Be(1920);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseTvShowFilename_WithHighSeasonEpisode_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "Long.Running.Show.S99E99.Final.Episode.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.TvShow);
+        _ = result.Title.Should().Be("Long Running Show");
+        _ = result.Season.Should().Be(99);
+        _ = result.Episode.Should().Be(99);
+        _ = result.EpisodeTitle.Should().Be("Final Episode");
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithMultipleDots_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "A.Very.Long.Movie.Title.With.Many.Dots.2023.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("A Very Long Movie Title With Many Dots");
+        _ = result.Year.Should().Be(2023);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithNoExtension_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "Movie.2023.1080p"; // No file extension
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Movie");
+        _ = result.Year.Should().Be(2023);
+    }
+
+    [Fact]
+    public void FilenameParser_ParseFilename_WithOnlyNumbers_HandlesCorrectly()
+    {
+        // Arrange
+        var filename = "123.456.789.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("123.456.789");
+        _ = result.Year.Should().BeNull(); // No valid year detected
+    }
+
+    [Fact]
+    public async Task FakeMetadataService_GetMovieMetadata_WithNullTitle_ReturnsNull()
+    {
+        // Arrange
+        var title = (string?)null;
+        var year = 2023;
+
+        // Act
+        var result = await _metadataService.GetMovieMetadataAsync(title!, year);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FakeMetadataService_GetMovieMetadata_WithEmptyTitle_ReturnsNull()
+    {
+        // Arrange
+        var title = "";
+        var year = 2023;
+
+        // Act
+        var result = await _metadataService.GetMovieMetadataAsync(title, year);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FakeMetadataService_GetTvShowMetadata_WithInvalidSeason_ReturnsNull()
+    {
+        // Arrange
+        var showName = "Breaking Bad";
+        var season = -1; // Invalid season
+        var episode = 1;
+        var firstAiredYear = 2008;
+
+        // Act
+        var result = await _metadataService.GetTvShowMetadataAsync(showName, season, episode, firstAiredYear);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FakeMetadataService_GetTvShowMetadata_WithInvalidEpisode_ReturnsNull()
+    {
+        // Arrange
+        var showName = "Breaking Bad";
+        var season = 1;
+        var episode = 0; // Invalid episode
+        var firstAiredYear = 2008;
+
+        // Act
+        var result = await _metadataService.GetTvShowMetadataAsync(showName, season, episode, firstAiredYear);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FakeMetadataService_GetTvShowMetadata_WithVeryHighSeasonEpisode_ReturnsNull()
+    {
+        // Arrange
+        var showName = "Breaking Bad";
+        var season = 999;
+        var episode = 999;
+        var firstAiredYear = 2008;
+
+        // Act
+        var result = await _metadataService.GetTvShowMetadataAsync(showName, season, episode, firstAiredYear);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    #endregion
 }
