@@ -1,5 +1,11 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using VideoConverter.Web.Data;
+using VideoConverter.Web.Dtos;
 using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.Models;
 using VideoConverter.Web.Validation;
 
 namespace VideoConverter.Tests;
@@ -143,5 +149,246 @@ public class UnitTests
         // Assert
         _ = result.Should().Contain("-vf");
         _ = result.Should().Contain("scale=w=1280:h=720:force_original_aspect_ratio=decrease");
+    }
+
+    // Additional validation tests for edge cases
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public void ValidationHelpers_IsValidPath_WithInvalidPaths_ReturnsFalse(string? path)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidPath(path, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().NotBeNullOrEmpty();
+    }
+
+    [Theory]
+    [InlineData("C:\\")]
+    [InlineData("/")]
+    [InlineData("\\\\server\\share")]
+    [InlineData("file://path")]
+    public void ValidationHelpers_IsValidPath_WithValidPaths_ReturnsTrue(string path)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidPath(path, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(64)]
+    [InlineData(int.MinValue)]
+    [InlineData(int.MaxValue)]
+    public void ValidationHelpers_IsValidCrf_WithInvalidValues_ReturnsFalse(int crf)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidCrf(crf, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("CRF must be between 0 and 63.");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(31)]
+    [InlineData(63)]
+    public void ValidationHelpers_IsValidCrf_WithValidValues_ReturnsTrue(int crf)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidCrf(crf, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(451)]
+    [InlineData(int.MinValue)]
+    [InlineData(int.MaxValue)]
+    public void ValidationHelpers_IsValidAudioBitrate_WithInvalidValues_ReturnsFalse(int bitrate)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidAudioBitrate(bitrate, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("AudioBitrateKbps must be between 1 and 450.");
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(128)]
+    [InlineData(450)]
+    public void ValidationHelpers_IsValidAudioBitrate_WithValidValues_ReturnsTrue(int bitrate)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidAudioBitrate(bitrate, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(480)]
+    [InlineData(1440)]
+    [InlineData(4320)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ValidationHelpers_IsValidResolution_WithInvalidValues_ReturnsFalse(int resolution)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidResolution(resolution, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("Resolution must be one of: 720, 1080, 2160.");
+    }
+
+    [Theory]
+    [InlineData(720)]
+    [InlineData(1080)]
+    [InlineData(2160)]
+    public void ValidationHelpers_IsValidResolution_WithValidValues_ReturnsTrue(int resolution)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidResolution(resolution, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidResolution_WithNull_ReturnsTrue()
+    {
+        // Act
+        var result = ValidationHelpers.IsValidResolution(null, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    [InlineData("English", "")]
+    [InlineData("English", "   ")]
+    [InlineData("English", "\t")]
+    [InlineData("English", "\n")]
+    public void ValidationHelpers_IsValidLanguageList_WithInvalidLanguages_ReturnsFalse(params string[] languages)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidLanguageList(languages, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("Language names must be non-empty.");
+    }
+
+    [Theory]
+    [InlineData("English")]
+    [InlineData("English", "Swedish")]
+    [InlineData("English", "Swedish", "French")]
+    public void ValidationHelpers_IsValidLanguageList_WithValidLanguages_ReturnsTrue(params string[] languages)
+    {
+        // Act
+        var result = ValidationHelpers.IsValidLanguageList(languages, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidLanguageList_WithNull_ReturnsTrue()
+    {
+        // Act
+        var result = ValidationHelpers.IsValidLanguageList(null, out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidLanguageList_WithEmptyArray_ReturnsTrue()
+    {
+        // Act
+        var result = ValidationHelpers.IsValidLanguageList(Array.Empty<string>(), out var error);
+
+        // Assert
+        result.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidFile_WithNonExistentFile_ReturnsFalse()
+    {
+        // Arrange
+        var nonExistentFile = Path.Combine(Path.GetTempPath(), $"non_existent_{Guid.NewGuid():N}.txt");
+
+        // Act
+        var result = ValidationHelpers.IsValidFile(nonExistentFile, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("File does not exist.");
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidFile_WithDirectory_ReturnsFalse()
+    {
+        // Arrange
+        var tempDir = Path.GetTempPath();
+
+        // Act
+        var result = ValidationHelpers.IsValidFile(tempDir, out var error);
+
+        // Assert
+        result.Should().BeFalse();
+        error.Should().Be("Path must be a file, not a directory.");
+    }
+
+    [Fact]
+    public void ValidationHelpers_IsValidDirectory_WithNonExistentDirectory_CreatesDirectory()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test_dir_{Guid.NewGuid():N}");
+
+        try
+        {
+            // Act
+            var result = ValidationHelpers.IsValidDirectory(tempDir, out var error);
+
+            // Assert
+            result.Should().BeTrue();
+            error.Should().BeNull();
+            Directory.Exists(tempDir).Should().BeTrue();
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir);
+            }
+        }
     }
 }
