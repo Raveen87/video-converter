@@ -10,7 +10,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
     private readonly ILogger<TmdbMetadataService> _logger = logger;
     private readonly string _apiKey = configuration["Tmdb:ApiKey"] ?? throw new InvalidOperationException("TMDb API key not configured");
 
-    public async Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, CancellationToken cancellationToken = default)
+    public async Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, string? source = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -29,6 +29,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
                 return new MovieMetadata(
                     movie.Title,
                     ExtractYear(movie.ReleaseDate),
+                    source,
                     movie.Overview,
                     GetPosterUrl(movie.PosterPath)
                 );
@@ -44,7 +45,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
         }
     }
 
-    public async Task<TvShowMetadata?> GetTvShowMetadataAsync(string showName, int season, int episode, int? firstAiredYear = null, CancellationToken cancellationToken = default)
+    public async Task<TvShowMetadata?> GetTvShowMetadataAsync(string showName, int season, int episode, int? firstAiredYear = null, string? source = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -70,6 +71,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
                     season,
                     episode,
                     episodeDetails?.Name,
+                    source,
                     episodeDetails?.Overview ?? show.Overview,
                     GetPosterUrl(show.PosterPath)
                 );

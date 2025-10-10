@@ -106,6 +106,7 @@ public sealed class ConversionService(
                 metadata = await _metadataService.GetMovieMetadataAsync(
                     parsedFilename.Title ?? "Unknown",
                     parsedFilename.Year,
+                    parsedFilename.Source,
                     cancellationToken);
             }
             else if (parsedFilename.DetectedType == MediaType.TvShow)
@@ -118,6 +119,7 @@ public sealed class ConversionService(
                     parsedFilename.Season ?? 1,
                     parsedFilename.Episode ?? 1,
                     null, // We don't have first aired year from filename parsing
+                    parsedFilename.Source,
                     cancellationToken);
             }
 

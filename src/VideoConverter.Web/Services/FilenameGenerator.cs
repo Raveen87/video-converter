@@ -24,7 +24,14 @@ public class FilenameGenerator : IFilenameGenerator
     private static string GenerateMovieFilename(MovieMetadata movie, string extension)
     {
         var cleanTitle = SanitizeFilename(movie.Title);
-        return $"{cleanTitle}.{movie.Year}{extension}";
+        var filename = $"{cleanTitle}.{movie.Year}";
+
+        if (!string.IsNullOrWhiteSpace(movie.Source))
+        {
+            filename += $".{movie.Source}";
+        }
+
+        return filename + extension;
     }
 
     private static string GenerateTvShowFilename(TvShowMetadata tvShow, string extension)
@@ -38,6 +45,11 @@ public class FilenameGenerator : IFilenameGenerator
         {
             var cleanEpisodeTitle = SanitizeFilename(tvShow.EpisodeTitle);
             filename += $".{cleanEpisodeTitle}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(tvShow.Source))
+        {
+            filename += $".{tvShow.Source}";
         }
 
         return filename + extension;

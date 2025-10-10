@@ -11,6 +11,7 @@ public abstract record MediaMetadata(MediaType Type);
 public record MovieMetadata(
     string Title,
     int Year,
+    string? Source = null,
     string? Overview = null,
     string? PosterUrl = null
 ) : MediaMetadata(MediaType.Movie);
@@ -21,6 +22,7 @@ public record TvShowMetadata(
     int Season,
     int Episode,
     string? EpisodeTitle = null,
+    string? Source = null,
     string? Overview = null,
     string? PosterUrl = null
 ) : MediaMetadata(MediaType.TvShow);
@@ -32,5 +34,6 @@ public record ParsedFilename(
     int? Year = null,
     int? Season = null,
     int? Episode = null,
-    string? EpisodeTitle = null
+    string? EpisodeTitle = null,
+    string? Source = null
 );

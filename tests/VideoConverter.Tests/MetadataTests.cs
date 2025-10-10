@@ -533,4 +533,70 @@ public class MetadataTests
     }
 
     #endregion
+
+    #region Source Parsing Tests
+
+    [Fact]
+    public void FilenameParser_ParseMovieFilename_WithBluraySource_ShouldDetectSource()
+    {
+        // Arrange
+        var filename = "The.Matrix.1999.Bluray.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("The Matrix");
+        _ = result.Year.Should().Be(1999);
+        _ = result.Source.Should().Be("Bluray");
+    }
+
+    [Fact]
+    public void FilenameParser_ParseTvShowFilename_WithHDTVSource_ShouldDetectSource()
+    {
+        // Arrange
+        var filename = "Breaking.Bad.S01E01.Pilot.HDTV.720p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.TvShow);
+        _ = result.Title.Should().Be("Breaking Bad");
+        _ = result.Season.Should().Be(1);
+        _ = result.Episode.Should().Be(1);
+        _ = result.EpisodeTitle.Should().Be("Pilot");
+        _ = result.Source.Should().Be("HDTV");
+    }
+
+    [Theory]
+    [InlineData("Bluray")]
+    [InlineData("DVDRip")]
+    [InlineData("WebRip")]
+    [InlineData("WEB")]
+    [InlineData("WEB-DL")]
+    [InlineData("BDRip")]
+    [InlineData("TV")]
+    [InlineData("PDTV")]
+    [InlineData("HDTV")]
+    public void FilenameParser_ParseFilename_AllSupportedSources_ShouldDetectCorrectly(string source)
+    {
+        // Arrange
+        var filename = $"Test.Movie.2020.{source}.1080p.mkv";
+
+        // Act
+        var result = _filenameParser.ParseFilename(filename);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.DetectedType.Should().Be(MediaType.Movie);
+        _ = result.Title.Should().Be("Test Movie");
+        _ = result.Year.Should().Be(2020);
+        _ = result.Source.Should().Be(source);
+    }
+
+    #endregion
 }

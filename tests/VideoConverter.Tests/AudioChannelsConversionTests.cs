@@ -149,7 +149,7 @@ public class AudioChannelsConversionTests
         _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "Test", 2020));
 
-        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MovieMetadata?)null);
 
         _ = _mockFilenameGenerator.Setup(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()))

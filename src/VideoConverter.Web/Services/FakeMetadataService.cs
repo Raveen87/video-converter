@@ -15,7 +15,7 @@ public class FakeMetadataService : IMetadataService
         _tvShowData = LoadTvShowTestData();
     }
 
-    public Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, CancellationToken cancellationToken = default)
+    public Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, string? source = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -43,7 +43,7 @@ public class FakeMetadataService : IMetadataService
             : Task.FromResult<MovieMetadata?>(null);
     }
 
-    public Task<TvShowMetadata?> GetTvShowMetadataAsync(string showName, int season, int episode, int? firstAiredYear = null, CancellationToken cancellationToken = default)
+    public Task<TvShowMetadata?> GetTvShowMetadataAsync(string showName, int season, int episode, int? firstAiredYear = null, string? source = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(showName) || season <= 0 || episode <= 0 || season > 100 || episode > 1000)
         {
@@ -77,12 +77,14 @@ public class FakeMetadataService : IMetadataService
             ["the matrix_1999"] = new MovieMetadata(
                 "The Matrix",
                 1999,
+                "Bluray",
                 "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
                 "https://image.tmdb.org/t/p/w500/f89q3d8Q3hn80D3TVLKaTRO3SxI.jpg"
             ),
             ["inception_2010"] = new MovieMetadata(
                 "Inception",
                 2010,
+                "WEB-DL",
                 "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
                 "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg"
             )
@@ -99,6 +101,7 @@ public class FakeMetadataService : IMetadataService
                 1, // Will be overridden by specific season/episode
                 1, // Will be overridden by specific season/episode
                 "Pilot",
+                "HDTV",
                 "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine in order to secure his family's future.",
                 "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
             ),
@@ -108,6 +111,7 @@ public class FakeMetadataService : IMetadataService
                 1, // Will be overridden by specific season/episode
                 1, // Will be overridden by specific season/episode
                 "Winter Is Coming",
+                "WEBRip",
                 "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north.",
                 "https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg"
             )

@@ -65,8 +65,8 @@ public class ServiceLayerTests
         _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "test", 2020));
 
-        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MovieMetadata("Test Movie", 2020));
+        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MovieMetadata("Test Movie", 2020, "Bluray"));
 
         _ = _mockFilenameGenerator.Setup(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()))
             .Returns("Test Movie.2020.mp4");
@@ -415,8 +415,8 @@ public class ServiceLayerTests
         _ = _mockFilenameParser.Setup(x => x.ParseFilename("Yellowstone.S01E01.Daybreak.mp4"))
             .Returns(new ParsedFilename("Yellowstone.S01E01.Daybreak.mp4", MediaType.TvShow, "Yellowstone", null, 1, 1, "Daybreak"));
 
-        _ = _mockMetadataService.Setup(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TvShowMetadata("Yellowstone", 2018, 1, 1, "Daybreak", "Episode description", null));
+        _ = _mockMetadataService.Setup(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TvShowMetadata("Yellowstone", 2018, 1, 1, "Daybreak", "HDTV", "Episode description", null));
 
         _ = _mockFilenameGenerator.Setup(x => x.GenerateFilename(It.IsAny<TvShowMetadata>(), ".mp4"))
             .Returns("Yellowstone.S01E01.Daybreak.mp4");
@@ -429,7 +429,7 @@ public class ServiceLayerTests
         _ = result.MetadataBasedFilename.Should().Be("Yellowstone.S01E01.Daybreak.mp4");
 
         _mockFilenameParser.Verify(x => x.ParseFilename("Yellowstone.S01E01.Daybreak.mp4"), Times.Once);
-        _mockMetadataService.Verify(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockMetadataService.Verify(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockFilenameGenerator.Verify(x => x.GenerateFilename(It.IsAny<TvShowMetadata>(), ".mp4"), Times.Once);
     }
 
@@ -456,7 +456,7 @@ public class ServiceLayerTests
         _ = _mockFilenameParser.Setup(x => x.ParseFilename("Unknown.Movie.mp4"))
             .Returns(new ParsedFilename("Unknown.Movie.mp4", MediaType.Movie, "Unknown Movie", 2020));
 
-        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MovieMetadata?)null);
 
         // Act
@@ -467,7 +467,7 @@ public class ServiceLayerTests
         _ = result.MetadataBasedFilename.Should().Be("Unknown.Movie.mp4");
 
         _mockFilenameParser.Verify(x => x.ParseFilename("Unknown.Movie.mp4"), Times.Once);
-        _mockMetadataService.Verify(x => x.GetMovieMetadataAsync("Unknown Movie", 2020, It.IsAny<CancellationToken>()), Times.Once);
+        _mockMetadataService.Verify(x => x.GetMovieMetadataAsync("Unknown Movie", 2020, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockFilenameGenerator.Verify(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()), Times.Never);
     }
 }
