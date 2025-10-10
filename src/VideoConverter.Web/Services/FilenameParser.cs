@@ -20,6 +20,11 @@ public class FilenameParser : IFilenameParser
         @"\b(19|20)\d{2}\b",
         RegexOptions.Compiled);
 
+    // Source patterns for detecting video source (ordered by length, longest first)
+    private static readonly string[] SourcePatterns = [
+        "WEB-DL", "DVDRip", "WebRip", "BDRip", "PDTV", "HDTV", "Bluray", "WEB", "TV"
+    ];
+
     public ParsedFilename ParseFilename(string filename)
     {
         if (string.IsNullOrWhiteSpace(filename))
@@ -29,6 +34,9 @@ public class FilenameParser : IFilenameParser
 
         // Remove file extension
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(filename);
+
+        // Detect source
+        var source = DetectSource(nameWithoutExtension);
 
         // Try TV show pattern first
         var tvMatch = TvShowPattern.Match(nameWithoutExtension);
@@ -52,7 +60,8 @@ public class FilenameParser : IFilenameParser
                 null,
                 season,
                 episode,
-                string.IsNullOrWhiteSpace(episodeTitle) ? null : episodeTitle
+                string.IsNullOrWhiteSpace(episodeTitle) ? null : episodeTitle,
+                source
             );
         }
 
@@ -70,7 +79,11 @@ public class FilenameParser : IFilenameParser
                     filename,
                     MediaType.Movie,
                     title,
-                    year
+                    year,
+                    null,
+                    null,
+                    null,
+                    source
                 );
             }
             else
@@ -81,7 +94,12 @@ public class FilenameParser : IFilenameParser
                 return new ParsedFilename(
                     filename,
                     MediaType.Movie,
-                    fullTitle
+                    fullTitle,
+                    null,
+                    null,
+                    null,
+                    null,
+                    source
                 );
             }
         }
@@ -101,7 +119,11 @@ public class FilenameParser : IFilenameParser
                     filename,
                     MediaType.Movie,
                     title,
-                    year
+                    year,
+                    null,
+                    null,
+                    null,
+                    source
                 );
             }
         }
@@ -110,7 +132,12 @@ public class FilenameParser : IFilenameParser
         return new ParsedFilename(
             filename,
             MediaType.Movie,
-            CleanTitle(nameWithoutExtension)
+            CleanTitle(nameWithoutExtension),
+            null,
+            null,
+            null,
+            null,
+            source
         );
     }
 
@@ -313,9 +340,11 @@ public class FilenameParser : IFilenameParser
 
         var cleaned = title.Trim();
 
-        // Remove quality indicators first
+        // Remove quality indicators and source patterns first
         var qualityPatterns = new[] { "1080p", "720p", "480p", "2160p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc" };
+        var sourcePatterns = new[] { "web-dl", "dvdrip", "webrip", "bdrip", "pdtv", "hdtv", "bluray", "web", "tv" };
 
+        // Remove quality indicators
         foreach (var pattern in qualityPatterns)
         {
             // Remove quality indicators at the end
@@ -331,6 +360,27 @@ public class FilenameParser : IFilenameParser
 
         // Also remove quality indicators that are standalone (not at the end)
         foreach (var pattern in qualityPatterns)
+        {
+            cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
+            cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Remove source patterns
+        foreach (var pattern in sourcePatterns)
+        {
+            // Remove source patterns at the end
+            if (cleaned.EndsWith($".{pattern}", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^pattern.Length].TrimEnd('.');
+            }
+            else if (cleaned.EndsWith(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^pattern.Length].Trim();
+            }
+        }
+
+        // Also remove source patterns that are standalone (not at the end)
+        foreach (var pattern in sourcePatterns)
         {
             cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
             cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
@@ -378,5 +428,32 @@ public class FilenameParser : IFilenameParser
         result = Regex.Replace(result, @"\((?![0-9]{4}\))[^)]*\)", "");
 
         return result.Trim();
+    }
+
+    private static string? DetectSource(string filename)
+    {
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            return null;
+        }
+
+        var filenameLower = filename.ToLowerInvariant();
+        var firstMatch = (string?)null;
+        var firstMatchIndex = int.MaxValue;
+
+        foreach (var pattern in SourcePatterns)
+        {
+            var patternLower = pattern.ToLowerInvariant();
+
+            // Check for exact match with word boundaries
+            var match = Regex.Match(filenameLower, $@"\b{Regex.Escape(patternLower)}\b");
+            if (match.Success && match.Index < firstMatchIndex)
+            {
+                firstMatch = pattern; // Return the original case
+                firstMatchIndex = match.Index;
+            }
+        }
+
+        return firstMatch;
     }
 }
