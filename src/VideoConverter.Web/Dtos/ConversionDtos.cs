@@ -16,4 +16,5 @@ public record ConversionDto(
     DateTime CreatedAtUtc,
     int? Crf,
     int? AudioBitrateKbps,
-    int? Resolution);
+    int? Resolution,
+    string? MetadataBasedFilename);

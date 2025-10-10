@@ -13,5 +13,6 @@ public class Conversion
     public string? SelectedSubtitleStreamIndicesCsv { get; set; }
     public string? SelectedExternalSubtitlePathsCsv { get; set; }
     public string? DetectedCrop { get; set; } // format: "w:h:x:y"
+    public string? MetadataBasedFilename { get; set; } // filename based on metadata lookup
 }
 

@@ -42,7 +42,7 @@ public static class ConversionsApi
             _ = await db.SaveChangesAsync();
 
             logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
-            return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution));
+            return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution, conversion.MetadataBasedFilename));
         }
         catch (InvalidOperationException ex)
         {
@@ -61,7 +61,7 @@ public static class ConversionsApi
         var items = await db.Conversions
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAtUtc)
-            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps, c.Resolution))
+            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps, c.Resolution, c.MetadataBasedFilename))
             .ToListAsync();
 
         logger.LogInformation("Retrieved {Count} conversions from database", items.Count);

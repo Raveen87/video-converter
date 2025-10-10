@@ -37,12 +37,13 @@ dotnet test
     [
       {
         "id": 1,
-        "inputPath": "...",
-        "outputDirectory": "...",
+        "inputPath": "C:/videos/input.mp4",
+        "outputDirectory": "C:/videos/out",
         "createdAtUtc": "2025-10-06T12:00:00Z",
         "crf": 40,
         "audioBitrateKbps": 128,
-        "resolution": 720
+        "resolution": 720,
+        "metadataBasedFilename": "Inception.2010.mp4"
       }
     ]
     ```
@@ -85,6 +86,7 @@ Environment/app settings:
 
 - `Ffmpeg:Path` or `FFMPEG_PATH`: Path to ffmpeg executable (default: `ffmpeg` in PATH)
 - `Ffmpeg:DryRun` or `FFMPEG_DRYRUN`: When `true`, the service will not spawn ffmpeg; it returns the built command string. Useful for tests and diagnostics.
+- `Tmdb:ApiKey` or `TMDB_API_KEY`: The Movie Database (TMDb) API key for metadata lookup (required for metadata-based file naming)
 
 ### Validation
 - `inputPath` must be a non-empty string and point to an existing file (not a directory).
@@ -194,8 +196,34 @@ The API includes a global exception handler middleware that automatically conver
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 - Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
 
+### Metadata-based file naming
+When a conversion is queued, the service automatically looks up metadata for the input file and generates a standardized output filename based on the content type:
+
+#### Movie naming format
+- **Pattern**: `[Movie.Name].[Year].[extension]`
+- **Example**: `Inception.2010.mp4`
+
+#### TV Show naming format  
+- **Pattern**: `[ShowName].[SXXEXX].[Episode.Name].[extension]`
+- **Example**: `Yellowstone.S01E01.Daybreak.mp4`
+
+#### Metadata lookup process
+1. **Filename parsing**: The service analyzes the input filename to detect if it's a movie or TV show
+   - Movies: Detects year patterns like `(2020)`, `.2020`, `-2020`
+   - TV Shows: Detects season/episode patterns like `S01E01`, `1x01`, `S1E1`
+2. **Metadata lookup**: Queries The Movie Database (TMDb) API for official metadata
+   - Movies: Searches by title and year
+   - TV Shows: Searches by show name, season, and episode
+3. **Filename generation**: Creates a clean, standardized filename using the official metadata
+4. **Fallback**: If metadata lookup fails, uses the original filename
+
+#### Configuration
+- **TMDb API Key**: Set `Tmdb:ApiKey` in configuration or environment variables
+- **Filename sanitization**: Special characters are replaced with underscores for filesystem compatibility
+- **Error handling**: Graceful fallback to original filename if metadata service is unavailable
+
 ### Metadata preservation
-- **Video title**: Automatically set to the input filename (without extension) using `-metadata title=<filename>`
+- **Video title**: Automatically set to the metadata-based filename (without extension) using `-metadata title=<filename>`
 - **Audio metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
 - **Subtitle metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
 - **External subtitle metadata**: Language tags are automatically extracted from external subtitle filenames and set using `-metadata:s:s:<index> language=<tag>`

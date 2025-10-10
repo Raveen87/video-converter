@@ -1,5 +1,6 @@
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
+using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Web.Services;
 
@@ -8,12 +9,18 @@ public sealed class ConversionService(
     IAudioLanguageMatcher audioMatcher,
     ISubtitleLanguageMatcher subtitleMatcher,
     ICropDetector cropDetector,
+    IMetadataService metadataService,
+    IFilenameParser filenameParser,
+    IFilenameGenerator filenameGenerator,
     ILogger<ConversionService> logger) : IConversionService
 {
     private readonly IMediaProber _prober = prober;
     private readonly IAudioLanguageMatcher _audioMatcher = audioMatcher;
     private readonly ISubtitleLanguageMatcher _subtitleMatcher = subtitleMatcher;
     private readonly ICropDetector _cropDetector = cropDetector;
+    private readonly IMetadataService _metadataService = metadataService;
+    private readonly IFilenameParser _filenameParser = filenameParser;
+    private readonly IFilenameGenerator _filenameGenerator = filenameGenerator;
     private readonly ILogger<ConversionService> _logger = logger;
 
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
@@ -33,6 +40,9 @@ public sealed class ConversionService(
         // Perform crop detection
         var detectedCrop = await DetectCropAsync(request, cancellationToken);
 
+        // Look up metadata and generate filename
+        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, cancellationToken);
+
         var conversion = new Conversion
         {
             InputPath = request.InputPath,
@@ -44,7 +54,8 @@ public sealed class ConversionService(
             SelectedAudioStreamIndicesCsv = audioProcessing.AudioIndicesCsv,
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
-            DetectedCrop = detectedCrop
+            DetectedCrop = detectedCrop,
+            MetadataBasedFilename = metadataBasedFilename
         };
 
         _logger.LogInformation("Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
@@ -53,6 +64,62 @@ public sealed class ConversionService(
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none", detectedCrop ?? "none");
 
         return conversion;
+    }
+
+    private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogDebug("Generating metadata-based filename for: {InputPath}", inputPath);
+
+            // Parse the filename to extract media information
+            var filename = Path.GetFileName(inputPath);
+            var parsedFilename = _filenameParser.ParseFilename(filename);
+            var extension = Path.GetExtension(inputPath);
+
+            MediaMetadata? metadata = null;
+
+            // Look up metadata based on parsed information
+            if (parsedFilename.DetectedType == MediaType.Movie)
+            {
+                _logger.LogDebug("Looking up movie metadata for: {Title} (Year: {Year})",
+                    parsedFilename.Title, parsedFilename.Year);
+
+                metadata = await _metadataService.GetMovieMetadataAsync(
+                    parsedFilename.Title ?? "Unknown",
+                    parsedFilename.Year,
+                    cancellationToken);
+            }
+            else if (parsedFilename.DetectedType == MediaType.TvShow)
+            {
+                _logger.LogDebug("Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
+                    parsedFilename.Title, parsedFilename.Season, parsedFilename.Episode);
+
+                metadata = await _metadataService.GetTvShowMetadataAsync(
+                    parsedFilename.Title ?? "Unknown",
+                    parsedFilename.Season ?? 1,
+                    parsedFilename.Episode ?? 1,
+                    null, // We don't have first aired year from filename parsing
+                    cancellationToken);
+            }
+
+            if (metadata is not null)
+            {
+                var generatedFilename = _filenameGenerator.GenerateFilename(metadata, extension);
+                _logger.LogInformation("Generated metadata-based filename: {GeneratedFilename}", generatedFilename);
+                return generatedFilename;
+            }
+            else
+            {
+                _logger.LogWarning("No metadata found for: {InputPath}, using original filename", inputPath);
+                return filename;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", inputPath);
+            return Path.GetFileName(inputPath);
+        }
     }
 
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)

@@ -101,7 +101,8 @@ public class ApiLayerTests
             CreatedAtUtc: DateTime.UtcNow,
             Crf: 23,
             AudioBitrateKbps: 128,
-            Resolution: 1080);
+            Resolution: 1080,
+            MetadataBasedFilename: "Test Movie.2020.mp4");
 
         // Act
         var json = JsonSerializer.Serialize(conversion);
@@ -129,7 +130,8 @@ public class ApiLayerTests
             CreatedAtUtc: DateTime.UtcNow,
             Crf: null,
             AudioBitrateKbps: null,
-            Resolution: null);
+            Resolution: null,
+            MetadataBasedFilename: null);
 
         // Act
         var json = JsonSerializer.Serialize(conversion);
