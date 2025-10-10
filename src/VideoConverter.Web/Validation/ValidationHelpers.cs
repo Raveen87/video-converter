@@ -12,6 +12,29 @@ public static class ValidationHelpers
             return false;
         }
 
+        // Check for invalid characters
+        var invalidChars = Path.GetInvalidPathChars();
+        if (path.IndexOfAny(invalidChars) >= 0)
+        {
+            errorMessage = "Path contains invalid characters.";
+            return false;
+        }
+
+        // Check for additional invalid characters that are commonly not allowed in file paths
+        var additionalInvalidChars = new[] { '|', '<', '>', '"', '*', '?' };
+        if (path.IndexOfAny(additionalInvalidChars) >= 0)
+        {
+            errorMessage = "Path contains invalid characters.";
+            return false;
+        }
+
+        // Check for very long paths (Windows MAX_PATH is 260, but we'll be more lenient)
+        if (path.Length > 300)
+        {
+            errorMessage = "Path is too long.";
+            return false;
+        }
+
         try
         {
             _ = Path.GetFullPath(path);

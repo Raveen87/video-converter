@@ -35,8 +35,8 @@ public class ApiLayerTests
         _ = deserialized.Crf.Should().Be(23);
         _ = deserialized.AudioBitrateKbps.Should().Be(128);
         _ = deserialized.Resolution.Should().Be(1080);
-        _ = deserialized.AudioLanguages.Should().BeEquivalentTo(["English"]);
-        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo(["English"]);
+        _ = deserialized.AudioLanguages.Should().BeEquivalentTo("English");
+        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo("English");
     }
 
     [Fact]
@@ -86,8 +86,8 @@ public class ApiLayerTests
 
         // Assert
         _ = deserialized.Should().NotBeNull();
-        _ = deserialized!.AudioLanguages.Should().BeEquivalentTo([]);
-        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo([]);
+        _ = deserialized!.AudioLanguages.Should().BeEquivalentTo();
+        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo();
     }
 
     [Fact]
@@ -166,8 +166,8 @@ public class ApiLayerTests
         _ = deserialized.Should().NotBeNull();
         _ = deserialized!.InputPath.Should().Be("test with spaces & special chars.mp4");
         _ = deserialized.OutputDirectory.Should().Be("output with spaces");
-        _ = deserialized.AudioLanguages.Should().BeEquivalentTo(["English", "Français", "Español"]);
-        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo(["English", "中文", "العربية"]);
+        _ = deserialized.AudioLanguages.Should().BeEquivalentTo("English", "Français", "Español");
+        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo("English", "中文", "العربية");
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class ApiLayerTests
         _ = deserialized!.Crf.Should().Be(100); // Should preserve invalid values
         _ = deserialized.AudioBitrateKbps.Should().Be(500);
         _ = deserialized.Resolution.Should().Be(1440);
-        _ = deserialized.AudioLanguages.Should().BeEquivalentTo([""]);
-        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo(["   "]);
+        _ = deserialized.AudioLanguages.Should().BeEquivalentTo("");
+        _ = deserialized.SubtitleLanguages.Should().BeEquivalentTo("   ");
     }
 }

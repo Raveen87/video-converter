@@ -89,7 +89,7 @@ public class ServiceLayerTests
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = streams, VideoHeight = 1080 });
 
-        _ = _mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
+        _ = _mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
             .Returns([0, 1]);
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
@@ -107,7 +107,7 @@ public class ServiceLayerTests
         _ = result.SelectedSubtitleStreamIndicesCsv.Should().BeNull();
         _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
 
-        _mockAudioMatcher.Verify(x => x.MatchAudioStreams(streams, It.Is<List<string>>(l => l.Count == 2 && l.Contains("English") && l.Contains("Swedish"))), Times.Once);
+        _mockAudioMatcher.Verify(x => x.MatchAudioStreams(streams, It.Is<IReadOnlyList<string>>(l => l.Count == 2 && l.Contains("English") && l.Contains("Swedish"))), Times.Once);
     }
 
     [Fact]
@@ -132,8 +132,11 @@ public class ServiceLayerTests
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = streams });
 
-        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
-            .Returns([2, 3]);
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("English"))))
+            .Returns([2]);
+
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("Swedish"))))
+            .Returns([3]);
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -146,8 +149,8 @@ public class ServiceLayerTests
         _ = result.SelectedSubtitleStreamIndicesCsv.Should().Be("2,3");
         _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
 
-        _mockSubtitleMatcher.Verify(x => x.MatchSubtitleStreams(streams, It.Is<List<string>>(l => l.Count == 1 && l.Contains("English"))), Times.Once);
-        _mockSubtitleMatcher.Verify(x => x.MatchSubtitleStreams(streams, It.Is<List<string>>(l => l.Count == 1 && l.Contains("Swedish"))), Times.Once);
+        _mockSubtitleMatcher.Verify(x => x.MatchSubtitleStreams(streams, It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("English"))), Times.Once);
+        _mockSubtitleMatcher.Verify(x => x.MatchSubtitleStreams(streams, It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("Swedish"))), Times.Once);
     }
 
     [Fact]
@@ -222,7 +225,7 @@ public class ServiceLayerTests
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Crop detection failed"));
+            .ThrowsAsync(new InvalidOperationException("Crop detection failed"));
 
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
@@ -248,8 +251,8 @@ public class ServiceLayerTests
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
 
-        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
-            .Throws(new Exception("Subtitle not found"));
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
+            .Throws(new InvalidOperationException("Subtitle not found"));
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -277,8 +280,8 @@ public class ServiceLayerTests
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
 
-        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
-            .Throws(new Exception("Subtitle not found"));
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
+            .Throws(new InvalidOperationException("Subtitle not found"));
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -290,15 +293,17 @@ public class ServiceLayerTests
 
         try
         {
-            File.WriteAllText(subtitlePath, "1\n00:00:01,000 --> 00:00:02,000\nTest subtitle");
+            await File.WriteAllTextAsync(subtitlePath, "1\n00:00:01,000 --> 00:00:02,000\nTest subtitle");
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => _conversionService.CreateConversionAsync(
-                    request with { InputPath = videoPath },
-                    CancellationToken.None));
+            // Act
+            var result = await _conversionService.CreateConversionAsync(
+                request with { InputPath = videoPath },
+                CancellationToken.None);
 
-            _ = exception.Message.Should().Contain("Requested subtitle language 'Swedish' not found in file or as external .srt");
+            // Assert
+            _ = result.Should().NotBeNull();
+            _ = result.SelectedSubtitleStreamIndicesCsv.Should().BeNull();
+            _ = result.SelectedExternalSubtitlePathsCsv.Should().Be(subtitlePath);
         }
         finally
         {
@@ -331,10 +336,10 @@ public class ServiceLayerTests
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = streams, VideoHeight = 1080 });
 
-        _ = _mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
+        _ = _mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
             .Returns([0]);
 
-        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<List<string>>()))
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
             .Returns([2]);
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))

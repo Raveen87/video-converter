@@ -17,6 +17,11 @@ public class FakeMetadataService : IMetadataService
 
     public Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return Task.FromResult<MovieMetadata?>(null);
+        }
+
         var key = $"{title.ToLowerInvariant()}_{year}";
 
         if (_movieData.TryGetValue(key, out var movie))
@@ -40,6 +45,11 @@ public class FakeMetadataService : IMetadataService
 
     public Task<TvShowMetadata?> GetTvShowMetadataAsync(string showName, int season, int episode, int? firstAiredYear = null, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(showName) || season <= 0 || episode <= 0 || season > 100 || episode > 1000)
+        {
+            return Task.FromResult<TvShowMetadata?>(null);
+        }
+
         var key = $"{showName.ToLowerInvariant()}_{firstAiredYear}";
 
         if (_tvShowData.TryGetValue(key, out var tvShow))
