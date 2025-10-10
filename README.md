@@ -115,6 +115,73 @@ Environment/app settings:
 
 - Copy required environment variables from `.env.example` to `.env` (if present). The service uses `ASPNETCORE_ENVIRONMENT` and may use `FFMPEG_PATH` when FFmpeg is not installed in the image.
 
+### Error Handling
+
+The API uses a structured error handling system that provides consistent error responses across all endpoints. All errors are returned as JSON with the following structure:
+
+```json
+{
+  "statusCode": 400,
+  "errorCode": "ValidationFailed",
+  "errorMessage": "The input path must point to an existing file.",
+  "userFriendlyMessage": "Please provide a valid input file path.",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### Error Properties
+
+- `statusCode`: HTTP status code (e.g., 400, 404, 500)
+- `errorCode`: Programmatic error identifier (enum value)
+- `errorMessage`: Technical message for developers/employees
+- `userFriendlyMessage`: User-friendly message for end users
+- `timestamp`: UTC timestamp when the error occurred
+
+#### Error Codes
+
+**Validation Errors (400)**
+- `ValidationFailed`: General validation error
+- `InvalidInput`: Invalid input parameters
+- `MissingRequiredField`: Required field is missing
+- `InvalidFileFormat`: Unsupported file format
+- `InvalidResolution`: Invalid resolution value
+- `InvalidBitrate`: Invalid bitrate value
+- `InvalidCrf`: Invalid CRF value
+
+**Not Found Errors (404)**
+- `ConversionNotFound`: Conversion with specified ID not found
+- `FileNotFound`: Input file not found
+- `QueueEmpty`: No conversions in queue
+
+**Business Logic Errors (400)**
+- `ConversionAlreadyStarted`: Conversion is already running
+- `ConversionAlreadyCompleted`: Conversion is already completed
+- `InvalidConversionState`: Invalid state for requested operation
+- `ProcessStartFailed`: Failed to start conversion process
+- `MediaProbeFailed`: Failed to probe media file
+- `CropDetectionFailed`: Failed to detect crop parameters
+
+**Server Errors (500)**
+- `DatabaseError`: Database operation failed
+- `FileSystemError`: File system operation failed
+- `FfmpegError`: FFmpeg execution failed
+- `MetadataServiceError`: Metadata service failed
+- `InternalServerError`: Unexpected server error
+
+#### Exception Handling
+
+The API includes a global exception handler middleware that automatically converts various exception types to structured API errors:
+
+- `ArgumentException` → Validation error
+- `ArgumentNullException` → Validation error
+- `InvalidOperationException` → Business logic error
+- `FileNotFoundException` → Not found error
+- `DirectoryNotFoundException` → Not found error
+- `UnauthorizedAccessException` → Forbidden error
+- `TimeoutException` → Server error
+- `ApiError` → Used directly (already structured)
+- Other exceptions → Generic server error
+
 ### Notes
 - Compiler/analyzer warnings are treated as errors via `Directory.Build.props`.
 - Nullable reference types are enabled.

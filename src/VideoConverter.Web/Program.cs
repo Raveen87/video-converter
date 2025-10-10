@@ -3,6 +3,7 @@ using VideoConverter.Web.Data;
 using VideoConverter.Web.Api;
 using VideoConverter.Web.Services;
 using VideoConverter.Web.Validation;
+using VideoConverter.Web.Middleware;
 
 namespace VideoConverter.Web;
 
@@ -28,6 +29,9 @@ public static class Program
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
 
         var app = builder.Build();
+
+        // Add global exception handling middleware
+        _ = app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
         // Log service initialization
         var logger = app.Services.GetRequiredService<ILogger<object>>();
