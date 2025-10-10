@@ -3,6 +3,7 @@ using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
 using VideoConverter.Web.Services;
 using VideoConverter.Web.Validation;
+using VideoConverter.Web.Exceptions;
 
 namespace VideoConverter.Web.Api;
 
@@ -46,11 +47,10 @@ public static class ConversionsApi
         catch (InvalidOperationException ex)
         {
             logger.LogWarning(ex, "Conversion creation failed: {Error}", ex.Message);
-            var dict = new Dictionary<string, string[]>
-            {
-                { "General", new[] { ex.Message } }
-            };
-            return Results.ValidationProblem(dict);
+            throw ApiErrorException.ValidationError(
+                ex.Message,
+                "The conversion request is invalid. Please check your input parameters and try again.",
+                ex);
         }
     }
 
@@ -80,7 +80,10 @@ public static class ConversionsApi
         if (conversion is null)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
-            return Results.NotFound();
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
         }
 
         logger.LogInformation("Found conversion {ConversionId} for input: {InputPath}", id, conversion.InputPath);
@@ -94,7 +97,10 @@ public static class ConversionsApi
         else
         {
             logger.LogError("Failed to start conversion {ConversionId}: {ErrorMessage}", id, result.ErrorMessage);
-            return Results.BadRequest(new { message = result.ErrorMessage });
+            throw ApiErrorException.BusinessError(
+                ErrorCode.ProcessStartFailed,
+                result.ErrorMessage ?? "Unknown error occurred",
+                "Failed to start the conversion process. Please try again later.");
         }
     }
 
@@ -113,7 +119,10 @@ public static class ConversionsApi
         if (conversion is null)
         {
             logger.LogInformation("No conversions found in queue");
-            return Results.NotFound(new { message = "Queue is empty" });
+            throw ApiErrorException.NotFound(
+                ErrorCode.QueueEmpty,
+                "No conversions found in the queue.",
+                "There are no conversions available to start.");
         }
 
         logger.LogInformation("Starting next conversion {ConversionId} for input: {InputPath}",
@@ -130,7 +139,10 @@ public static class ConversionsApi
         {
             logger.LogError("Failed to start next conversion {ConversionId}: {ErrorMessage}",
                 conversion.Id, result.ErrorMessage);
-            return Results.BadRequest(new { message = result.ErrorMessage, conversionId = conversion.Id });
+            throw ApiErrorException.BusinessError(
+                ErrorCode.ProcessStartFailed,
+                result.ErrorMessage ?? "Unknown error occurred",
+                "Failed to start the conversion process. Please try again later.");
         }
     }
 }
