@@ -13,6 +13,9 @@ public class ServiceLayerTests
     private readonly Mock<IAudioLanguageMatcher> _mockAudioMatcher;
     private readonly Mock<ISubtitleLanguageMatcher> _mockSubtitleMatcher;
     private readonly Mock<ICropDetector> _mockCropDetector;
+    private readonly Mock<IMetadataService> _mockMetadataService;
+    private readonly Mock<IFilenameParser> _mockFilenameParser;
+    private readonly Mock<IFilenameGenerator> _mockFilenameGenerator;
     private readonly Mock<ILogger<ConversionService>> _mockLogger;
     private readonly ConversionService _conversionService;
 
@@ -22,6 +25,9 @@ public class ServiceLayerTests
         _mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
         _mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         _mockCropDetector = new Mock<ICropDetector>();
+        _mockMetadataService = new Mock<IMetadataService>();
+        _mockFilenameParser = new Mock<IFilenameParser>();
+        _mockFilenameGenerator = new Mock<IFilenameGenerator>();
         _mockLogger = new Mock<ILogger<ConversionService>>();
 
         _conversionService = new ConversionService(
@@ -29,6 +35,9 @@ public class ServiceLayerTests
             _mockAudioMatcher.Object,
             _mockSubtitleMatcher.Object,
             _mockCropDetector.Object,
+            _mockMetadataService.Object,
+            _mockFilenameParser.Object,
+            _mockFilenameGenerator.Object,
             _mockLogger.Object);
     }
 
@@ -51,6 +60,15 @@ public class ServiceLayerTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:1080:0:0");
 
+        _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
+            .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "test", 2020));
+
+        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MovieMetadata("Test Movie", 2020));
+
+        _ = _mockFilenameGenerator.Setup(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()))
+            .Returns("Test Movie.2020.mp4");
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
@@ -65,6 +83,7 @@ public class ServiceLayerTests
         _ = result.SelectedSubtitleStreamIndicesCsv.Should().BeNull();
         _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
         _ = result.DetectedCrop.Should().Be("1920:1080:0:0");
+        _ = result.MetadataBasedFilename.Should().Be("Test Movie.2020.mp4");
     }
 
     [Fact]
@@ -360,5 +379,82 @@ public class ServiceLayerTests
         _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
         _ = result.DetectedCrop.Should().Be("1920:1080:0:0");
         _ = result.CreatedAtUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WithTvShowMetadata_GeneratesCorrectFilename()
+    {
+        // Arrange
+        var request = new ConversionCreateDto(
+            InputPath: "Yellowstone.S01E01.Daybreak.mp4",
+            OutputDirectory: "output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null);
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _ = _mockFilenameParser.Setup(x => x.ParseFilename("Yellowstone.S01E01.Daybreak.mp4"))
+            .Returns(new ParsedFilename("Yellowstone.S01E01.Daybreak.mp4", MediaType.TvShow, "Yellowstone", null, 1, 1, "Daybreak"));
+
+        _ = _mockMetadataService.Setup(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TvShowMetadata("Yellowstone", 2018, 1, 1, "Daybreak", "Episode description", null));
+
+        _ = _mockFilenameGenerator.Setup(x => x.GenerateFilename(It.IsAny<TvShowMetadata>(), ".mp4"))
+            .Returns("Yellowstone.S01E01.Daybreak.mp4");
+
+        // Act
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.MetadataBasedFilename.Should().Be("Yellowstone.S01E01.Daybreak.mp4");
+
+        _mockFilenameParser.Verify(x => x.ParseFilename("Yellowstone.S01E01.Daybreak.mp4"), Times.Once);
+        _mockMetadataService.Verify(x => x.GetTvShowMetadataAsync("Yellowstone", 1, 1, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockFilenameGenerator.Verify(x => x.GenerateFilename(It.IsAny<TvShowMetadata>(), ".mp4"), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WithMetadataLookupFailure_UsesOriginalFilename()
+    {
+        // Arrange
+        var request = new ConversionCreateDto(
+            InputPath: "Unknown.Movie.mp4",
+            OutputDirectory: "output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null);
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _ = _mockFilenameParser.Setup(x => x.ParseFilename("Unknown.Movie.mp4"))
+            .Returns(new ParsedFilename("Unknown.Movie.mp4", MediaType.Movie, "Unknown Movie", 2020));
+
+        _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MovieMetadata?)null);
+
+        // Act
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.MetadataBasedFilename.Should().Be("Unknown.Movie.mp4");
+
+        _mockFilenameParser.Verify(x => x.ParseFilename("Unknown.Movie.mp4"), Times.Once);
+        _mockMetadataService.Verify(x => x.GetMovieMetadataAsync("Unknown Movie", 2020, It.IsAny<CancellationToken>()), Times.Once);
+        _mockFilenameGenerator.Verify(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()), Times.Never);
     }
 }
