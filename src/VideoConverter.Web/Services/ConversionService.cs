@@ -1,5 +1,6 @@
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
+using VideoConverter.Web.Models;
 using VideoConverter.Web.Services.Models;
 
 namespace VideoConverter.Web.Services;
@@ -43,13 +44,17 @@ public sealed class ConversionService(
         // Look up metadata and generate filename
         var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, cancellationToken);
 
+        // Determine audio bitrate based on audio channels
+        var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
+
         var conversion = new Conversion
         {
             InputPath = request.InputPath,
             OutputDirectory = request.OutputDirectory,
             CreatedAtUtc = DateTime.UtcNow,
             Crf = request.Crf,
-            AudioBitrateKbps = request.AudioBitrateKbps,
+            AudioBitrateKbps = audioBitrate,
+            AudioChannels = request.AudioChannels ?? AudioChannels.Stereo20, // Default to 2.0
             Resolution = request.Resolution,
             SelectedAudioStreamIndicesCsv = audioProcessing.AudioIndicesCsv,
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
@@ -64,6 +69,19 @@ public sealed class ConversionService(
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none", detectedCrop ?? "none");
 
         return conversion;
+    }
+
+    private static int DetermineAudioBitrate(int? requestedBitrate, AudioChannels? audioChannels)
+    {
+        // If bitrate is explicitly provided, use it
+        if (requestedBitrate.HasValue)
+        {
+            return requestedBitrate.Value;
+        }
+
+        // Otherwise, use default bitrate based on audio channels
+        var channels = audioChannels ?? AudioChannels.Stereo20;
+        return channels.GetDefaultBitrate();
     }
 
     private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, CancellationToken cancellationToken)

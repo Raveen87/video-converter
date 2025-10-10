@@ -1,3 +1,5 @@
+using VideoConverter.Web.Models;
+
 namespace VideoConverter.Web.Validation;
 
 public static class ValidationHelpers
@@ -175,6 +177,19 @@ public static class ValidationHelpers
                 errorMessage = "Language names must be non-empty.";
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    public static bool IsValidAudioChannels(AudioChannels? audioChannels, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (audioChannels is not null && !Enum.IsDefined(audioChannels.Value))
+        {
+            errorMessage = "AudioChannels must be either 2.0 (Stereo) or 5.1 (Surround).";
+            return false;
         }
 
         return true;

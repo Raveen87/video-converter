@@ -20,6 +20,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English"],
             SubtitleLanguages: ["English"]);
@@ -48,6 +49,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -76,6 +78,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: [],
             SubtitleLanguages: []);
@@ -101,6 +104,7 @@ public class ApiLayerTests
             CreatedAtUtc: DateTime.UtcNow,
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             MetadataBasedFilename: "Test Movie.2020.mp4");
 
@@ -130,6 +134,7 @@ public class ApiLayerTests
             CreatedAtUtc: DateTime.UtcNow,
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             MetadataBasedFilename: null);
 
@@ -156,6 +161,7 @@ public class ApiLayerTests
             OutputDirectory: "output with spaces",
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English", "Français", "Español"],
             SubtitleLanguages: ["English", "中文", "العربية"]);
@@ -184,6 +190,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: longLanguages,
             SubtitleLanguages: longLanguages);
@@ -208,6 +215,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 0, // Minimum valid CRF
             AudioBitrateKbps: 1, // Minimum valid bitrate
+            AudioChannels: null,
             Resolution: 720, // Minimum valid resolution
             AudioLanguages: ["English"],
             SubtitleLanguages: ["English"]);
@@ -232,6 +240,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 63, // Maximum valid CRF
             AudioBitrateKbps: 450, // Maximum valid bitrate
+            AudioChannels: null,
             Resolution: 2160, // Maximum valid resolution
             AudioLanguages: ["English"],
             SubtitleLanguages: ["English"]);
@@ -256,6 +265,7 @@ public class ApiLayerTests
             OutputDirectory: "output",
             Crf: 100, // Invalid CRF
             AudioBitrateKbps: 500, // Invalid bitrate
+            AudioChannels: null,
             Resolution: 1440, // Invalid resolution
             AudioLanguages: [""], // Invalid language
             SubtitleLanguages: ["   "]); // Invalid language

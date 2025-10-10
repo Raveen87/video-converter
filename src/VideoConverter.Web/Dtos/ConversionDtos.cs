@@ -1,3 +1,5 @@
+using VideoConverter.Web.Models;
+
 namespace VideoConverter.Web.Dtos;
 
 public record ConversionCreateDto(
@@ -5,6 +7,7 @@ public record ConversionCreateDto(
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
+    AudioChannels? AudioChannels,
     int? Resolution,
     IReadOnlyList<string>? AudioLanguages,
     IReadOnlyList<string>? SubtitleLanguages);
@@ -16,5 +19,6 @@ public record ConversionDto(
     DateTime CreatedAtUtc,
     int? Crf,
     int? AudioBitrateKbps,
+    AudioChannels? AudioChannels,
     int? Resolution,
     string? MetadataBasedFilename);

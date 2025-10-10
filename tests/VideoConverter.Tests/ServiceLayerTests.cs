@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using VideoConverter.Web.Dtos;
+using VideoConverter.Web.Models;
 using VideoConverter.Web.Services;
 using VideoConverter.Web.Services.Models;
 
@@ -50,6 +51,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -77,7 +79,8 @@ public class ServiceLayerTests
         _ = result.InputPath.Should().Be("test.mp4");
         _ = result.OutputDirectory.Should().Be("output");
         _ = result.Crf.Should().BeNull();
-        _ = result.AudioBitrateKbps.Should().BeNull();
+        _ = result.AudioBitrateKbps.Should().Be(128); // Default bitrate for 2.0 audio channels
+        _ = result.AudioChannels.Should().Be(AudioChannels.Stereo20); // Default audio channels
         _ = result.Resolution.Should().BeNull();
         _ = result.SelectedAudioStreamIndicesCsv.Should().BeNull();
         _ = result.SelectedSubtitleStreamIndicesCsv.Should().BeNull();
@@ -95,6 +98,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: 23,
             AudioBitrateKbps: 128,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English", "Swedish"],
             SubtitleLanguages: null);
@@ -138,6 +142,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: ["English", "Swedish"]);
@@ -181,6 +186,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: 2160, // Requesting 4K
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -207,6 +213,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -236,6 +243,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -263,6 +271,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: ["French"]);
@@ -292,6 +301,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: ["Swedish"]);
@@ -342,6 +352,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: 20,
             AudioBitrateKbps: 256,
+            AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English"],
             SubtitleLanguages: ["English"]);
@@ -390,6 +401,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);
@@ -430,6 +442,7 @@ public class ServiceLayerTests
             OutputDirectory: "output",
             Crf: null,
             AudioBitrateKbps: null,
+            AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null);

@@ -1,4 +1,5 @@
 using VideoConverter.Web.Data;
+using VideoConverter.Web.Models;
 
 namespace VideoConverter.Web.Services;
 
@@ -97,6 +98,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
                 "-vf", vf,
                 "-c:a", "libopus",
                 "-b:a", (conversion.AudioBitrateKbps ?? 128) + "k",
+                "-ac", conversion.AudioChannels?.GetFfmpegChannelLayout() ?? "stereo",
                 outputFile
             };
 
