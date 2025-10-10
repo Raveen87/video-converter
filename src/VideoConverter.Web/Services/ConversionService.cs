@@ -150,6 +150,11 @@ public sealed class ConversionService(
                 throw new InvalidOperationException($"Requested resolution {request.Resolution}p exceeds source height {probe.VideoHeight}p.");
             }
         }
+        catch (InvalidOperationException)
+        {
+            // Re-throw validation exceptions
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);

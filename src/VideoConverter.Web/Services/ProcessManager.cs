@@ -170,7 +170,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
             }
         }
 
-        return Quote(executablePath) + " " + string.Join(" ", displayArgs);
+        return Quote(executablePath) + (displayArgs.Count > 0 ? " " + string.Join(" ", displayArgs) : "");
     }
 }
 
