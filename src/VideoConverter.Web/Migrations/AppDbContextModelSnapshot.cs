@@ -26,6 +26,9 @@ namespace VideoConverter.Web.Migrations
                     b.Property<int?>("AudioBitrateKbps")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("AudioChannels")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 

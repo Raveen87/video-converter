@@ -21,6 +21,7 @@ dotnet test
       "outputDirectory": "C:/videos/out",
       "crf": 40,
       "audioBitrateKbps": 128,
+      "audioChannels": 2,
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"]
@@ -42,6 +43,7 @@ dotnet test
         "createdAtUtc": "2025-10-06T12:00:00Z",
         "crf": 40,
         "audioBitrateKbps": 128,
+        "audioChannels": 2,
         "resolution": 720,
         "metadataBasedFilename": "Inception.2010.mp4"
       }
@@ -92,7 +94,8 @@ Environment/app settings:
 - `inputPath` must be a non-empty string and point to an existing file (not a directory).
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
 - `crf` (optional): integer 0–63. If omitted, defaults to 40.
-- `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128.
+- `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128 for 2.0 audio or 192 for 5.1 audio.
+- `audioChannels` (optional): integer 2 (Stereo 2.0) or 6 (Surround 5.1). If omitted, defaults to 2 (Stereo 2.0).
 - `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
 - `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
   - When provided, the service probes the input with ffprobe and attempts to match each requested language using:
@@ -191,7 +194,7 @@ The API includes a global exception handler middleware that automatically conver
 
 ### FFmpeg settings used
 - Video: AV1 via `libsvtav1`, 10-bit (`-pix_fmt yuv420p10le`), preset `6` (optimized for quality), GOP `120`, configurable CRF (`-crf <0..63>`, default 40)
-- Audio: Opus `-c:a libopus -b:a <kbps>k` (default 128k)
+- Audio: Opus `-c:a libopus -b:a <kbps>k -ac <channels>` (default 128k for 2.0, 192k for 5.1)
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
 - Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
@@ -239,7 +242,7 @@ When a conversion is queued, the service automatically looks up metadata for the
 
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:s? -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -c:s copy -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
+ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:s? -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -ac <channels> -c:s copy -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
 ```
 
 ### Static Analysis

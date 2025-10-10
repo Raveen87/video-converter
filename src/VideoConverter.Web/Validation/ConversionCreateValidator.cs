@@ -68,6 +68,13 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
             result.Add(nameof(request.SubtitleLanguages), subtitleLangError!);
         }
 
+        // Validate audio channels (when provided)
+        if (!ValidationHelpers.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError))
+        {
+            _logger.LogWarning("Validation failed: Audio channels - {Error}", audioChannelsError);
+            result.Add(nameof(request.AudioChannels), audioChannelsError!);
+        }
+
         if (result.IsValid)
         {
             _logger.LogInformation("Validation completed successfully");
