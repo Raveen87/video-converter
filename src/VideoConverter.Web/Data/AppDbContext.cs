@@ -5,6 +5,7 @@ namespace VideoConverter.Web.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Conversion> Conversions => Set<Conversion>();
+    public DbSet<Profile> Profiles => Set<Profile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,5 +32,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096);
         _ = entity.Property(c => c.DetectedCrop)
             .HasMaxLength(64);
+
+        var profileEntity = modelBuilder.Entity<Profile>();
+        _ = profileEntity.HasKey(p => p.Id);
+        _ = profileEntity.Property(p => p.OutputDirectory)
+            .HasMaxLength(1024);
+        _ = profileEntity.Property(p => p.MetadataBasedFilename)
+            .HasMaxLength(1024);
     }
 }

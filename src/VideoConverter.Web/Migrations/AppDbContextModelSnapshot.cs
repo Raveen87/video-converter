@@ -71,6 +71,37 @@ namespace VideoConverter.Web.Migrations
 
                     b.ToTable("Conversions");
                 });
+
+            modelBuilder.Entity("VideoConverter.Web.Data.Profile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AudioBitrateKbps")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AudioChannels")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Crf")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MetadataBasedFilename")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutputDirectory")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Resolution")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Profiles");
+                });
 #pragma warning restore 612, 618
         }
     }
