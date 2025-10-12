@@ -18,6 +18,7 @@ public enum ErrorCode
     ConversionNotFound = 2001,
     FileNotFound = 2002,
     QueueEmpty = 2003,
+    ProfileNotFound = 2004,
 
     // Business logic errors (400)
     ConversionAlreadyStarted = 3001,
