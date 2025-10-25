@@ -30,9 +30,10 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         var response = context.Response;
         response.ContentType = "application/json";
 
-        var apiError = exception switch
+        object apiError = exception switch
         {
             ApiErrorException apiException => apiException,
+            ValidationException validationEx => validationEx,
             ArgumentNullException nullEx => ApiErrorException.ValidationError(
                 nullEx.Message,
                 "A required parameter is missing. Please provide all required information.",
@@ -74,9 +75,20 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
                 exception)
         };
 
-        response.StatusCode = (int)apiError.StatusCode;
+        var errorResponse = apiError switch
+        {
+            ApiErrorException apiException => apiException.ToDictionary(),
+            ValidationException validationException => validationException.ToDictionary(),
+            _ => throw new InvalidOperationException("Unexpected error type")
+        };
 
-        var errorResponse = apiError.ToDictionary();
+        response.StatusCode = apiError switch
+        {
+            ApiErrorException apiException => (int)apiException.StatusCode,
+            ValidationException => (int)HttpStatusCode.BadRequest,
+            _ => (int)HttpStatusCode.InternalServerError
+        };
+
         var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

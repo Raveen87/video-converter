@@ -31,6 +31,9 @@ public static class Program
         _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfileCreateDto>, ProfileCreateValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfilePatchDto>, ProfilePatchValidator>();
+        _ = builder.Services.AddScoped<ProfileExistsValidator>();
         _ = builder.Services.AddControllers().AddNewtonsoftJson();
 
         var app = builder.Build();

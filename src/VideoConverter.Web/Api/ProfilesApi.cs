@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
 using VideoConverter.Web.Exceptions;
+using VideoConverter.Web.Validation;
 
 namespace VideoConverter.Web.Api;
 
@@ -19,9 +20,22 @@ public static class ProfilesApi
     private static async Task<IResult> CreateProfileAsync(
         ProfileCreateDto request,
         AppDbContext db,
-        ILogger logger)
+        ILogger logger,
+        ProfileCreateValidator validator,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Creating profile with request: {@ProfileRequest}", request);
+
+        // Validate the request
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            logger.LogWarning("Profile creation validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
+            throw new ValidationException(
+                "Validation failed.",
+                "The request contains invalid data.",
+                validationResult.ToDictionary());
+        }
 
         var profile = new Profile
         {
@@ -34,7 +48,7 @@ public static class ProfilesApi
         };
 
         _ = db.Profiles.Add(profile);
-        _ = await db.SaveChangesAsync();
+        _ = await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Profile created successfully with ID: {ProfileId}", profile.Id);
         return Results.Created($"/api/profiles/{profile.Id}", ToDto(profile));
@@ -43,22 +57,13 @@ public static class ProfilesApi
     private static async Task<IResult> GetProfileByIdAsync(
         int id,
         AppDbContext db,
-        ILogger logger)
+        ILogger logger,
+        ProfileExistsValidator profileExistsValidator,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Retrieving profile with ID: {ProfileId}", id);
 
-        var profile = await db.Profiles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (profile is null)
-        {
-            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
-            throw ApiErrorException.NotFound(
-                ErrorCode.ProfileNotFound,
-                $"Profile with ID {id} was not found.",
-                "The requested profile could not be found.");
-        }
+        var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, cancellationToken);
 
         logger.LogInformation("Profile retrieved successfully with ID: {ProfileId}", id);
         return Results.Ok(ToDto(profile));
@@ -68,7 +73,10 @@ public static class ProfilesApi
         int id,
         JsonPatchDocument<ProfilePatchDto> patchDocument,
         AppDbContext db,
-        ILogger logger)
+        ILogger logger,
+        ProfilePatchValidator validator,
+        ProfileExistsValidator profileExistsValidator,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Updating profile with ID: {ProfileId}", id);
 
@@ -80,15 +88,7 @@ public static class ProfilesApi
                 "The request body must contain a valid JSON Patch document.");
         }
 
-        var profile = await db.Profiles.FirstOrDefaultAsync(p => p.Id == id);
-        if (profile is null)
-        {
-            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
-            throw ApiErrorException.NotFound(
-                ErrorCode.ProfileNotFound,
-                $"Profile with ID {id} was not found.",
-                "The requested profile could not be found.");
-        }
+        var profile = await profileExistsValidator.GetProfileForUpdateAsync(id, db, cancellationToken);
 
         var patchModel = new ProfilePatchDto
         {
@@ -113,6 +113,17 @@ public static class ProfilesApi
                 ex);
         }
 
+        // Validate the patched model
+        var validationResult = await validator.ValidateAsync(patchModel, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            logger.LogWarning("Profile update validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
+            throw new ValidationException(
+                "Validation failed.",
+                "The request contains invalid data.",
+                validationResult.ToDictionary());
+        }
+
         profile.OutputDirectory = patchModel.OutputDirectory;
         profile.Crf = patchModel.Crf;
         profile.AudioBitrateKbps = patchModel.AudioBitrateKbps;
@@ -120,7 +131,7 @@ public static class ProfilesApi
         profile.Resolution = patchModel.Resolution;
         profile.MetadataBasedFilename = patchModel.MetadataBasedFilename;
 
-        _ = await db.SaveChangesAsync();
+        _ = await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
         return Results.Ok(ToDto(profile));
