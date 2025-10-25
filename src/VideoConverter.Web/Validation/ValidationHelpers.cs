@@ -98,20 +98,45 @@ public static class ValidationHelpers
         {
             var fullPath = Path.GetFullPath(directoryPath!);
 
+            // Check if directory exists or create it atomically during validation
             if (!Directory.Exists(fullPath))
             {
-                try
+                // Check if the parent directory exists and is writable
+                var parentDir = Path.GetDirectoryName(fullPath);
+
+                // Handle root directory children (e.g., "C:\newdir" -> parentDir is null, "/newdir" -> parentDir is "/")
+                if (string.IsNullOrEmpty(parentDir))
                 {
-                    _ = Directory.CreateDirectory(fullPath);
+                    // This is a direct child of the root directory (e.g., "C:\newdir", "/newdir")
+                    // The root directory always exists, so we just need to check if we can write to it
+                    var rootDir = Path.GetPathRoot(fullPath);
+                    if (string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir))
+                    {
+                        errorMessage = "Root directory does not exist.";
+                        return false;
+                    }
+
+                    if (!CanWriteToDirectory(rootDir))
+                    {
+                        errorMessage = "Cannot create directory: root directory is not writable.";
+                        return false;
+                    }
                 }
-                catch (Exception ex)
+                else if (!Directory.Exists(parentDir))
                 {
-                    errorMessage = $"Cannot create directory: {ex.Message}";
+                    errorMessage = "Parent directory does not exist.";
                     return false;
                 }
-            }
+                else if (!CanWriteToDirectory(parentDir))
+                {
+                    errorMessage = "Cannot create directory: parent directory is not writable.";
+                    return false;
+                }
 
-            if (Directory.Exists(fullPath) && !CanWriteToDirectory(fullPath))
+                // Create the directory atomically during validation
+                _ = Directory.CreateDirectory(fullPath);
+            }
+            else if (!CanWriteToDirectory(fullPath))
             {
                 errorMessage = "Directory is not writable.";
                 return false;
@@ -189,6 +214,33 @@ public static class ValidationHelpers
         if (audioChannels is not null && !Enum.IsDefined(audioChannels.Value))
         {
             errorMessage = "AudioChannels must be either 2.0 (Stereo) or 5.1 (Surround).";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static bool IsValidMetadataBasedFilename(string? metadataBasedFilename, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(metadataBasedFilename))
+        {
+            return true; // Optional field, null/empty is valid
+        }
+
+        // Check for invalid characters that could cause issues in filenames
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (metadataBasedFilename.IndexOfAny(invalidChars) >= 0)
+        {
+            errorMessage = "MetadataBasedFilename contains invalid characters for filenames.";
+            return false;
+        }
+
+        // Check for reasonable length
+        if (metadataBasedFilename.Length > 200)
+        {
+            errorMessage = "MetadataBasedFilename is too long (maximum 200 characters).";
             return false;
         }
 
