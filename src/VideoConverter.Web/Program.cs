@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Data;
-using VideoConverter.Web.Api;
-using VideoConverter.Web.Services.Conversion;
-using VideoConverter.Web.Services.Ffmpeg;
-using VideoConverter.Web.Services.Metadata;
-using VideoConverter.Web.Services.LanguageMatching;
-using VideoConverter.Web.Validation;
-using VideoConverter.Web.Middleware;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
+using VideoConverter.Web.Features.Conversions.Api;
+using VideoConverter.Web.Features.Profiles.Api;
+using VideoConverter.Web.Features.Conversions.Services;
+using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Web.Features.Metadata.Services;
+using VideoConverter.Web.Shared.Validation;
+using VideoConverter.Web.Features.Conversions.Validation;
+using VideoConverter.Web.Features.Profiles.Validation;
+using VideoConverter.Web.Common.Middleware;
 
 namespace VideoConverter.Web;
 
@@ -33,9 +35,9 @@ public static class Program
         _ = builder.Services.AddSingleton<IFilenameParser, FilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
-        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
-        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfileCreateDto>, ProfileCreateValidator>();
-        _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfilePatchDto>, ProfilePatchValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
+        _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfilePatchDto>, ProfilePatchValidator>();
         _ = builder.Services.AddScoped<ProfileExistsValidator>();
         _ = builder.Services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
         _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
