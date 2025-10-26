@@ -1,9 +1,9 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Data;
-using VideoConverter.Web.Domain.Entities;
-using VideoConverter.Web.Services.Ffmpeg;
-using VideoConverter.Web.Validation;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
+using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Tests;
 

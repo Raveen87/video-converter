@@ -1,4 +1,4 @@
-using VideoConverter.Web.Validation;
+using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Tests.Validation;
 

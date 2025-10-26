@@ -18,7 +18,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
     private static bool _preflightDone;
     private static string? _preflightError;
 
-    public async Task<ConversionStartResult> StartAsync(Shared.Domain.Entities.Conversion conversion)
+    public async Task<ConversionStartResult> StartAsync(Conversion conversion)
     {
         _logger.LogInformation("Starting conversion for input: {InputPath}, output: {OutputDirectory}",
             conversion.InputPath, conversion.OutputDirectory);

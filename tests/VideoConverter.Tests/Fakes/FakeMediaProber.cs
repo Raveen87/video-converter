@@ -1,5 +1,5 @@
-using VideoConverter.Web.Domain.Models;
-using VideoConverter.Web.Services.Ffmpeg;
+using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Fakes;
 

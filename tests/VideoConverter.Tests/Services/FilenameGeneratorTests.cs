@@ -1,5 +1,5 @@
-using VideoConverter.Web.Services.Metadata;
-using VideoConverter.Web.Domain.Models;
+using VideoConverter.Web.Features.Metadata.Services;
+using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Tests.Services;
 

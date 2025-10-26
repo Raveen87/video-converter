@@ -1,8 +1,8 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Data;
-using VideoConverter.Web.Domain.Entities;
-using VideoConverter.Web.Domain.Models;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
+using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Tests.Persistence;
 

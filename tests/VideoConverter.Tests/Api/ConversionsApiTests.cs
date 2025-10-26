@@ -1,6 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
-using VideoConverter.Web.Dtos;
+using VideoConverter.Web.Features.Conversions.Dtos;
 
 namespace VideoConverter.Tests.Api;
 

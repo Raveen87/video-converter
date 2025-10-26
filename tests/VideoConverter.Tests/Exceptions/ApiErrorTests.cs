@@ -1,5 +1,5 @@
 using System.Net;
-using VideoConverter.Web.Exceptions;
+using VideoConverter.Web.Common.Exceptions;
 
 namespace VideoConverter.Tests.Exceptions;
 

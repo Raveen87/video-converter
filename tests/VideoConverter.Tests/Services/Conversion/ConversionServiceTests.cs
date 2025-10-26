@@ -1,12 +1,12 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using VideoConverter.Web.Dtos;
-using VideoConverter.Web.Domain.Models;
-using VideoConverter.Web.Services.Conversion;
-using VideoConverter.Web.Services.Ffmpeg;
-using VideoConverter.Web.Services.Metadata;
-using VideoConverter.Web.Services.LanguageMatching;
+using VideoConverter.Web.Features.Conversions.Dtos;
+using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Web.Features.Conversions.Services;
+using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Web.Features.Metadata.Services;
+using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

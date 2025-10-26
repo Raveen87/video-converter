@@ -5,5 +5,5 @@ namespace VideoConverter.Web.Features.Conversions.Services;
 
 public interface IConversionService
 {
-    Task<Shared.Domain.Entities.Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken);
+    Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken);
 }

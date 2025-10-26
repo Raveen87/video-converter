@@ -3,8 +3,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using VideoConverter.Web.Exceptions;
-using VideoConverter.Web.Middleware;
+using VideoConverter.Web.Common.Exceptions;
+using VideoConverter.Web.Common.Middleware;
 
 namespace VideoConverter.Tests.Middleware;
 

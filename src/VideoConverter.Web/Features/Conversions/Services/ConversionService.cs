@@ -26,7 +26,7 @@ public sealed class ConversionService(
     private readonly IFilenameGenerator _filenameGenerator = filenameGenerator;
     private readonly ILogger<ConversionService> _logger = logger;
 
-    public async Task<Shared.Domain.Entities.Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating conversion for input: {InputPath}, output: {OutputDirectory}",
             request.InputPath, request.OutputDirectory);
@@ -49,7 +49,7 @@ public sealed class ConversionService(
         // Determine audio bitrate based on audio channels
         var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
 
-        var conversion = new Shared.Domain.Entities.Conversion
+        var conversion = new Conversion
         {
             InputPath = request.InputPath,
             OutputDirectory = request.OutputDirectory,
