@@ -66,6 +66,30 @@ dotnet test
     ```
   - Response 404 if queue is empty
 
+- GET `/api/conversions/{id}/progress`
+  - Returns the current progress of a conversion by parsing ffmpeg output
+  - Response 200:
+    ```json
+    {
+      "status": "Running",
+      "percentageComplete": 45.2,
+      "currentTimeSeconds": 54.3,
+      "totalDurationSeconds": 120.0,
+      "estimatedTimeRemaining": "00:01:15"
+    }
+    ```
+  - Response 200 (conversion not running):
+    ```json
+    {
+      "status": "Waiting",
+      "percentageComplete": null,
+      "currentTimeSeconds": null,
+      "totalDurationSeconds": null,
+      "estimatedTimeRemaining": null
+    }
+    ```
+  - Response 404 if conversion ID not found
+
 ### Persistence
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
 - Override via environment variables, user secrets, or appsettings.

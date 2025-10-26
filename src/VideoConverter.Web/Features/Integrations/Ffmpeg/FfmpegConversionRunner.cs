@@ -1,9 +1,11 @@
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Web.Features.Conversions.Services;
+using System.Text.RegularExpressions;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegConversionRunner(IConfiguration configuration, ProcessManager processManager, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(IConfiguration configuration, ProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
 {
     private static readonly HashSet<string> RunningKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
@@ -12,11 +14,16 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
     private readonly bool _dryRun = string.Equals(configuration["Ffmpeg:DryRun"], "true", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
     private readonly ProcessManager _processManager = processManager;
+    private readonly IProgressTracker _progressTracker = progressTracker;
+    private readonly IMediaProber _mediaProber = mediaProber;
     private readonly ILogger<FfmpegConversionRunner> _logger = logger;
 
     private static readonly SemaphoreSlim _preflightLock = new(1, 1);
     private static bool _preflightDone;
     private static string? _preflightError;
+
+    // Regex to parse ffmpeg progress output: time=HH:MM:SS.ms
+    private static readonly Regex TimeRegex = new(@"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})", RegexOptions.Compiled);
 
     public async Task<ConversionStartResult> StartAsync(Conversion conversion)
     {
@@ -58,6 +65,22 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
                     _ = RunningKeys.Remove(key);
                 }
                 return new ConversionStartResult { IsSuccess = false, ErrorMessage = "InputPath and OutputDirectory are required." };
+            }
+
+            // Probe input file to get duration for progress tracking
+            double totalDurationSeconds = 0;
+            if (!_dryRun)
+            {
+                try
+                {
+                    var probe = await _mediaProber.ProbeAsync(conversion.InputPath, CancellationToken.None);
+                    totalDurationSeconds = probe.DurationSeconds ?? 0;
+                    _logger.LogDebug("Probed input file duration: {Duration}s", totalDurationSeconds);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to probe input file for duration, progress tracking will be limited");
+                }
             }
 
             _logger.LogDebug("Creating output directory: {OutputDirectory}", conversion.OutputDirectory);
@@ -219,17 +242,30 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
                 return new ConversionStartResult { IsSuccess = true, ProcessId = 0, Command = cmdString };
             }
 
+            // Start progress tracking
+            if (totalDurationSeconds > 0)
+            {
+                _progressTracker.StartTracking(conversion.Id, totalDurationSeconds);
+            }
+
             var result = await _processManager.RunProcessWithOutputHandlingAsync(
                 _ffmpegPath,
                 args,
                 onOutput: data => _logger.LogInformation("[ffmpeg] {Line}", data),
-                onError: data => _logger.LogInformation("[ffmpeg] {Line}", data),
+                onError: data =>
+                {
+                    _logger.LogInformation("[ffmpeg] {Line}", data);
+                    ParseProgressFromOutput(data, conversion.Id);
+                },
                 CancellationToken.None);
 
             lock (RunningKeys)
             {
                 _ = RunningKeys.Remove(key);
             }
+
+            // Stop progress tracking
+            _progressTracker.StopTracking(conversion.Id);
 
             if (result.IsSuccess)
             {
@@ -249,7 +285,31 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
             {
                 _ = RunningKeys.Remove(key);
             }
+            // Stop progress tracking on error
+            _progressTracker.StopTracking(conversion.Id);
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    private void ParseProgressFromOutput(string outputLine, int conversionId)
+    {
+        try
+        {
+            var match = TimeRegex.Match(outputLine);
+            if (match.Success)
+            {
+                var hours = int.Parse(match.Groups[1].Value);
+                var minutes = int.Parse(match.Groups[2].Value);
+                var seconds = int.Parse(match.Groups[3].Value);
+                var centiseconds = int.Parse(match.Groups[4].Value);
+
+                var totalSeconds = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100.0);
+                _progressTracker.UpdateProgress(conversionId, totalSeconds);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to parse progress from ffmpeg output: {OutputLine}", outputLine);
         }
     }
 
