@@ -26,6 +26,7 @@ public static class Program
 
         _ = builder.Services.AddHttpClient();
         _ = builder.Services.AddSingleton<ProcessManager>();
+        _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
         _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();

@@ -16,6 +16,7 @@ public static class ConversionsApi
         _ = app.MapGet("/api/conversions", ListConversionsAsync);
         _ = app.MapPost("/api/conversions/{id:int}/start", StartConversionByIdAsync);
         _ = app.MapPost("/api/conversions/start-next", StartNextConversionAsync);
+        _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
     }
 
     private static async Task<IResult> CreateConversionAsync(
@@ -145,5 +146,33 @@ public static class ConversionsApi
                 result.ErrorMessage ?? "Unknown error occurred",
                 "Failed to start the conversion process. Please try again later.");
         }
+    }
+
+    private static async Task<IResult> GetConversionProgressAsync(
+        int id,
+        AppDbContext db,
+        IProgressTracker progressTracker,
+        ILogger logger)
+    {
+        logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
+
+        // Check if conversion exists in database
+        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id);
+        if (!conversionExists)
+        {
+            logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
+        }
+
+        // Get progress from tracker
+        var progress = progressTracker.GetProgress(id);
+
+        logger.LogDebug("Retrieved progress for conversion {ConversionId}: Status={Status}, Percentage={Percentage}%",
+            id, progress?.Status, progress?.PercentageComplete);
+
+        return Results.Ok(progress);
     }
 }
