@@ -2,9 +2,11 @@ using VideoConverter.Web.Dtos;
 
 namespace VideoConverter.Web.Validation;
 
-public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator> logger) : IRequestValidator<ConversionCreateDto>
+public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator> logger, IFileSystemValidator fileSystemValidator, IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ConversionCreateDto>
 {
     private readonly ILogger<ConversionCreateValidator> _logger = logger;
+    private readonly IFileSystemValidator _fileSystemValidator = fileSystemValidator;
+    private readonly IRequestPropertyValidator _requestPropertyValidator = requestPropertyValidator;
 
     public Task<ValidationResult> ValidateAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
@@ -12,7 +14,7 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
         var result = new ValidationResult();
 
         // Validate input file
-        if (!ValidationHelpers.IsValidFile(request.InputPath, out var inputError))
+        if (!_fileSystemValidator.IsValidFile(request.InputPath, out var inputError))
         {
             _logger.LogWarning("Validation failed: InputPath - {Error}", inputError);
             result.Add(nameof(request.InputPath), inputError!);
@@ -23,7 +25,7 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
         }
 
         // Validate output directory
-        if (!ValidationHelpers.IsValidDirectory(request.OutputDirectory, out var outputError))
+        if (!_fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError))
         {
             _logger.LogWarning("Validation failed: OutputDirectory - {Error}", outputError);
             result.Add(nameof(request.OutputDirectory), outputError!);
@@ -34,42 +36,42 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
         }
 
         // Validate CRF range when provided
-        if (!ValidationHelpers.IsValidCrf(request.Crf, out var crfError))
+        if (!_requestPropertyValidator.IsValidCrf(request.Crf, out var crfError))
         {
             _logger.LogWarning("Validation failed: CRF value {Crf} - {Error}", request.Crf, crfError);
             result.Add(nameof(request.Crf), crfError!);
         }
 
         // Validate audio bitrate range when provided (kbps)
-        if (!ValidationHelpers.IsValidAudioBitrate(request.AudioBitrateKbps, out var bitrateError))
+        if (!_requestPropertyValidator.IsValidAudioBitrate(request.AudioBitrateKbps, out var bitrateError))
         {
             _logger.LogWarning("Validation failed: Audio bitrate {AudioBitrate}Kbps - {Error}", request.AudioBitrateKbps, bitrateError);
             result.Add(nameof(request.AudioBitrateKbps), bitrateError!);
         }
 
         // Validate resolution (when provided): allowed values 720, 1080, 2160
-        if (!ValidationHelpers.IsValidResolution(request.Resolution, out var resolutionError))
+        if (!_requestPropertyValidator.IsValidResolution(request.Resolution, out var resolutionError))
         {
             _logger.LogWarning("Validation failed: Resolution {Resolution}p - {Error}", request.Resolution, resolutionError);
             result.Add(nameof(request.Resolution), resolutionError!);
         }
 
         // Validate audio language names format (when provided)
-        if (!ValidationHelpers.IsValidLanguageList(request.AudioLanguages, out var audioLangError))
+        if (!_requestPropertyValidator.IsValidLanguageList(request.AudioLanguages, out var audioLangError))
         {
             _logger.LogWarning("Validation failed: Audio languages - {Error}", audioLangError);
             result.Add(nameof(request.AudioLanguages), audioLangError!);
         }
 
         // Validate subtitle language names format (when provided)
-        if (!ValidationHelpers.IsValidLanguageList(request.SubtitleLanguages, out var subtitleLangError))
+        if (!_requestPropertyValidator.IsValidLanguageList(request.SubtitleLanguages, out var subtitleLangError))
         {
             _logger.LogWarning("Validation failed: Subtitle languages - {Error}", subtitleLangError);
             result.Add(nameof(request.SubtitleLanguages), subtitleLangError!);
         }
 
         // Validate audio channels (when provided)
-        if (!ValidationHelpers.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError))
+        if (!_requestPropertyValidator.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError))
         {
             _logger.LogWarning("Validation failed: Audio channels - {Error}", audioChannelsError);
             result.Add(nameof(request.AudioChannels), audioChannelsError!);

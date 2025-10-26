@@ -8,109 +8,112 @@ namespace VideoConverter.Tests;
 
 public class UnitTests
 {
+    private readonly RequestPropertyValidator RequestPropertyValidator = new();
+    private readonly FileSystemValidator _fileSystemValidator = new();
+
     [Fact]
-    public void ValidationHelpers_IsValidCrf_ReturnsTrueForValidValues()
+    public void RequestPropertyValidator_IsValidCrf_ReturnsTrueForValidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidCrf(0, out var error1).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidCrf(0, out var error1).Should().BeTrue();
         _ = error1.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidCrf(63, out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidCrf(63, out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidCrf(30, out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidCrf(30, out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidCrf_ReturnsFalseForInvalidValues()
+    public void RequestPropertyValidator_IsValidCrf_ReturnsFalseForInvalidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidCrf(-1, out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidCrf(-1, out var error1).Should().BeFalse();
         _ = error1.Should().Be("CRF must be between 0 and 63.");
 
-        _ = ValidationHelpers.IsValidCrf(64, out var error2).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidCrf(64, out var error2).Should().BeFalse();
         _ = error2.Should().Be("CRF must be between 0 and 63.");
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidAudioBitrate_ReturnsTrueForValidValues()
+    public void RequestPropertyValidator_IsValidAudioBitrate_ReturnsTrueForValidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidAudioBitrate(1, out var error1).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(1, out var error1).Should().BeTrue();
         _ = error1.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidAudioBitrate(450, out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(450, out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidAudioBitrate(128, out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(128, out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidAudioBitrate_ReturnsFalseForInvalidValues()
+    public void RequestPropertyValidator_IsValidAudioBitrate_ReturnsFalseForInvalidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidAudioBitrate(0, out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(0, out var error1).Should().BeFalse();
         _ = error1.Should().Be("AudioBitrateKbps must be between 1 and 450.");
 
-        _ = ValidationHelpers.IsValidAudioBitrate(451, out var error2).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(451, out var error2).Should().BeFalse();
         _ = error2.Should().Be("AudioBitrateKbps must be between 1 and 450.");
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidResolution_ReturnsTrueForValidValues()
+    public void RequestPropertyValidator_IsValidResolution_ReturnsTrueForValidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidResolution(720, out var error1).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidResolution(720, out var error1).Should().BeTrue();
         _ = error1.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidResolution(1080, out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidResolution(1080, out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidResolution(2160, out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidResolution(2160, out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidResolution(null, out var error4).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidResolution(null, out var error4).Should().BeTrue();
         _ = error4.Should().BeNull();
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidResolution_ReturnsFalseForInvalidValues()
+    public void RequestPropertyValidator_IsValidResolution_ReturnsFalseForInvalidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidResolution(480, out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidResolution(480, out var error1).Should().BeFalse();
         _ = error1.Should().Be("Resolution must be one of: 720, 1080, 2160.");
 
-        _ = ValidationHelpers.IsValidResolution(1440, out var error2).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidResolution(1440, out var error2).Should().BeFalse();
         _ = error2.Should().Be("Resolution must be one of: 720, 1080, 2160.");
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidLanguageList_ReturnsTrueForValidValues()
+    public void RequestPropertyValidator_IsValidLanguageList_ReturnsTrueForValidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidLanguageList(null, out var error1).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList(null, out var error1).Should().BeTrue();
         _ = error1.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidLanguageList([], out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList([], out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidLanguageList(["English", "Swedish"], out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList(["English", "Swedish"], out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidLanguageList_ReturnsFalseForInvalidValues()
+    public void RequestPropertyValidator_IsValidLanguageList_ReturnsFalseForInvalidValues()
     {
         // Arrange & Act & Assert
-        _ = ValidationHelpers.IsValidLanguageList([""], out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidLanguageList([""], out var error1).Should().BeFalse();
         _ = error1.Should().Be("Language names must be non-empty.");
 
-        _ = ValidationHelpers.IsValidLanguageList(["English", ""], out var error2).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidLanguageList(["English", ""], out var error2).Should().BeFalse();
         _ = error2.Should().Be("Language names must be non-empty.");
 
-        _ = ValidationHelpers.IsValidLanguageList(["English", "   "], out var error3).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidLanguageList(["English", "   "], out var error3).Should().BeFalse();
         _ = error3.Should().Be("Language names must be non-empty.");
     }
 
@@ -304,7 +307,7 @@ public class UnitTests
     #region Edge Case Tests
 
     [Fact]
-    public void ValidationHelpers_IsValidPath_WithInvalidCharacters_ReturnsFalse()
+    public void FileSystemValidator_IsValidPath_WithInvalidCharacters_ReturnsFalse()
     {
         // Arrange
         var invalidPaths = new[]
@@ -320,7 +323,7 @@ public class UnitTests
         foreach (var path in invalidPaths)
         {
             // Act
-            var result = ValidationHelpers.IsValidPath(path, out var error);
+            var result = _fileSystemValidator.IsValidPath(path, out var error);
 
             // Assert
             _ = result.Should().BeFalse($"Path '{path}' should be invalid");
@@ -329,13 +332,13 @@ public class UnitTests
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidPath_WithVeryLongPath_ReturnsFalse()
+    public void FileSystemValidator_IsValidPath_WithVeryLongPath_ReturnsFalse()
     {
         // Arrange
         var longPath = "C:\\" + new string('a', 300) + ".mp4"; // Path longer than MAX_PATH
 
         // Act
-        var result = ValidationHelpers.IsValidPath(longPath, out var error);
+        var result = _fileSystemValidator.IsValidPath(longPath, out var error);
 
         // Assert
         _ = result.Should().BeFalse();
@@ -343,61 +346,61 @@ public class UnitTests
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidCrf_WithBoundaryValues_ReturnsCorrectResults()
+    public void RequestPropertyValidator_IsValidCrf_WithBoundaryValues_ReturnsCorrectResults()
     {
         // Test exact boundary values
-        _ = ValidationHelpers.IsValidCrf(-1, out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidCrf(-1, out var error1).Should().BeFalse();
         _ = error1.Should().Be("CRF must be between 0 and 63.");
 
-        _ = ValidationHelpers.IsValidCrf(0, out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidCrf(0, out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidCrf(63, out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidCrf(63, out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidCrf(64, out var error4).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidCrf(64, out var error4).Should().BeFalse();
         _ = error4.Should().Be("CRF must be between 0 and 63.");
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidAudioBitrate_WithBoundaryValues_ReturnsCorrectResults()
+    public void RequestPropertyValidator_IsValidAudioBitrate_WithBoundaryValues_ReturnsCorrectResults()
     {
         // Test exact boundary values
-        _ = ValidationHelpers.IsValidAudioBitrate(0, out var error1).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(0, out var error1).Should().BeFalse();
         _ = error1.Should().Be("AudioBitrateKbps must be between 1 and 450.");
 
-        _ = ValidationHelpers.IsValidAudioBitrate(1, out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(1, out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidAudioBitrate(450, out var error3).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(450, out var error3).Should().BeTrue();
         _ = error3.Should().BeNull();
 
-        _ = ValidationHelpers.IsValidAudioBitrate(451, out var error4).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidAudioBitrate(451, out var error4).Should().BeFalse();
         _ = error4.Should().Be("AudioBitrateKbps must be between 1 and 450.");
     }
 
     [Fact]
-    public void ValidationHelpers_IsValidLanguageList_WithVariousEdgeCases_ReturnsCorrectResults()
+    public void RequestPropertyValidator_IsValidLanguageList_WithVariousEdgeCases_ReturnsCorrectResults()
     {
         // Test null list
-        _ = ValidationHelpers.IsValidLanguageList(null, out var error1).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList(null, out var error1).Should().BeTrue();
         _ = error1.Should().BeNull();
 
         // Test empty list
-        _ = ValidationHelpers.IsValidLanguageList([], out var error2).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList([], out var error2).Should().BeTrue();
         _ = error2.Should().BeNull();
 
         // Test list with only whitespace
-        _ = ValidationHelpers.IsValidLanguageList(["   ", "\t", "\n"], out var error3).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidLanguageList(["   ", "\t", "\n"], out var error3).Should().BeFalse();
         _ = error3.Should().Be("Language names must be non-empty.");
 
         // Test list with mixed valid and invalid
-        _ = ValidationHelpers.IsValidLanguageList(["English", "", "Swedish"], out var error4).Should().BeFalse();
+        _ = RequestPropertyValidator.IsValidLanguageList(["English", "", "Swedish"], out var error4).Should().BeFalse();
         _ = error4.Should().Be("Language names must be non-empty.");
 
         // Test list with very long language names
         var longLanguage = new string('a', 1000);
-        _ = ValidationHelpers.IsValidLanguageList([longLanguage], out var error5).Should().BeTrue();
+        _ = RequestPropertyValidator.IsValidLanguageList([longLanguage], out var error5).Should().BeTrue();
         _ = error5.Should().BeNull();
     }
 

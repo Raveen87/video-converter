@@ -34,6 +34,8 @@ public static class Program
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfileCreateDto>, ProfileCreateValidator>();
         _ = builder.Services.AddScoped<IRequestValidator<Dtos.ProfilePatchDto>, ProfilePatchValidator>();
         _ = builder.Services.AddScoped<ProfileExistsValidator>();
+        _ = builder.Services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
+        _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
         _ = builder.Services.AddControllers().AddNewtonsoftJson();
 
         var app = builder.Build();
