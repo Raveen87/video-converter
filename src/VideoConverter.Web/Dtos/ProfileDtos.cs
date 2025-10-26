@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Web.Domain.Models;
 
 namespace VideoConverter.Web.Dtos;
 

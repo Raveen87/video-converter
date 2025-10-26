@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Api;
-using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.Conversion;
+using VideoConverter.Web.Services.Ffmpeg;
+using VideoConverter.Web.Services.Metadata;
+using VideoConverter.Web.Services.LanguageMatching;
 using VideoConverter.Web.Validation;
 using VideoConverter.Web.Middleware;
 
