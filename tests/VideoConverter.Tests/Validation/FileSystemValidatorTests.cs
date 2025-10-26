@@ -2,8 +2,10 @@ using VideoConverter.Web.Validation;
 
 namespace VideoConverter.Tests.Validation;
 
-public class ValidationHelpersReadOnlyTests
+public class FileSystemValidatorTests
 {
+    private readonly FileSystemValidator _validator = new();
+
     [Fact]
     public void IsValidDirectory_WithNonExistentParentDirectory_ReturnsFalse()
     {
@@ -16,7 +18,7 @@ public class ValidationHelpersReadOnlyTests
             // Don't create parent directory - it should not exist
 
             // Act
-            var isValid = ValidationHelpers.IsValidDirectory(subDir, out var errorMessage);
+            var isValid = _validator.IsValidDirectory(subDir, out var errorMessage);
 
             // Assert
             Assert.False(isValid);
@@ -46,7 +48,7 @@ public class ValidationHelpersReadOnlyTests
             _ = Directory.CreateDirectory(tempDir);
 
             // Act
-            var isValid = ValidationHelpers.IsValidDirectory(subDir, out var errorMessage);
+            var isValid = _validator.IsValidDirectory(subDir, out var errorMessage);
 
             // Assert
             Assert.True(isValid);
@@ -74,7 +76,7 @@ public class ValidationHelpersReadOnlyTests
             _ = Directory.CreateDirectory(tempDir);
 
             // Act
-            var isValid = ValidationHelpers.IsValidDirectory(tempDir, out var errorMessage);
+            var isValid = _validator.IsValidDirectory(tempDir, out var errorMessage);
 
             // Assert
             Assert.True(isValid);
@@ -97,7 +99,7 @@ public class ValidationHelpersReadOnlyTests
         var invalidPath = "C:\\Invalid<>Path\\With\\Invalid\\Characters";
 
         // Act
-        var isValid = ValidationHelpers.IsValidDirectory(invalidPath, out var errorMessage);
+        var isValid = _validator.IsValidDirectory(invalidPath, out var errorMessage);
 
         // Assert
         Assert.False(isValid);
@@ -109,7 +111,7 @@ public class ValidationHelpersReadOnlyTests
     public void IsValidDirectory_WithNullPath_ReturnsFalse()
     {
         // Act
-        var isValid = ValidationHelpers.IsValidDirectory(null, out var errorMessage);
+        var isValid = _validator.IsValidDirectory(null, out var errorMessage);
 
         // Assert
         Assert.False(isValid);
@@ -120,7 +122,7 @@ public class ValidationHelpersReadOnlyTests
     public void IsValidDirectory_WithEmptyPath_ReturnsFalse()
     {
         // Act
-        var isValid = ValidationHelpers.IsValidDirectory("", out var errorMessage);
+        var isValid = _validator.IsValidDirectory("", out var errorMessage);
 
         // Assert
         Assert.False(isValid);
@@ -131,7 +133,7 @@ public class ValidationHelpersReadOnlyTests
     public void IsValidDirectory_WithWhitespacePath_ReturnsFalse()
     {
         // Act
-        var isValid = ValidationHelpers.IsValidDirectory("   ", out var errorMessage);
+        var isValid = _validator.IsValidDirectory("   ", out var errorMessage);
 
         // Assert
         Assert.False(isValid);
@@ -149,7 +151,7 @@ public class ValidationHelpersReadOnlyTests
         try
         {
             // Act
-            var isValid = ValidationHelpers.IsValidDirectory(rootChild, out var errorMessage);
+            var isValid = _validator.IsValidDirectory(rootChild, out var errorMessage);
 
             // Assert
             // Note: This test may fail if the root directory is not writable (which is common)
@@ -188,7 +190,7 @@ public class ValidationHelpersReadOnlyTests
             try
             {
                 // Act
-                var isValid = ValidationHelpers.IsValidDirectory(rootChild, out var errorMessage);
+                var isValid = _validator.IsValidDirectory(rootChild, out var errorMessage);
 
                 // Assert
                 Assert.True(isValid);
@@ -218,7 +220,7 @@ public class ValidationHelpersReadOnlyTests
         var invalidRootChild = "invalidroot:\\testdir";
 
         // Act
-        var isValid = ValidationHelpers.IsValidDirectory(invalidRootChild, out var errorMessage);
+        var isValid = _validator.IsValidDirectory(invalidRootChild, out var errorMessage);
 
         // Assert
         Assert.False(isValid);

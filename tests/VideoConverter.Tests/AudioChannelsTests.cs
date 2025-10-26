@@ -6,6 +6,8 @@ namespace VideoConverter.Tests;
 
 public class AudioChannelsTests
 {
+    private readonly RequestPropertyValidator _requestPropertyValidator = new();
+
     [Fact]
     public void AudioChannels_GetDefaultBitrate_ForStereo20_Returns128()
     {
@@ -51,13 +53,13 @@ public class AudioChannelsTests
     [InlineData(AudioChannels.Stereo20, true, null)]
     [InlineData(AudioChannels.Surround51, true, null)]
     [InlineData((AudioChannels)99, false, "AudioChannels must be either 2.0 (Stereo) or 5.1 (Surround).")]
-    public void ValidationHelpers_IsValidAudioChannels_ValidatesCorrectly(
+    public void RequestPropertyValidator_IsValidAudioChannels_ValidatesCorrectly(
         AudioChannels? audioChannels,
         bool expectedValid,
         string? expectedError)
     {
         // Act
-        var isValid = ValidationHelpers.IsValidAudioChannels(audioChannels, out var errorMessage);
+        var isValid = _requestPropertyValidator.IsValidAudioChannels(audioChannels, out var errorMessage);
 
         // Assert
         _ = isValid.Should().Be(expectedValid);
