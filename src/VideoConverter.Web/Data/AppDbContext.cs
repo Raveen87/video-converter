@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using VideoConverter.Web.Domain.Entities;
 
 namespace VideoConverter.Web.Data;
 

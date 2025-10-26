@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VideoConverter.Web.Data;
+using VideoConverter.Web.Domain.Entities;
 using VideoConverter.Web.Exceptions;
 
 namespace VideoConverter.Web.Validation;

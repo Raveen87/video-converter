@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
-using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.Conversion;
+using VideoConverter.Web.Services.Ffmpeg;
 using VideoConverter.Web.Validation;
 using VideoConverter.Web.Exceptions;
 

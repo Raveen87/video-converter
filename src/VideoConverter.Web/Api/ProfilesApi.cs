@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.JsonPatch.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using VideoConverter.Web.Data;
 using VideoConverter.Web.Dtos;
+using VideoConverter.Web.Domain.Entities;
 using VideoConverter.Web.Exceptions;
 using VideoConverter.Web.Validation;
 
