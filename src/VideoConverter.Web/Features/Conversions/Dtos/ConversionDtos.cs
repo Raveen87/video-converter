@@ -10,7 +10,8 @@ public record ConversionCreateDto(
     AudioChannels? AudioChannels,
     int? Resolution,
     IReadOnlyList<string>? AudioLanguages,
-    IReadOnlyList<string>? SubtitleLanguages);
+    IReadOnlyList<string>? SubtitleLanguages,
+    int? ProfileId);
 
 public record ConversionDto(
     int Id,

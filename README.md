@@ -24,9 +24,11 @@ dotnet test
       "audioChannels": 2,
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
-      "subtitleLanguages": ["English", "Swedish"]
+      "subtitleLanguages": ["English", "Swedish"],
+      "profileId": 1
     }
     ```
+  - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`). Language fields are not part of profiles and always come from the request.
   - Responses:
     - 201 Created with created item
     - 400 Bad Request if validation fails (see Validation section)
@@ -121,6 +123,7 @@ Environment/app settings:
 - `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128 for 2.0 audio or 192 for 5.1 audio.
 - `audioChannels` (optional): integer 2 (Stereo 2.0) or 6 (Surround 5.1). If omitted, defaults to 2 (Stereo 2.0).
 - `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
+- `profileId` (optional): ID of a saved profile. When set, profile values override same-named request fields; if a profile field is null, the request value is used.
 - `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
   - When provided, the service probes the input with ffprobe and attempts to match each requested language using:
     - language tag metadata (e.g., `eng`, `en`, `swe`, `sv`)

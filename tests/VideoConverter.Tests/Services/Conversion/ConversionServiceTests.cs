@@ -56,7 +56,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -103,7 +104,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English", "Swedish"],
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         var streams = new List<MediaStream>
         {
@@ -147,7 +149,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["English", "Swedish"]);
+            SubtitleLanguages: ["English", "Swedish"],
+            ProfileId: null);
 
         var streams = new List<MediaStream>
         {
@@ -191,7 +194,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: 2160, // Requesting 4K
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 }); // Source is only 1080p
@@ -218,7 +222,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.5 });
@@ -248,7 +253,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -276,7 +282,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["French"]);
+            SubtitleLanguages: ["French"],
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -306,7 +313,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["Swedish"]);
+            SubtitleLanguages: ["Swedish"],
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -357,7 +365,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"]);
+            SubtitleLanguages: ["English"],
+            ProfileId: null);
 
         var streams = new List<MediaStream>
         {
@@ -406,7 +415,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -447,7 +457,8 @@ public class ServiceLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });

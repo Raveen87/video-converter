@@ -23,7 +23,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"]);
+            SubtitleLanguages: ["English"],
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -52,7 +53,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -81,7 +83,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: [],
-            SubtitleLanguages: []);
+            SubtitleLanguages: [],
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -164,7 +167,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English", "Français", "Español"],
-            SubtitleLanguages: ["English", "中文", "العربية"]);
+            SubtitleLanguages: ["English", "中文", "العربية"],
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -193,7 +197,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: longLanguages,
-            SubtitleLanguages: longLanguages);
+            SubtitleLanguages: longLanguages,
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -218,7 +223,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 720, // Minimum valid resolution
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"]);
+            SubtitleLanguages: ["English"],
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -243,7 +249,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 2160, // Maximum valid resolution
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"]);
+            SubtitleLanguages: ["English"],
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
@@ -268,7 +275,8 @@ public class ApiLayerTests
             AudioChannels: null,
             Resolution: 1440, // Invalid resolution
             AudioLanguages: [""], // Invalid language
-            SubtitleLanguages: ["   "]); // Invalid language
+            SubtitleLanguages: ["   "], // Invalid language
+            ProfileId: null);
 
         // Act
         var json = JsonSerializer.Serialize(request);
