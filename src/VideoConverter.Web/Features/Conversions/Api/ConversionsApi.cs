@@ -54,7 +54,7 @@ public static class ConversionsApi
             _ = await db.SaveChangesAsync();
 
             logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
-            return Results.Created($"/api/conversions/{conversion.Id}", new ConversionDto(conversion.Id, conversion.InputPath, conversion.OutputDirectory, conversion.CreatedAtUtc, conversion.Crf, conversion.AudioBitrateKbps, conversion.AudioChannels, conversion.Resolution, conversion.MetadataBasedFilename));
+            return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
         }
         catch (InvalidOperationException ex)
         {
@@ -73,7 +73,7 @@ public static class ConversionsApi
         var items = await db.Conversions
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAtUtc)
-            .Select(c => new ConversionDto(c.Id, c.InputPath, c.OutputDirectory, c.CreatedAtUtc, c.Crf, c.AudioBitrateKbps, c.AudioChannels, c.Resolution, c.MetadataBasedFilename))
+            .Select(c => ToDto(c))
             .ToListAsync();
 
         logger.LogInformation("Retrieved {Count} conversions from database", items.Count);
@@ -184,5 +184,19 @@ public static class ConversionsApi
             id, progress?.Status, progress?.PercentageComplete);
 
         return Results.Ok(progress);
+    }
+
+    private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
+    {
+        return new ConversionDto(
+            c.Id,
+            c.InputPath,
+            c.OutputDirectory,
+            c.CreatedAtUtc,
+            c.Crf,
+            c.AudioBitrateKbps,
+            c.AudioChannels,
+            c.Resolution,
+            c.MetadataBasedFilename);
     }
 }
