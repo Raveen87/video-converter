@@ -56,7 +56,8 @@ public class AudioChannelsConversionTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         SetupMocks();
 
@@ -80,7 +81,8 @@ public class AudioChannelsConversionTests
             AudioChannels: AudioChannels.Stereo20,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         SetupMocks();
 
@@ -104,7 +106,8 @@ public class AudioChannelsConversionTests
             AudioChannels: AudioChannels.Surround51,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         SetupMocks();
 
@@ -128,7 +131,8 @@ public class AudioChannelsConversionTests
             AudioChannels: AudioChannels.Surround51,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null);
+            SubtitleLanguages: null,
+            ProfileId: null);
 
         SetupMocks();
 
