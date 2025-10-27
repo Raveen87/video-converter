@@ -30,7 +30,9 @@ public class EffectiveConversionRequestBuilderTests
             Crf = 20,
             AudioBitrateKbps = 192,
             AudioChannels = AudioChannels.Surround51,
-            Resolution = 1080
+            Resolution = 1080,
+            AudioLanguages = ["en", "sv"],
+            SubtitleLanguages = ["sv"]
         };
 
         var logger = new Mock<ILogger>().Object;
@@ -42,6 +44,8 @@ public class EffectiveConversionRequestBuilderTests
         _ = effective.AudioBitrateKbps.Should().Be(192);
         _ = effective.AudioChannels.Should().Be(AudioChannels.Surround51);
         _ = effective.Resolution.Should().Be(1080);
+        _ = effective.AudioLanguages.Should().BeEquivalentTo("en", "sv");
+        _ = effective.SubtitleLanguages.Should().BeEquivalentTo("sv");
         _ = effective.ProfileId.Should().Be(1);
         _ = effective.InputPath.Should().Be("in.mp4");
     }

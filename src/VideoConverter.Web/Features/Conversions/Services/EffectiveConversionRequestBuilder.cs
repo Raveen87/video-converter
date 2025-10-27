@@ -21,6 +21,11 @@ public static class EffectiveConversionRequestBuilder
             return !string.IsNullOrWhiteSpace(profileValue) ? "profile" : "request";
         }
 
+        string SourceList(IReadOnlyList<string>? profileList)
+        {
+            return profileList is { Count: > 0 } ? "profile" : "request";
+        }
+
         var outputDirectory = profile?.OutputDirectory ?? request.OutputDirectory;
         logger.LogDebug("Using {Source} value for OutputDirectory: {Value}",
             SourceRef(profile?.OutputDirectory), outputDirectory);
@@ -41,6 +46,14 @@ public static class EffectiveConversionRequestBuilder
         logger.LogDebug("Using {Source} value for Resolution: {Value}",
             Source(profile?.Resolution), resolution);
 
+        var audioLanguages = (profile?.AudioLanguages is { Count: > 0 }) ? profile!.AudioLanguages : request.AudioLanguages;
+        logger.LogDebug("Using {Source} value for AudioLanguages: {Value}",
+            SourceList(profile?.AudioLanguages), audioLanguages is null ? "<null>" : string.Join(", ", audioLanguages));
+
+        var subtitleLanguages = (profile?.SubtitleLanguages is { Count: > 0 }) ? profile!.SubtitleLanguages : request.SubtitleLanguages;
+        logger.LogDebug("Using {Source} value for SubtitleLanguages: {Value}",
+            SourceList(profile?.SubtitleLanguages), subtitleLanguages is null ? "<null>" : string.Join(", ", subtitleLanguages));
+
         return request with
         {
             OutputDirectory = outputDirectory,
@@ -48,6 +61,8 @@ public static class EffectiveConversionRequestBuilder
             AudioBitrateKbps = audioBitrate,
             AudioChannels = audioChannels,
             Resolution = resolution,
+            AudioLanguages = audioLanguages,
+            SubtitleLanguages = subtitleLanguages,
             ProfileId = request.ProfileId
         };
     }

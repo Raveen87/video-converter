@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Shared.Domain.Entities;
@@ -11,4 +12,6 @@ public class Profile
     public AudioChannels? AudioChannels { get; set; }
     public int? Resolution { get; set; }
     public string? MetadataBasedFilename { get; set; }
+    public List<string>? AudioLanguages { get; set; }
+    public List<string>? SubtitleLanguages { get; set; }
 }

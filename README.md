@@ -28,7 +28,7 @@ dotnet test
       "profileId": 1
     }
     ```
-  - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`). Language fields are not part of profiles and always come from the request.
+  - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`, `audioLanguages`, `subtitleLanguages`). For each property, if the profile value is present (non-null/non-empty for lists), it is used; otherwise, the request value is used. Values are never merged per-property.
   - Responses:
     - 201 Created with created item
     - 400 Bad Request if validation fails (see Validation section)
@@ -95,6 +95,7 @@ dotnet test
 ### Persistence
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
 - Override via environment variables, user secrets, or appsettings.
+ - Profiles store `audioLanguages` and `subtitleLanguages` as JSON text columns.
 
 ### Testing
 - Integration tests use `WebApplicationFactory` and override the SQLite path per run.
