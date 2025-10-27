@@ -45,7 +45,9 @@ public static class ProfilesApi
             AudioBitrateKbps = request.AudioBitrateKbps,
             AudioChannels = request.AudioChannels,
             Resolution = request.Resolution,
-            MetadataBasedFilename = request.MetadataBasedFilename
+            MetadataBasedFilename = request.MetadataBasedFilename,
+            AudioLanguages = request.AudioLanguages?.ToList(),
+            SubtitleLanguages = request.SubtitleLanguages?.ToList()
         };
 
         _ = db.Profiles.Add(profile);
@@ -98,7 +100,9 @@ public static class ProfilesApi
             AudioBitrateKbps = profile.AudioBitrateKbps,
             AudioChannels = profile.AudioChannels,
             Resolution = profile.Resolution,
-            MetadataBasedFilename = profile.MetadataBasedFilename
+            MetadataBasedFilename = profile.MetadataBasedFilename,
+            AudioLanguages = profile.AudioLanguages,
+            SubtitleLanguages = profile.SubtitleLanguages
         };
 
         try
@@ -131,6 +135,8 @@ public static class ProfilesApi
         profile.AudioChannels = patchModel.AudioChannels;
         profile.Resolution = patchModel.Resolution;
         profile.MetadataBasedFilename = patchModel.MetadataBasedFilename;
+        profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
+        profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
 
         _ = await db.SaveChangesAsync(cancellationToken);
 
@@ -147,6 +153,8 @@ public static class ProfilesApi
             profile.AudioBitrateKbps,
             profile.AudioChannels,
             profile.Resolution,
-            profile.MetadataBasedFilename);
+            profile.MetadataBasedFilename,
+            profile.AudioLanguages,
+            profile.SubtitleLanguages);
     }
 }

@@ -63,6 +63,18 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
             result.Add(nameof(request.MetadataBasedFilename), metadataError!);
         }
 
+        // Validate language lists when provided
+        if (!_requestPropertyValidator.IsValidLanguageList(request.AudioLanguages, out var audioLangError))
+        {
+            _logger.LogWarning("Validation failed: AudioLanguages - {Error}", audioLangError);
+            result.Add(nameof(request.AudioLanguages), audioLangError!);
+        }
+        if (!_requestPropertyValidator.IsValidLanguageList(request.SubtitleLanguages, out var subLangError))
+        {
+            _logger.LogWarning("Validation failed: SubtitleLanguages - {Error}", subLangError);
+            result.Add(nameof(request.SubtitleLanguages), subLangError!);
+        }
+
         if (result.IsValid)
         {
             _logger.LogInformation("Profile patch validation completed successfully");
