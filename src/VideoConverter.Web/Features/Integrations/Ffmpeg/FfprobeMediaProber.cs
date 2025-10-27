@@ -51,8 +51,9 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
 
         if (proc.ExitCode != 0)
         {
-            _logger.LogError("ffprobe failed for {InputPath} with exit code {ExitCode}: {Error}",
-                inputPath, proc.ExitCode, stderr);
+            var cmd = ProcessManager.BuildDisplayCommand(_ffprobePath, args);
+            _logger.LogError("ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Stderr: {Error}",
+                inputPath, proc.ExitCode, cmd, stderr);
             throw new InvalidOperationException("ffprobe failed: " + stderr);
         }
 
