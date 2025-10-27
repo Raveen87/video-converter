@@ -17,63 +17,27 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
         // Validate output directory when provided
         if (!string.IsNullOrWhiteSpace(request.OutputDirectory))
         {
-            if (!_fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError))
-            {
-                _logger.LogWarning("Validation failed: OutputDirectory - {Error}", outputError);
-                result.Add(nameof(request.OutputDirectory), outputError!);
-            }
-            else
-            {
-                _logger.LogDebug("Output directory validation passed: {OutputDirectory}", request.OutputDirectory);
-            }
+            result.AddIfInvalid(_fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, _logger, request.OutputDirectory);
         }
 
         // Validate CRF range when provided
-        if (!_requestPropertyValidator.IsValidCrf(request.Crf, out var crfError))
-        {
-            _logger.LogWarning("Validation failed: CRF value {Crf} - {Error}", request.Crf, crfError);
-            result.Add(nameof(request.Crf), crfError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidCrf(request.Crf, out var crfError), nameof(request.Crf), crfError, _logger, request.Crf);
 
         // Validate audio bitrate range when provided (kbps)
-        if (!_requestPropertyValidator.IsValidAudioBitrate(request.AudioBitrateKbps, out var bitrateError))
-        {
-            _logger.LogWarning("Validation failed: Audio bitrate {AudioBitrate}Kbps - {Error}", request.AudioBitrateKbps, bitrateError);
-            result.Add(nameof(request.AudioBitrateKbps), bitrateError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidAudioBitrate(request.AudioBitrateKbps, out var bitrateError), nameof(request.AudioBitrateKbps), bitrateError, _logger, request.AudioBitrateKbps);
 
         // Validate resolution (when provided): allowed values 720, 1080, 2160
-        if (!_requestPropertyValidator.IsValidResolution(request.Resolution, out var resolutionError))
-        {
-            _logger.LogWarning("Validation failed: Resolution {Resolution}p - {Error}", request.Resolution, resolutionError);
-            result.Add(nameof(request.Resolution), resolutionError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidResolution(request.Resolution, out var resolutionError), nameof(request.Resolution), resolutionError, _logger, request.Resolution);
 
         // Validate audio channels (when provided)
-        if (!_requestPropertyValidator.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError))
-        {
-            _logger.LogWarning("Validation failed: Audio channels - {Error}", audioChannelsError);
-            result.Add(nameof(request.AudioChannels), audioChannelsError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError), nameof(request.AudioChannels), audioChannelsError, _logger);
 
         // Validate metadata based filename when provided
-        if (!_requestPropertyValidator.IsValidMetadataBasedFilename(request.MetadataBasedFilename, out var metadataError))
-        {
-            _logger.LogWarning("Validation failed: MetadataBasedFilename - {Error}", metadataError);
-            result.Add(nameof(request.MetadataBasedFilename), metadataError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidMetadataBasedFilename(request.MetadataBasedFilename, out var metadataError), nameof(request.MetadataBasedFilename), metadataError, _logger);
 
         // Validate language lists when provided
-        if (!_requestPropertyValidator.IsValidLanguageList(request.AudioLanguages, out var audioLangError))
-        {
-            _logger.LogWarning("Validation failed: AudioLanguages - {Error}", audioLangError);
-            result.Add(nameof(request.AudioLanguages), audioLangError!);
-        }
-        if (!_requestPropertyValidator.IsValidLanguageList(request.SubtitleLanguages, out var subLangError))
-        {
-            _logger.LogWarning("Validation failed: SubtitleLanguages - {Error}", subLangError);
-            result.Add(nameof(request.SubtitleLanguages), subLangError!);
-        }
+        result.AddIfInvalid(_requestPropertyValidator.IsValidLanguageList(request.AudioLanguages, out var audioLangError), nameof(request.AudioLanguages), audioLangError, _logger);
+        result.AddIfInvalid(_requestPropertyValidator.IsValidLanguageList(request.SubtitleLanguages, out var subLangError), nameof(request.SubtitleLanguages), subLangError, _logger);
 
         if (result.IsValid)
         {

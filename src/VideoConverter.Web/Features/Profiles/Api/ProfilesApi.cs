@@ -6,6 +6,7 @@ using VideoConverter.Web.Features.Profiles.Dtos;
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Profiles.Validation;
+using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web.Features.Profiles.Api;
 
@@ -22,7 +23,7 @@ public static class ProfilesApi
         ProfileCreateDto request,
         AppDbContext db,
         ILogger logger,
-        ProfileCreateValidator validator,
+        IRequestValidator<ProfileCreateDto> validator,
         CancellationToken cancellationToken)
     {
         logger.LogDebug("Creating profile with request: {@ProfileRequest}", request);
@@ -77,7 +78,7 @@ public static class ProfilesApi
         JsonPatchDocument<ProfilePatchDto> patchDocument,
         AppDbContext db,
         ILogger logger,
-        ProfilePatchValidator validator,
+        IRequestValidator<ProfilePatchDto> validator,
         ProfileExistsValidator profileExistsValidator,
         CancellationToken cancellationToken)
     {
