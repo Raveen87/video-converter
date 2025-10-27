@@ -6,14 +6,8 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
 {
     private readonly ILogger<ProcessManager> _logger = logger;
 
-    public async Task<ProcessResult> RunProcessAsync(
-        string executablePath,
-        IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken = default)
+    private static ProcessStartInfo BuildStartInfo(string executablePath, IReadOnlyList<string> arguments)
     {
-        _logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments",
-            executablePath, arguments.Count);
-
         var startInfo = new ProcessStartInfo
         {
             FileName = executablePath,
@@ -26,6 +20,19 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
         {
             startInfo.ArgumentList.Add(arg);
         }
+
+        return startInfo;
+    }
+
+    public async Task<ProcessResult> RunProcessAsync(
+        string executablePath,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments",
+            executablePath, arguments.Count);
+
+        var startInfo = BuildStartInfo(executablePath, arguments);
 
         using var process = new Process { StartInfo = startInfo };
 
@@ -71,18 +78,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
     {
         _logger.LogDebug("Starting process with output handling: {Executable}", executablePath);
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executablePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        foreach (var arg in arguments)
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
+        var startInfo = BuildStartInfo(executablePath, arguments);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
@@ -95,12 +91,15 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
         _logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
 
         // Set up output handling
+        var stdoutLines = new List<string>();
+        var stderrLines = new List<string>();
         if (onOutput != null)
         {
             process.OutputDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
+                    stdoutLines.Add(e.Data);
                     onOutput(e.Data);
                 }
             };
@@ -113,6 +112,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
+                    stderrLines.Add(e.Data);
                     onError(e.Data);
                 }
             };
@@ -125,7 +125,9 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
         {
             IsSuccess = process.ExitCode == 0,
             ExitCode = process.ExitCode,
-            ProcessId = process.Id
+            ProcessId = process.Id,
+            StandardOutput = stdoutLines.Count == 0 ? string.Empty : string.Join(Environment.NewLine, stdoutLines),
+            StandardError = stderrLines.Count == 0 ? string.Empty : string.Join(Environment.NewLine, stderrLines)
         };
 
         if (result.IsSuccess)
@@ -134,7 +136,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
         }
         else
         {
-            _logger.LogWarning("Process failed with exit code {ExitCode}", process.ExitCode);
+            _logger.LogWarning("Process failed with exit code {ExitCode}. Stderr: {Stderr}", process.ExitCode, result.StandardError);
         }
 
         return result;
