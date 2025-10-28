@@ -117,6 +117,38 @@ Environment/app settings:
 - `Ffmpeg:DryRun` or `FFMPEG_DRYRUN`: When `true`, the service will not spawn ffmpeg; it returns the built command string. Useful for tests and diagnostics.
 - `Tmdb:ApiKey` or `TMDB_API_KEY`: The Movie Database (TMDb) API key for metadata lookup (required for metadata-based file naming)
 
+FFmpeg options (appsettings.json):
+
+```json
+"Ffmpeg": {
+  "Path": "ffmpeg",
+  "DryRun": false,
+  "VideoCodec": "libsvtav1",
+  "PixelFormat": "yuv420p10le",
+  "Preset": "6",
+  "Tune": "0",
+  "Gop": "120",
+  "SvtParams": "film-grain=8:film-grain-denoise=0",
+  "AudioCodec": "libopus",
+  "DefaultAudioBitrateKbps": 128
+}
+```
+
+- `Ffmpeg:VideoCodec`: Video codec (default `libsvtav1`)
+- `Ffmpeg:PixelFormat`: Output pixel format (default `yuv420p10le`)
+- `Ffmpeg:Preset`: Encoder preset (default `6`)
+- `Ffmpeg:Tune`: Encoder tune (default `0`)
+- `Ffmpeg:Gop`: GOP size (default `120`)
+- `Ffmpeg:SvtParams`: SVT-AV1 parameter string (default `film-grain=8:film-grain-denoise=0`)
+- `Ffmpeg:AudioCodec`: Audio codec (default `libopus`)
+- `Ffmpeg:DefaultAudioBitrateKbps`: Default audio bitrate when request doesn’t specify (default `128`)
+
+Environment variable overrides follow ASP.NET Core’s standard mapping. For example:
+
+- `Ffmpeg__PixelFormat=yuv420p10le`
+- `Ffmpeg__Preset=6`
+- `Ffmpeg__DefaultAudioBitrateKbps=192`
+
 ### Validation
 - `inputPath` must be a non-empty string and point to an existing file (not a directory).
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
