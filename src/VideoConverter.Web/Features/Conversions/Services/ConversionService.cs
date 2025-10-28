@@ -1,9 +1,9 @@
-using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using VideoConverter.Web.Features.Metadata.Services;
 using VideoConverter.Web.Features.Metadata.Models;
+using VideoConverter.Web.Features.Metadata.Services;
+using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Conversions.Services;
 
@@ -17,34 +17,25 @@ public sealed class ConversionService(
     IFilenameGenerator filenameGenerator,
     ILogger<ConversionService> logger) : IConversionService
 {
-    private readonly IMediaProber _prober = prober;
-    private readonly IAudioLanguageMatcher _audioMatcher = audioMatcher;
-    private readonly ISubtitleLanguageMatcher _subtitleMatcher = subtitleMatcher;
-    private readonly ICropDetector _cropDetector = cropDetector;
-    private readonly IMetadataService _metadataService = metadataService;
-    private readonly IFilenameParser _filenameParser = filenameParser;
-    private readonly IFilenameGenerator _filenameGenerator = filenameGenerator;
-    private readonly ILogger<ConversionService> _logger = logger;
-
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating conversion for input: {InputPath}, output: {OutputDirectory}",
+        logger.LogInformation("Creating conversion for input: {InputPath}, output: {OutputDirectory}",
             request.InputPath, request.OutputDirectory);
 
         // Process audio language requirements
-        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken);
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Process subtitle language requirements
-        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken);
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Validate resolution against source
-        await ValidateResolutionAsync(request, cancellationToken);
+        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Perform crop detection
-        var detectedCrop = await DetectCropAsync(request, cancellationToken);
+        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
-        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, cancellationToken);
+        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
 
         // Determine audio bitrate based on audio channels
         var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
@@ -62,10 +53,10 @@ public sealed class ConversionService(
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
-            MetadataBasedFilename = metadataBasedFilename
+            MetadataBasedFilename = metadataBasedFilename,
         };
 
-        _logger.LogInformation("Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
+        logger.LogInformation("Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
             conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution,
             audioProcessing.AudioIndicesCsv ?? "none", subtitleProcessing.SubtitleIndicesCsv ?? "none",
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none", detectedCrop ?? "none");
@@ -90,11 +81,11 @@ public sealed class ConversionService(
     {
         try
         {
-            _logger.LogDebug("Generating metadata-based filename for: {InputPath}", inputPath);
+            logger.LogDebug("Generating metadata-based filename for: {InputPath}", inputPath);
 
             // Parse the filename to extract media information
             var filename = Path.GetFileName(inputPath);
-            var parsedFilename = _filenameParser.ParseFilename(filename);
+            var parsedFilename = filenameParser.ParseFilename(filename);
             var extension = Path.GetExtension(inputPath);
 
             MediaMetadata? metadata = null;
@@ -102,64 +93,63 @@ public sealed class ConversionService(
             // Look up metadata based on parsed information
             if (parsedFilename.DetectedType == MediaType.Movie)
             {
-                _logger.LogDebug("Looking up movie metadata for: {Title} (Year: {Year})",
+                logger.LogDebug("Looking up movie metadata for: {Title} (Year: {Year})",
                     parsedFilename.Title, parsedFilename.Year);
 
-                metadata = await _metadataService.GetMovieMetadataAsync(
+                metadata = await metadataService.GetMovieMetadataAsync(
                     parsedFilename.Title ?? "Unknown",
                     parsedFilename.Year,
                     parsedFilename.Source,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             }
             else if (parsedFilename.DetectedType == MediaType.TvShow)
             {
-                _logger.LogDebug("Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
+                logger.LogDebug("Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
                     parsedFilename.Title, parsedFilename.Season, parsedFilename.Episode);
 
-                metadata = await _metadataService.GetTvShowMetadataAsync(
+                metadata = await metadataService.GetTvShowMetadataAsync(
                     parsedFilename.Title ?? "Unknown",
                     parsedFilename.Season ?? 1,
                     parsedFilename.Episode ?? 1,
-                    null, // We don't have first aired year from filename parsing
+                    firstAiredYear: null, // We don't have first aired year from filename parsing
                     parsedFilename.Source,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             }
 
             if (metadata is not null)
             {
-                var generatedFilename = _filenameGenerator.GenerateFilename(metadata, extension);
-                _logger.LogInformation("Generated metadata-based filename: {GeneratedFilename}", generatedFilename);
+                var generatedFilename = filenameGenerator.GenerateFilename(metadata, extension);
+                logger.LogInformation("Generated metadata-based filename: {GeneratedFilename}", generatedFilename);
                 return generatedFilename;
             }
-            else
-            {
-                _logger.LogWarning("No metadata found for: {InputPath}, using original filename", inputPath);
-                return filename;
-            }
+
+            logger.LogWarning("No metadata found for: {InputPath}, using original filename", inputPath);
+            return filename;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", inputPath);
+            logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", inputPath);
             return Path.GetFileName(inputPath);
         }
     }
 
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        if (request.AudioLanguages is not { Count: > 0 })
+        var requested = request.AudioLanguages?.ToList();
+
+        if (requested is not { Count: > 0 })
         {
             return new AudioProcessingResult();
         }
 
-        _logger.LogDebug("Processing audio language requirements: {AudioLanguages}",
-            string.Join(", ", request.AudioLanguages));
+        logger.LogDebug("Processing audio language requirements: {AudioLanguages}",
+            string.Join(", ", requested));
 
-        var probe = await _prober.ProbeAsync(request.InputPath, cancellationToken);
-        var requested = request.AudioLanguages.ToList();
-        var matched = _audioMatcher.MatchAudioStreams(probe.Streams, requested);
+        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
         var audioIndicesCsv = string.Join(",", matched);
 
-        _logger.LogInformation("Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
+        logger.LogInformation("Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
             audioIndicesCsv, string.Join(", ", requested));
 
         return new AudioProcessingResult { AudioIndicesCsv = audioIndicesCsv };
@@ -167,16 +157,17 @@ public sealed class ConversionService(
 
     private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        if (request.SubtitleLanguages is not { Count: > 0 })
+        var requested = request.SubtitleLanguages?.ToList();
+
+        if (requested is not { Count: > 0 })
         {
             return new SubtitleProcessingResult();
         }
 
-        _logger.LogDebug("Processing subtitle language requirements: {SubtitleLanguages}",
-            string.Join(", ", request.SubtitleLanguages));
+        logger.LogDebug("Processing subtitle language requirements: {SubtitleLanguages}",
+            string.Join(", ", requested));
 
-        var probe = await _prober.ProbeAsync(request.InputPath, cancellationToken);
-        var requested = request.SubtitleLanguages.ToList();
+        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
         var matchedIndices = new List<int>();
         var externalPaths = new List<string>();
 
@@ -184,24 +175,24 @@ public sealed class ConversionService(
         {
             try
             {
-                var idx = _subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
+                var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
                 matchedIndices.AddRange(idx);
-                _logger.LogDebug("Found subtitle stream for language '{Language}': indices {Indices}",
+                logger.LogDebug("Found subtitle stream for language '{Language}': indices {Indices}",
                     lang, string.Join(",", idx));
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
+                logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
 
                 var externalPath = FindExternalSubtitle(request.InputPath, lang);
                 if (externalPath is not null)
                 {
                     externalPaths.Add(externalPath);
-                    _logger.LogDebug("Found external subtitle file: {Path}", externalPath);
+                    logger.LogDebug("Found external subtitle file: {Path}", externalPath);
                 }
                 else
                 {
-                    _logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", lang);
+                    logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", lang);
                     throw new InvalidOperationException($"Requested subtitle language '{lang}' not found in file or as external .srt.");
                 }
             }
@@ -210,13 +201,13 @@ public sealed class ConversionService(
         var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(",", matchedIndices) : null;
         var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
 
-        _logger.LogInformation("Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
+        logger.LogInformation("Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
             subtitleIndicesCsv ?? "none", externalSubtitlePathsCsv ?? "none");
 
         return new SubtitleProcessingResult
         {
             SubtitleIndicesCsv = subtitleIndicesCsv,
-            ExternalSubtitlePathsCsv = externalSubtitlePathsCsv
+            ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
         };
     }
 
@@ -227,14 +218,14 @@ public sealed class ConversionService(
             return;
         }
 
-        _logger.LogDebug("Validating resolution {RequestedResolution}p against source", request.Resolution);
+        logger.LogDebug("Validating resolution {RequestedResolution}p against source", request.Resolution);
 
         try
         {
-            var probe = await _prober.ProbeAsync(request.InputPath, cancellationToken);
+            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
             if (probe.VideoHeight is not null && request.Resolution > probe.VideoHeight)
             {
-                _logger.LogWarning("Resolution validation failed: requested {RequestedResolution}p exceeds source {SourceHeight}p",
+                logger.LogWarning("Resolution validation failed: requested {RequestedResolution}p exceeds source {SourceHeight}p",
                     request.Resolution, probe.VideoHeight);
                 throw new InvalidOperationException($"Requested resolution {request.Resolution}p exceeds source height {probe.VideoHeight}p.");
             }
@@ -246,34 +237,34 @@ public sealed class ConversionService(
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
+            logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
             // Continue without validation if we can't determine source height
         }
     }
 
     private async Task<string?> DetectCropAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting crop detection for {InputPath}", request.InputPath);
+        logger.LogDebug("Starting crop detection for {InputPath}", request.InputPath);
 
         try
         {
-            var probe = await _prober.ProbeAsync(request.InputPath, cancellationToken);
-            var detectedCrop = await _cropDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken);
+            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var detectedCrop = await cropDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
 
             if (detectedCrop is not null)
             {
-                _logger.LogInformation("Crop detection completed: {DetectedCrop}", detectedCrop);
+                logger.LogInformation("Crop detection completed: {DetectedCrop}", detectedCrop);
             }
             else
             {
-                _logger.LogDebug("No crop detected for {InputPath}", request.InputPath);
+                logger.LogDebug("No crop detected for {InputPath}", request.InputPath);
             }
 
             return detectedCrop;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
+            logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
             return null;
         }
     }
@@ -298,14 +289,14 @@ public sealed class ConversionService(
 
     private static IEnumerable<string> GetSubtitleTags(string language)
     {
-        var key = (language ?? string.Empty).Trim().ToLowerInvariant();
+        var key = language.Trim().ToLowerInvariant();
 
         return key switch
         {
-            var k when SubtitleTagsSwedish.Contains(k, StringComparer.Ordinal) => SubtitleTagsSwedish,
-            var k when SubtitleTagsEnglish.Contains(k, StringComparer.Ordinal) => SubtitleTagsEnglish,
-            var k when SubtitleTagsVietnamese.Contains(k, StringComparer.Ordinal) => SubtitleTagsVietnamese,
-            _ => [key] // Fallback: if a tag-like short code is provided, just try it
+            _ when SubtitleTagsSwedish.Contains(key, StringComparer.Ordinal) => SubtitleTagsSwedish,
+            _ when SubtitleTagsEnglish.Contains(key, StringComparer.Ordinal) => SubtitleTagsEnglish,
+            _ when SubtitleTagsVietnamese.Contains(key, StringComparer.Ordinal) => SubtitleTagsVietnamese,
+            _ => [key], // Fallback: if a tag-like short code is provided, just try it
         };
     }
 
@@ -321,6 +312,7 @@ public sealed class ConversionService(
     private sealed record SubtitleProcessingResult
     {
         public string? SubtitleIndicesCsv { get; init; }
+
         public string? ExternalSubtitlePathsCsv { get; init; }
     }
 }

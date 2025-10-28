@@ -10,6 +10,3 @@ public interface ISubtitleLanguageMatcher
     /// </summary>
     IReadOnlyList<int> MatchSubtitleStreams(IReadOnlyList<MediaStream> streams, IReadOnlyList<string> requestedLanguages);
 }
-
-
-

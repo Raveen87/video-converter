@@ -1,4 +1,5 @@
 using System.Net;
+
 using VideoConverter.Web.Common.Exceptions;
 
 namespace VideoConverter.Tests.Exceptions;
@@ -13,17 +14,15 @@ public class ApiErrorTests
         var errorCode = ErrorCode.ValidationFailed;
         var errorMessage = "Test error message";
         var userFriendlyMessage = "User-friendly message";
-        var innerException = new ArgumentException("Inner exception");
 
         // Act
-        var apiError = new ApiErrorException(statusCode, errorCode, errorMessage, userFriendlyMessage, innerException);
+        var apiError = new ApiErrorException(statusCode, errorCode, errorMessage, userFriendlyMessage);
 
         // Assert
         Assert.Equal(statusCode, apiError.StatusCode);
         Assert.Equal(errorCode, apiError.ErrorCode);
         Assert.Equal(errorMessage, apiError.ErrorMessage);
         Assert.Equal(userFriendlyMessage, apiError.UserFriendlyMessage);
-        Assert.Equal(innerException, apiError.InnerException);
         Assert.Equal(errorMessage, apiError.Message);
     }
 
@@ -33,17 +32,15 @@ public class ApiErrorTests
         // Arrange
         var errorMessage = "Validation failed";
         var userFriendlyMessage = "Please check your input";
-        var innerException = new ArgumentException("Invalid argument");
 
         // Act
-        var apiError = ApiErrorException.ValidationError(errorMessage, userFriendlyMessage, innerException);
+        var apiError = ApiErrorException.ValidationError(errorMessage, userFriendlyMessage);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, apiError.StatusCode);
         Assert.Equal(ErrorCode.ValidationFailed, apiError.ErrorCode);
         Assert.Equal(errorMessage, apiError.ErrorMessage);
         Assert.Equal(userFriendlyMessage, apiError.UserFriendlyMessage);
-        Assert.Equal(innerException, apiError.InnerException);
     }
 
     [Fact]

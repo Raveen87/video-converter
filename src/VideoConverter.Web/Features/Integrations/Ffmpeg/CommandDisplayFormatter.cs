@@ -10,8 +10,8 @@ public static class CommandDisplayFormatter
             {
                 return s;
             }
-            var needsQuotes = s.Any(ch => char.IsWhiteSpace(ch) || "&|><^()'\"".Contains(ch));
-            return needsQuotes ? "\"" + s.Replace("\"", "\\\"") + "\"" : s;
+            var needsQuotes = s.Any(ch => char.IsWhiteSpace(ch) || "&|><^()'\"".Contains(ch, StringComparison.Ordinal));
+            return needsQuotes ? "\"" + s.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"" : s;
         }
 
         var displayArgs = new List<string>();
@@ -19,7 +19,7 @@ public static class CommandDisplayFormatter
         while (i < arguments.Count)
         {
             var arg = arguments[i];
-            if (arg == "-vf" && i + 1 < arguments.Count)
+            if (string.Equals(arg, "-vf", StringComparison.Ordinal) && i + 1 < arguments.Count)
             {
                 displayArgs.Add(arg);
                 displayArgs.Add(Quote(arguments[i + 1]));
@@ -35,5 +35,4 @@ public static class CommandDisplayFormatter
         return Quote(executablePath) + (displayArgs.Count > 0 ? " " + string.Join(" ", displayArgs) : "");
     }
 }
-
 

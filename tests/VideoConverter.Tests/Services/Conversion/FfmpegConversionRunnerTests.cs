@@ -1,9 +1,13 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+
 using Moq;
+
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
+
 using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
@@ -14,10 +18,11 @@ public class FfmpegConversionRunnerTests
     public async Task StartAsync_DryRun_ReturnsCommandString()
     {
         var inMemorySettings = new Dictionary<string, string?>
+(StringComparer.Ordinal)
         {
             ["Ffmpeg:Path"] = "ffmpeg",
             ["Ffmpeg:DryRun"] = "true",
-            ["Ffmpeg:FfprobePath"] = "ffprobe"
+            ["Ffmpeg:FfprobePath"] = "ffprobe",
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings!).Build();
 
@@ -37,7 +42,7 @@ public class FfmpegConversionRunnerTests
             OutputDirectory = tempOut,
             Crf = 30,
             AudioBitrateKbps = 128,
-            Resolution = 720
+            Resolution = 720,
         };
 
         var result = await runner.StartAsync(conversion);

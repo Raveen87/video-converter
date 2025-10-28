@@ -3,7 +3,8 @@ namespace VideoConverter.Web.Shared.Validation;
 public sealed class ValidationResult
 {
     public bool IsValid => Errors.Count == 0;
-    public Dictionary<string, List<string>> Errors { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, List<string>> Errors { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public void Add(string field, string message)
     {

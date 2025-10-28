@@ -36,9 +36,7 @@ internal static class VideoArgsBuilder
             "-g", options.Gop,
             "-crf", conversion.Crf?.ToString() ?? "40",
             "-svtav1-params", options.SvtParams,
-            "-vf", vf
+            "-vf", vf,
         ];
     }
 }
-
-

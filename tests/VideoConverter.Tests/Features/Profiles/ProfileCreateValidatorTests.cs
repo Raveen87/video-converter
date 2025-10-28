@@ -1,5 +1,7 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Profiles.Dtos;
 using VideoConverter.Web.Features.Profiles.Validation;
 using VideoConverter.Web.Shared.Validation;
@@ -15,7 +17,8 @@ public class ProfileCreateValidatorTests
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "vc-prof-" + Guid.NewGuid().ToString("N"));
         _ = Directory.CreateDirectory(tempDir);
-        var dto = new ProfileCreateDto(tempDir, 20, 192, null, 1080, null, null, null);
+        var dto = new ProfileCreateDto(tempDir, 20, 192, AudioChannels: null, 1080, MetadataBasedFilename: "bla", AudioLanguages: null,
+            SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         try
         {
@@ -25,7 +28,7 @@ public class ProfileCreateValidatorTests
         {
             if (Directory.Exists(tempDir))
             {
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
             }
         }
     }
@@ -33,10 +36,9 @@ public class ProfileCreateValidatorTests
     [Fact]
     public async Task ValidateAsync_WithInvalidValues_ReturnsErrors()
     {
-        var dto = new ProfileCreateDto("C:/invalid<>dir", 100, 0, (Web.Shared.Domain.ValueObjects.AudioChannels)99, 1440, "|invalid|", null, null);
+        var dto = new ProfileCreateDto("C:/invalid<>dir", 100, 0, (Web.Shared.Domain.ValueObjects.AudioChannels)99, 1440, "|invalid|", AudioLanguages: null, SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();
     }
 }
-
 

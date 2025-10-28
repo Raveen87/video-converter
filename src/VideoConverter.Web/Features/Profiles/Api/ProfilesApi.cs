@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Exceptions;
-using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
-using VideoConverter.Web.Features.Profiles.Dtos;
-using VideoConverter.Web.Shared.Domain.Entities;
+
 using VideoConverter.Web.Common.Exceptions;
+using VideoConverter.Web.Features.Profiles.Dtos;
 using VideoConverter.Web.Features.Profiles.Validation;
+using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
 using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web.Features.Profiles.Api;
@@ -29,7 +29,7 @@ public static class ProfilesApi
         logger.LogDebug("Creating profile with request: {@ProfileRequest}", request);
 
         // Validate the request
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             logger.LogWarning("Profile creation validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
@@ -48,11 +48,11 @@ public static class ProfilesApi
             Resolution = request.Resolution,
             MetadataBasedFilename = request.MetadataBasedFilename,
             AudioLanguages = request.AudioLanguages?.ToList(),
-            SubtitleLanguages = request.SubtitleLanguages?.ToList()
+            SubtitleLanguages = request.SubtitleLanguages?.ToList(),
         };
 
         _ = db.Profiles.Add(profile);
-        _ = await db.SaveChangesAsync(cancellationToken);
+        _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation("Profile created successfully with ID: {ProfileId}", profile.Id);
         return Results.Created($"/api/profiles/{profile.Id}", ToDto(profile));
@@ -67,7 +67,7 @@ public static class ProfilesApi
     {
         logger.LogDebug("Retrieving profile with ID: {ProfileId}", id);
 
-        var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, cancellationToken);
+        var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation("Profile retrieved successfully with ID: {ProfileId}", id);
         return Results.Ok(ToDto(profile));
@@ -92,7 +92,7 @@ public static class ProfilesApi
                 "The request body must contain a valid JSON Patch document.");
         }
 
-        var profile = await profileExistsValidator.GetProfileForUpdateAsync(id, db, cancellationToken);
+        var profile = await profileExistsValidator.GetProfileForUpdateAsync(id, db, cancellationToken).ConfigureAwait(false);
 
         var patchModel = new ProfilePatchDto
         {
@@ -103,7 +103,7 @@ public static class ProfilesApi
             Resolution = profile.Resolution,
             MetadataBasedFilename = profile.MetadataBasedFilename,
             AudioLanguages = profile.AudioLanguages,
-            SubtitleLanguages = profile.SubtitleLanguages
+            SubtitleLanguages = profile.SubtitleLanguages,
         };
 
         try
@@ -120,7 +120,7 @@ public static class ProfilesApi
         }
 
         // Validate the patched model
-        var validationResult = await validator.ValidateAsync(patchModel, cancellationToken);
+        var validationResult = await validator.ValidateAsync(patchModel, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             logger.LogWarning("Profile update validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
@@ -139,7 +139,7 @@ public static class ProfilesApi
         profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
         profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
 
-        _ = await db.SaveChangesAsync(cancellationToken);
+        _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
         return Results.Ok(ToDto(profile));

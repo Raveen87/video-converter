@@ -1,7 +1,9 @@
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
+
 using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Tests.Persistence;
 
@@ -11,7 +13,7 @@ public class ConversionPersistenceTests
     public async Task AppDbContext_CanCreateAndRetrieveConversion()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var conversion = new Conversion
         {
             InputPath = "test.mp4",
@@ -23,7 +25,7 @@ public class ConversionPersistenceTests
             SelectedAudioStreamIndicesCsv = "0,1",
             SelectedSubtitleStreamIndicesCsv = "2",
             SelectedExternalSubtitlePathsCsv = "sub.srt",
-            DetectedCrop = "1920:1080:0:0"
+            DetectedCrop = "1920:1080:0:0",
         };
         _ = context.Conversions.Add(conversion);
         _ = await context.SaveChangesAsync();
@@ -43,13 +45,13 @@ public class ConversionPersistenceTests
     public async Task AppDbContext_CanQueryConversionsByDateRange()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var baseDate = DateTime.UtcNow;
         var conversions = new[]
         {
             new Conversion { InputPath = "old.mp4", OutputDirectory = "out", CreatedAtUtc = baseDate.AddDays(-2) },
             new Conversion { InputPath = "recent.mp4", OutputDirectory = "out", CreatedAtUtc = baseDate.AddDays(-1) },
-            new Conversion { InputPath = "new.mp4", OutputDirectory = "out", CreatedAtUtc = baseDate }
+            new Conversion { InputPath = "new.mp4", OutputDirectory = "out", CreatedAtUtc = baseDate },
         };
         context.Conversions.AddRange(conversions);
         _ = await context.SaveChangesAsync();
@@ -66,13 +68,13 @@ public class ConversionPersistenceTests
     public async Task AppDbContext_CanQueryConversionsByResolution()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var conversions = new[]
         {
             new Conversion { InputPath = "720p.mp4", OutputDirectory = "out", Resolution = 720 },
             new Conversion { InputPath = "1080p.mp4", OutputDirectory = "out", Resolution = 1080 },
             new Conversion { InputPath = "2160p.mp4", OutputDirectory = "out", Resolution = 2160 },
-            new Conversion { InputPath = "nores.mp4", OutputDirectory = "out", Resolution = null }
+            new Conversion { InputPath = "nores.mp4", OutputDirectory = "out", Resolution = null },
         };
         context.Conversions.AddRange(conversions);
         _ = await context.SaveChangesAsync();
@@ -87,7 +89,7 @@ public class ConversionPersistenceTests
     public async Task AppDbContext_CanHandleNullOptionalFields()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var conversion = new Conversion
         {
             InputPath = "test.mp4",
@@ -99,7 +101,7 @@ public class ConversionPersistenceTests
             SelectedAudioStreamIndicesCsv = null,
             SelectedSubtitleStreamIndicesCsv = null,
             SelectedExternalSubtitlePathsCsv = null,
-            DetectedCrop = null
+            DetectedCrop = null,
         };
         _ = context.Conversions.Add(conversion);
         _ = await context.SaveChangesAsync();
@@ -113,5 +115,4 @@ public class ConversionPersistenceTests
         _ = retrieved.DetectedCrop.Should().BeNull();
     }
 }
-
 

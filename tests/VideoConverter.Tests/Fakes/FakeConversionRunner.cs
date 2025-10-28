@@ -11,10 +11,9 @@ public sealed class FakeConversionRunner : IConversionRunner
         {
             IsSuccess = true,
             ProcessId = 0,
-            Command = "ffmpeg <fake>"
+            Command = "ffmpeg <fake>",
         };
         return Task.FromResult(result);
     }
 }
-
 

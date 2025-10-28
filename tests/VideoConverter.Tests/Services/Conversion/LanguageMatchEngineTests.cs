@@ -1,5 +1,7 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
@@ -12,7 +14,7 @@ public class LanguageMatchEngineTests
         new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng", Title = "English 5.1" },
         new MediaStream { Index = 1, CodecType = "audio", LanguageTag = "swe", Title = "Swedish Stereo" },
         new MediaStream { Index = 2, CodecType = "subtitle", LanguageTag = "eng", Title = "English CC" },
-        new MediaStream { Index = 3, CodecType = "subtitle", LanguageTag = "sv", Title = "Svenska" }
+        new MediaStream { Index = 3, CodecType = "subtitle", LanguageTag = "sv", Title = "Svenska" },
     ];
 
     [Fact]
@@ -39,5 +41,4 @@ public class LanguageMatchEngineTests
         _ = act.Should().Throw<InvalidOperationException>();
     }
 }
-
 

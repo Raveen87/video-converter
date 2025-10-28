@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
+
+using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using VideoConverter.Web.Shared.Validation;
-using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Profiles.Validation;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
+using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web.Features.Conversions.Api;
 
@@ -31,12 +32,12 @@ public static class ConversionsApi
     {
         var profile = request.ProfileId.HasValue
             ? await profileExistsValidator.GetProfileForReadAsync(request.ProfileId.Value, db, CancellationToken.None)
-            : null;
+.ConfigureAwait(false) : null;
 
         var builderLogger = loggerFactory.CreateLogger("EffectiveConversionRequestBuilder");
         var effectiveRequest = EffectiveConversionRequestBuilder.Build(request, profile, builderLogger);
 
-        var validation = await validator.ValidateAsync(effectiveRequest, CancellationToken.None);
+        var validation = await validator.ValidateAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
         {
             logger.LogWarning("Validation failed for conversion request: {ValidationErrors}",
@@ -48,10 +49,10 @@ public static class ConversionsApi
 
         try
         {
-            var conversion = await conversionService.CreateConversionAsync(effectiveRequest, CancellationToken.None);
+            var conversion = await conversionService.CreateConversionAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
 
             _ = db.Conversions.Add(conversion);
-            _ = await db.SaveChangesAsync();
+            _ = await db.SaveChangesAsync().ConfigureAwait(false);
 
             logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
             return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
@@ -74,7 +75,7 @@ public static class ConversionsApi
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAtUtc)
             .Select(c => ToDto(c))
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         logger.LogInformation("Retrieved {Count} conversions from database", items.Count);
         return Results.Ok(items);
@@ -88,7 +89,7 @@ public static class ConversionsApi
     {
         logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
 
-        var conversion = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+        var conversion = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false);
         if (conversion is null)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
@@ -100,20 +101,18 @@ public static class ConversionsApi
 
         logger.LogInformation("Found conversion {ConversionId} for input: {InputPath}", id, conversion.InputPath);
 
-        var result = await runner.StartAsync(conversion);
+        var result = await runner.StartAsync(conversion).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}", id, result.ProcessId);
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command });
         }
-        else
-        {
-            logger.LogError("Failed to start conversion {ConversionId}: {ErrorMessage}", id, result.ErrorMessage);
-            throw ApiErrorException.BusinessError(
-                ErrorCode.ProcessStartFailed,
-                result.ErrorMessage ?? "Unknown error occurred",
-                "Failed to start the conversion process. Please try again later.");
-        }
+
+        logger.LogError("Failed to start conversion {ConversionId}: {ErrorMessage}", id, result.ErrorMessage);
+        throw ApiErrorException.BusinessError(
+            ErrorCode.ProcessStartFailed,
+            result.ErrorMessage ?? "Unknown error occurred",
+            "Failed to start the conversion process. Please try again later.");
     }
 
     private static async Task<IResult> StartNextConversionAsync(
@@ -126,7 +125,7 @@ public static class ConversionsApi
         var conversion = await db.Conversions
             .AsNoTracking()
             .OrderBy(c => c.CreatedAtUtc)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (conversion is null)
         {
@@ -140,22 +139,20 @@ public static class ConversionsApi
         logger.LogInformation("Starting next conversion {ConversionId} for input: {InputPath}",
             conversion.Id, conversion.InputPath);
 
-        var result = await runner.StartAsync(conversion);
+        var result = await runner.StartAsync(conversion).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation("Next conversion {ConversionId} started successfully with PID: {ProcessId}",
                 conversion.Id, result.ProcessId);
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId = conversion.Id });
         }
-        else
-        {
-            logger.LogError("Failed to start next conversion {ConversionId}: {ErrorMessage}",
-                conversion.Id, result.ErrorMessage);
-            throw ApiErrorException.BusinessError(
-                ErrorCode.ProcessStartFailed,
-                result.ErrorMessage ?? "Unknown error occurred",
-                "Failed to start the conversion process. Please try again later.");
-        }
+
+        logger.LogError("Failed to start next conversion {ConversionId}: {ErrorMessage}",
+            conversion.Id, result.ErrorMessage);
+        throw ApiErrorException.BusinessError(
+            ErrorCode.ProcessStartFailed,
+            result.ErrorMessage ?? "Unknown error occurred",
+            "Failed to start the conversion process. Please try again later.");
     }
 
     private static async Task<IResult> GetConversionProgressAsync(
@@ -167,7 +164,7 @@ public static class ConversionsApi
         logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
 
         // Check if conversion exists in database
-        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id);
+        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
         if (!conversionExists)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);

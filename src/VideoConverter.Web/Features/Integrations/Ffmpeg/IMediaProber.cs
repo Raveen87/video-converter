@@ -7,4 +7,3 @@ public interface IMediaProber
     Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken);
 }
 
-

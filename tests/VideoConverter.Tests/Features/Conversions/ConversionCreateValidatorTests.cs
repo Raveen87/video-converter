@@ -1,5 +1,7 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Validation;
 using VideoConverter.Web.Shared.Validation;
@@ -18,7 +20,7 @@ public class ConversionCreateValidatorTests
         var tempFile = Path.Combine(tempDir, "input.mp4");
         await File.WriteAllTextAsync(tempFile, "x");
 
-        var request = new ConversionCreateDto(tempFile, tempDir, 23, 128, null, 1080, ["English"], ["English"], null);
+        var request = new ConversionCreateDto(tempFile, tempDir, 23, 128, AudioChannels: null, 1080, ["English"], ["English"], ProfileId: null);
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
 
         try
@@ -29,7 +31,7 @@ public class ConversionCreateValidatorTests
         {
             if (Directory.Exists(tempDir))
             {
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
             }
         }
     }
@@ -54,5 +56,4 @@ public class ConversionCreateValidatorTests
         _ = dict.Keys.Should().Contain([nameof(request.InputPath), nameof(request.OutputDirectory), nameof(request.Crf), nameof(request.AudioBitrateKbps), nameof(request.Resolution), nameof(request.AudioLanguages), nameof(request.SubtitleLanguages), nameof(request.AudioChannels)]);
     }
 }
-
 

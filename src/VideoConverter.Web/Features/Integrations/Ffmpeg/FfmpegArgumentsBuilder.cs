@@ -1,5 +1,4 @@
 using VideoConverter.Web.Shared.Domain.Entities;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
@@ -20,7 +19,7 @@ internal static class FfmpegArgumentsBuilder
         var args = new List<string>
         {
             "-y",
-            "-i", conversion.InputPath!
+            "-i", conversion.InputPath!,
         };
 
         args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf, options));
@@ -43,5 +42,4 @@ internal static class FfmpegArgumentsBuilder
         return args;
     }
 }
-
 

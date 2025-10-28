@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+
 using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
@@ -17,7 +18,7 @@ public class FilenameGenerator : IFilenameGenerator
         {
             MovieMetadata movie => GenerateMovieFilename(movie, extension),
             TvShowMetadata tvShow => GenerateTvShowFilename(tvShow, extension),
-            _ => throw new ArgumentException($"Unsupported media type: {metadata.GetType().Name}", nameof(metadata))
+            _ => throw new ArgumentException($"Unsupported media type: {metadata.GetType().Name}", nameof(metadata)),
         };
     }
 
@@ -63,10 +64,10 @@ public class FilenameGenerator : IFilenameGenerator
         }
 
         // Remove or replace characters that are not allowed in filenames
-        var sanitized = Regex.Replace(filename, @"[<>:""/\\|?*]", "_");
+        var sanitized = Regex.Replace(filename, @"[<>:""/\\|?*]", "_", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Replace multiple spaces with single space
-        sanitized = Regex.Replace(sanitized, @"\s+", " ");
+        sanitized = Regex.Replace(sanitized, @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(1));
 
         // Remove leading/trailing spaces and dots
         sanitized = sanitized.Trim(' ', '.');

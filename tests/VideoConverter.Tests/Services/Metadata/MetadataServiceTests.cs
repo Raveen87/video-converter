@@ -1,10 +1,11 @@
 using FluentAssertions;
-using VideoConverter.Web.Features.Metadata.Services;
+
 using VideoConverter.Web.Features.Metadata.Models;
+using VideoConverter.Web.Features.Metadata.Services;
 
 namespace VideoConverter.Tests.Services.Metadata;
 
-public class MetadataTests
+public class MetadataServiceTests
 {
     private readonly FilenameParser _filenameParser = new();
     private readonly FakeMetadataService _metadataService = new();

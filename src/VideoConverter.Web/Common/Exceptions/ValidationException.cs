@@ -25,15 +25,16 @@ public class ValidationException(
     /// Converts the validation error to a dictionary for JSON serialization.
     /// </summary>
     /// <returns>A dictionary containing the error information.</returns>
-    public Dictionary<string, object> ToDictionary()
+    public IDictionary<string, object> ToDictionary()
     {
         var result = new Dictionary<string, object>
+(StringComparer.Ordinal)
         {
             { "statusCode", (int)HttpStatusCode.BadRequest },
             { "errorCode", ErrorCode.ValidationFailed.ToString() },
             { "errorMessage", Message },
             { "userFriendlyMessage", UserFriendlyMessage },
-            { "timestamp", DateTime.UtcNow }
+            { "timestamp", DateTime.UtcNow },
         };
 
         if (FieldErrors is not null && FieldErrors.Count > 0)

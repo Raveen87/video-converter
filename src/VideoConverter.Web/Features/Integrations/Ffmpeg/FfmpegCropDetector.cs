@@ -7,6 +7,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
     private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
         ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
         ?? "ffmpeg";
+
     private readonly ILogger<FfmpegCropDetector> _logger = logger;
 
     public async Task<string?> DetectAsync(string inputPath, double? durationSeconds, CancellationToken cancellationToken)
@@ -24,7 +25,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
 
         foreach (var ts in timestamps)
         {
-            var crop = await DetectAtAsync(inputPath, ts, cancellationToken);
+            var crop = await DetectAtAsync(inputPath, ts, cancellationToken).ConfigureAwait(false);
             if (TryParseArea(crop, out var area) && area > bestArea)
             {
                 _logger.LogDebug("New best crop found at {Timestamp}s: {Crop} (area: {Area})",
@@ -79,7 +80,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
             "-t", "1",
             "-vf", filter,
             "-f", "null",
-            "-"
+            "-",
         };
 
         var psi = new ProcessStartInfo
@@ -87,7 +88,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
             FileName = _ffmpegPath,
             UseShellExecute = false,
             RedirectStandardError = true,
-            RedirectStandardOutput = true
+            RedirectStandardOutput = true,
         };
         foreach (var a in args)
         {
@@ -103,9 +104,9 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
 
         _logger.LogDebug("ffmpeg crop detection process started with PID: {ProcessId}", proc.Id);
 
-        var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
-        _ = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
-        await proc.WaitForExitAsync(cancellationToken);
+        var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        _ = await proc.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
         if (proc.ExitCode != 0)
         {
@@ -122,12 +123,12 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
             {
                 var token = line[(idx + 5)..].Trim();
                 // sometimes additional text may follow; take until whitespace or comma
-                var end = token.IndexOf(' ');
+                var end = token.IndexOf(' ', StringComparison.Ordinal);
                 if (end > 0)
                 {
                     token = token[..end];
                 }
-                end = token.IndexOf(',');
+                end = token.IndexOf(',', StringComparison.Ordinal);
                 if (end > 0)
                 {
                     token = token[..end];
@@ -164,5 +165,4 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         return false;
     }
 }
-
 

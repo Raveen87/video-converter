@@ -42,6 +42,10 @@ mkdir -p analysis-results
 echo "📦 Restoring packages..."
 dotnet restore VideoConverter.sln
 
+# Verify formatting (fail if changes are needed)
+echo "🧯 Verifying code formatting with dotnet format..."
+dotnet format VideoConverter.sln --severity error --verify-no-changes
+
 # Build with analysis
 echo "🔨 Building with static analysis..."
 BUILD_ARGS=(

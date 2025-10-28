@@ -1,6 +1,9 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using Moq;
+
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Integrations;
@@ -62,5 +65,4 @@ public class FfmpegPreflightCheckerTests
         _ = err.Should().Contain("boom");
     }
 }
-
 

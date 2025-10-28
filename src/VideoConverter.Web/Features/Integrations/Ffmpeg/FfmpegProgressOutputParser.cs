@@ -2,14 +2,14 @@ using System.Text.RegularExpressions;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegProgressOutputParser : IProgressOutputParser
+public sealed partial class FfmpegProgressOutputParser : IProgressOutputParser
 {
-    private static readonly Regex TimeRegex = new(@"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})", RegexOptions.Compiled);
+    private static readonly Regex TimePattern = TimeRegex();
 
     public bool TryParseTimeSeconds(string line, out double seconds)
     {
         seconds = 0;
-        var match = TimeRegex.Match(line ?? string.Empty);
+        var match = TimePattern.Match(line);
         if (!match.Success)
         {
             return false;
@@ -22,6 +22,7 @@ public sealed class FfmpegProgressOutputParser : IProgressOutputParser
         seconds = (hours * 3600) + (minutes * 60) + secs + (centiseconds / 100.0);
         return true;
     }
+
+    [GeneratedRegex(@"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})", RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TimeRegex();
 }
-
-

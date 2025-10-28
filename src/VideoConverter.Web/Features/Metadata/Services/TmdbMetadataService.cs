@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+
 using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
@@ -20,7 +21,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
 
             _logger.LogDebug("Searching for movie: {Title} (Year: {Year})", title, year);
 
-            var response = await _httpClient.GetStringAsync(url, cancellationToken);
+            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(response);
 
             if (searchResult?.Results?.Count > 0)
@@ -55,7 +56,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
 
             _logger.LogDebug("Searching for TV show: {ShowName} (Year: {Year})", showName, firstAiredYear);
 
-            var response = await _httpClient.GetStringAsync(url, cancellationToken);
+            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(response);
 
             if (searchResult?.Results?.Count > 0)
@@ -63,7 +64,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
                 var show = searchResult.Results[0];
 
                 // Get episode details
-                var episodeDetails = await GetEpisodeDetailsAsync(show.Id, season, episode, cancellationToken);
+                var episodeDetails = await GetEpisodeDetailsAsync(show.Id, season, episode, cancellationToken).ConfigureAwait(false);
 
                 return new TvShowMetadata(
                     show.Name,
@@ -92,7 +93,7 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
         try
         {
             var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}?api_key={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url, cancellationToken);
+            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<TmdbEpisodeDetails>(response);
         }
         catch (Exception ex)
@@ -116,9 +117,11 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
 
     // TMDb API response models
     private sealed record TmdbMovieSearchResult(List<TmdbMovie>? Results);
+
     private sealed record TmdbMovie(string Title, string? ReleaseDate, string? Overview, string? PosterPath);
 
     private sealed record TmdbTvSearchResult(List<TmdbTvShow>? Results);
+
     private sealed record TmdbTvShow(int Id, string Name, string? FirstAirDate, string? Overview, string? PosterPath);
 
     private sealed record TmdbEpisodeDetails(string Name, string? Overview);

@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
-using VideoConverter.Web.Shared.Domain.Entities;
+
 using VideoConverter.Web.Common.Exceptions;
+using VideoConverter.Web.Shared.Domain.Entities;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Web.Features.Profiles.Validation;
 
@@ -26,7 +27,7 @@ public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logge
 
         var profile = await db.Profiles
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (profile is null)
         {
@@ -54,7 +55,7 @@ public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logge
         _logger.LogDebug("Looking up profile with ID: {ProfileId} for update access", id);
 
         var profile = await db.Profiles
-            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (profile is null)
         {

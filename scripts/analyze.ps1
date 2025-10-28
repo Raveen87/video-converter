@@ -24,6 +24,16 @@ try {
     Write-Host "📦 Restoring packages..." -ForegroundColor Yellow
     dotnet restore VideoConverter.sln
 
+    # Verify formatting (fail if changes are needed)
+    Write-Host "🧯 Verifying code formatting with dotnet format..." -ForegroundColor Yellow
+    $formatArgs = @(
+        "format"
+        "VideoConverter.sln"
+        "--severity", "error"
+        "--verify-no-changes"
+    )
+    dotnet @formatArgs
+
     # Build with analysis
     Write-Host "🔨 Building with static analysis..." -ForegroundColor Yellow
     $buildArgs = @(

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+
 using VideoConverter.Web.Features.Conversions.Dtos;
 
 namespace VideoConverter.Web.Features.Conversions.Services;
@@ -15,7 +16,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
             ConversionId = conversionId,
             TotalDurationSeconds = totalDurationSeconds,
             StartTime = DateTime.UtcNow,
-            Status = ConversionStatus.Running
+            Status = ConversionStatus.Running,
         };
 
         _ = _activeConversions.AddOrUpdate(conversionId, state, (_, _) => state);
@@ -65,7 +66,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
                 PercentageComplete = state.PercentageComplete,
                 CurrentTimeSeconds = state.CurrentTimeSeconds,
                 TotalDurationSeconds = state.TotalDurationSeconds,
-                EstimatedTimeRemaining = state.EstimatedTimeRemaining
+                EstimatedTimeRemaining = state.EstimatedTimeRemaining,
             };
         }
 
@@ -76,7 +77,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
             PercentageComplete = null,
             CurrentTimeSeconds = null,
             TotalDurationSeconds = null,
-            EstimatedTimeRemaining = null
+            EstimatedTimeRemaining = null,
         };
     }
 
@@ -119,12 +120,19 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
     private sealed class ProgressState
     {
         public int ConversionId { get; init; }
+
         public ConversionStatus Status { get; set; }
+
         public double TotalDurationSeconds { get; init; }
+
         public double? CurrentTimeSeconds { get; set; }
+
         public double? PercentageComplete { get; set; }
+
         public TimeSpan? EstimatedTimeRemaining { get; set; }
+
         public DateTime StartTime { get; init; }
+
         public DateTime LastUpdateTime { get; set; }
     }
 }

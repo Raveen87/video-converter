@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace VideoConverter.Web.Migrations;
 
+#pragma warning disable MA0048 // Migration files should start with date prefix
 /// <inheritdoc />
 public partial class AddMetadataBasedFilename : Migration
 {

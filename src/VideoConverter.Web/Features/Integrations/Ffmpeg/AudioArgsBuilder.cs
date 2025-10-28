@@ -10,8 +10,8 @@ internal static class AudioArgsBuilder
         var args = new List<string>
         {
             "-c:a", options.AudioCodec,
-            "-b:a", (conversion.AudioBitrateKbps ?? options.DefaultAudioBitrateKbps) + "k",
-            "-ac", conversion.AudioChannels?.GetFfmpegChannelLayout() ?? "stereo"
+            "-b:a", (conversion.AudioBitrateKbps?.ToString() ?? options.DefaultAudioBitrateKbps.ToString()) + "k",
+            "-ac", conversion.AudioChannels?.GetFfmpegChannelLayout() ?? "stereo",
         };
         return args;
     }
@@ -38,5 +38,4 @@ internal static class AudioArgsBuilder
         }
     }
 }
-
 
