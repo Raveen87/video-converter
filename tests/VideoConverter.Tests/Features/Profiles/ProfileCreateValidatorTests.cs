@@ -8,7 +8,7 @@ namespace VideoConverter.Tests.Features.Profiles;
 
 public class ProfileCreateValidatorTests
 {
-    private readonly ProfileCreateValidator _validator = new(NullLogger<ProfileCreateValidator>.Instance, new FileSystemValidator());
+    private readonly ProfileCreateValidator _validator = new(NullLogger<ProfileCreateValidator>.Instance, new FileSystemValidator(), new RequestPropertyValidator());
 
     [Fact]
     public async Task ValidateAsync_WithValidValues_ReturnsValid()

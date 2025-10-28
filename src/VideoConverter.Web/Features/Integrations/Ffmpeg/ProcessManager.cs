@@ -147,38 +147,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
         return result;
     }
 
-    public static string BuildDisplayCommand(string executablePath, IReadOnlyList<string> arguments)
-    {
-        static string Quote(string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return s;
-            }
-            var needsQuotes = s.Any(ch => char.IsWhiteSpace(ch) || "&|><^()'\"".Contains(ch));
-            return needsQuotes ? "\"" + s.Replace("\"", "\\\"") + "\"" : s;
-        }
-
-        var displayArgs = new List<string>();
-        var i = 0;
-        while (i < arguments.Count)
-        {
-            var arg = arguments[i];
-            if (arg == "-vf" && i + 1 < arguments.Count)
-            {
-                displayArgs.Add(arg);
-                displayArgs.Add(Quote(arguments[i + 1]));
-                i += 2; // Skip both the current and next argument
-            }
-            else
-            {
-                displayArgs.Add(Quote(arg));
-                i++;
-            }
-        }
-
-        return Quote(executablePath) + (displayArgs.Count > 0 ? " " + string.Join(" ", displayArgs) : "");
-    }
+    // Display command formatting moved to CommandDisplayFormatter
 }
 
 public sealed record ProcessResult

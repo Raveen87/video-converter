@@ -32,6 +32,7 @@ public static class Program
         _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
         _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
+        _ = builder.Services.AddSingleton<IConversionRunCoordinator, ConversionRunCoordinator>();
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IProgressOutputParser, FfmpegProgressOutputParser>();
         _ = builder.Services.AddSingleton<IFfmpegPreflightChecker, FfmpegPreflightChecker>();

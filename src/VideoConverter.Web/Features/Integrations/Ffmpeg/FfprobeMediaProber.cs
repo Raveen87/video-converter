@@ -1,14 +1,14 @@
-using System.Diagnostics;
 using System.Text.Json;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<FfprobeMediaProber> logger) : IMediaProber
+public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger) : IMediaProber
 {
-    private readonly string _ffprobePath = configuration["Ffmpeg:FfprobePath"]
+    private readonly string _ffprobePath = options.Value.FfprobePath
         ?? Environment.GetEnvironmentVariable("FFPROBE_PATH")
         ?? "ffprobe";
+    private readonly IProcessManager _processManager = processManager;
     private readonly ILogger<FfprobeMediaProber> _logger = logger;
 
     public async Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken)
@@ -24,36 +24,21 @@ public sealed class FfprobeMediaProber(IConfiguration configuration, ILogger<Ffp
             inputPath
         };
 
-        var psi = new ProcessStartInfo
+        var procResult = await _processManager.RunAsync(new ProcessRequest
         {
-            FileName = _ffprobePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        foreach (var a in args)
+            ExecutablePath = _ffprobePath,
+            Arguments = args,
+            CaptureOutput = true
+        }, cancellationToken);
+
+        var stdout = procResult.StandardOutput;
+        var stderr = procResult.StandardError;
+
+        if (!procResult.IsSuccess)
         {
-            psi.ArgumentList.Add(a);
-        }
-
-        using var proc = new Process { StartInfo = psi };
-        if (!proc.Start())
-        {
-            _logger.LogError("Failed to start ffprobe process for: {InputPath}", inputPath);
-            throw new InvalidOperationException("Failed to start ffprobe");
-        }
-
-        _logger.LogDebug("ffprobe process started with PID: {ProcessId}", proc.Id);
-
-        var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
-        await proc.WaitForExitAsync(cancellationToken);
-
-        if (proc.ExitCode != 0)
-        {
-            var cmd = ProcessManager.BuildDisplayCommand(_ffprobePath, args);
+            var cmd = CommandDisplayFormatter.Build(_ffprobePath, args);
             _logger.LogError("ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Stderr: {Error}",
-                inputPath, proc.ExitCode, cmd, stderr);
+                inputPath, procResult.ExitCode, cmd, stderr);
             throw new InvalidOperationException("ffprobe failed: " + stderr);
         }
 
