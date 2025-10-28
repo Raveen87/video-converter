@@ -25,8 +25,8 @@ public static class Program
         });
 
         // Options
-        _ = builder.Services.Configure<Features.Integrations.Ffmpeg.FfmpegOptions>(
-            builder.Configuration.GetSection(Features.Integrations.Ffmpeg.FfmpegOptions.SectionName));
+        _ = builder.Services.Configure<FfmpegOptions>(
+            builder.Configuration.GetSection(FfmpegOptions.SectionName));
 
         _ = builder.Services.AddHttpClient();
         _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();

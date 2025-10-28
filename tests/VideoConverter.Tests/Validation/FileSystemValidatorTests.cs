@@ -227,4 +227,34 @@ public class FileSystemValidatorTests
         Assert.NotNull(errorMessage);
         // Should fail at path validation level before reaching directory validation
     }
+
+    [Fact]
+    public void IsValidPath_WithInvalidCharacters_ReturnsFalse()
+    {
+        var invalidPaths = new[]
+        {
+            "C:\\test|file.mp4",
+            "C:\\test<file.mp4",
+            "C:\\test>file.mp4",
+            "C:\\test\"file.mp4",
+            "C:\\test*file.mp4",
+            "C:\\test?file.mp4"
+        };
+
+        foreach (var path in invalidPaths)
+        {
+            var result = _validator.IsValidPath(path, out var error);
+            Assert.False(result);
+            Assert.NotNull(error);
+        }
+    }
+
+    [Fact]
+    public void IsValidPath_WithVeryLongPath_ReturnsFalse()
+    {
+        var longPath = "C:\\" + new string('a', 300) + ".mp4";
+        var ok = _validator.IsValidPath(longPath, out var error);
+        Assert.False(ok);
+        Assert.NotNull(error);
+    }
 }
