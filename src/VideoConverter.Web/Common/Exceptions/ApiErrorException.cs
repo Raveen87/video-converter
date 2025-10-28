@@ -87,15 +87,16 @@ public class ApiErrorException(
     /// Converts the ApiError to a dictionary for JSON serialization.
     /// </summary>
     /// <returns>A dictionary containing the error information.</returns>
-    public Dictionary<string, object> ToDictionary()
+    public IDictionary<string, object> ToDictionary()
     {
         return new Dictionary<string, object>
+(StringComparer.Ordinal)
         {
             { "statusCode", (int)StatusCode },
             { "errorCode", ErrorCode.ToString() },
             { "errorMessage", ErrorMessage },
             { "userFriendlyMessage", UserFriendlyMessage },
-            { "timestamp", DateTime.UtcNow }
+            { "timestamp", DateTime.UtcNow },
         };
     }
 }

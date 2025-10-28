@@ -1,8 +1,11 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
+
+using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
@@ -18,7 +21,7 @@ public class FfmpegArgumentsBuilderTests
             Crf = 28,
             AudioBitrateKbps = 160,
             AudioChannels = AudioChannels.Stereo20,
-            Resolution = 1080
+            Resolution = 1080,
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
@@ -40,7 +43,7 @@ public class FfmpegArgumentsBuilderTests
         {
             InputPath = "in.mp4",
             OutputDirectory = ".",
-            SelectedSubtitleStreamIndicesCsv = null // triggers 0:s?
+            SelectedSubtitleStreamIndicesCsv = null, // triggers 0:s?
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
@@ -48,7 +51,7 @@ public class FfmpegArgumentsBuilderTests
         var hasInternalSubMap = false;
         for (var i = 0; i < args.Count - 1; i++)
         {
-            if (args[i] == "-map" && args[i + 1] == "0:s?")
+            if (string.Equals(args[i], "-map", StringComparison.Ordinal) && string.Equals(args[i + 1], "0:s?", StringComparison.Ordinal))
             {
                 hasInternalSubMap = true;
                 break;
@@ -64,13 +67,13 @@ public class FfmpegArgumentsBuilderTests
         {
             InputPath = "in.mp4",
             OutputDirectory = ".",
-            SelectedExternalSubtitlePathsCsv = "movie.en.srt|movie.sv.srt"
+            SelectedExternalSubtitlePathsCsv = "movie.en.srt|movie.sv.srt",
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
 
         // ensure additional "-i" inputs inserted
-        var inputFlags = args.Count(a => a == "-i");
+        var inputFlags = args.Count(a => string.Equals(a, "-i", StringComparison.Ordinal));
         _ = inputFlags.Should().Be(1 + 2); // original + 2 externals
 
         // language metadata entries present
@@ -88,7 +91,7 @@ public class FfmpegArgumentsBuilderTests
             InputPath = "in.mp4",
             OutputDirectory = ".",
             SelectedAudioStreamIndicesCsv = "1,3",
-            SelectedSubtitleStreamIndicesCsv = "2,4"
+            SelectedSubtitleStreamIndicesCsv = "2,4",
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
@@ -108,7 +111,7 @@ public class FfmpegArgumentsBuilderTests
             InputPath = "in.mp4",
             OutputDirectory = ".",
             DetectedCrop = "100:100:10:10",
-            Resolution = 720
+            Resolution = 720,
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
@@ -125,7 +128,7 @@ public class FfmpegArgumentsBuilderTests
         var c = new ConversionEntity
         {
             InputPath = "in.mp4",
-            OutputDirectory = "."
+            OutputDirectory = ".",
         };
 
         var args = InvokeBuilder(c, "out.mkv", "MyTitle");
@@ -141,5 +144,4 @@ public class FfmpegArgumentsBuilderTests
         return FfmpegArgumentsBuilder.Build(c, outFile, title, NullLogger.Instance, opts);
     }
 }
-
 

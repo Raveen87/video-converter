@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+
 using VideoConverter.Web.Common.Exceptions;
 
 namespace VideoConverter.Web.Common.Middleware;
@@ -16,12 +17,12 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
     {
         try
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex);
+            await HandleExceptionAsync(context, ex).ConfigureAwait(false);
         }
     }
 
@@ -72,29 +73,29 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
                 ErrorCode.InternalServerError,
                 "An unexpected error occurred.",
                 "An unexpected error occurred. Please try again later.",
-                exception)
+                exception),
         };
 
         var errorResponse = apiError switch
         {
             ApiErrorException apiException => apiException.ToDictionary(),
             ValidationException validationException => validationException.ToDictionary(),
-            _ => throw new InvalidOperationException("Unexpected error type")
+            _ => throw new InvalidOperationException("Unexpected error type"),
         };
 
         response.StatusCode = apiError switch
         {
             ApiErrorException apiException => (int)apiException.StatusCode,
             ValidationException => (int)HttpStatusCode.BadRequest,
-            _ => (int)HttpStatusCode.InternalServerError
+            _ => (int)HttpStatusCode.InternalServerError,
         };
 
         var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
+            WriteIndented = true,
         });
 
-        await response.WriteAsync(jsonResponse);
+        await response.WriteAsync(jsonResponse, cancellationToken: context.RequestAborted).ConfigureAwait(false);
     }
 }

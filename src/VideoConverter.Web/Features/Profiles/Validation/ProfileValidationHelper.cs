@@ -11,8 +11,8 @@ internal static class ProfileValidationHelper
         Shared.Domain.ValueObjects.AudioChannels? audioChannels,
         int? resolution,
         string? metadataBasedFilename,
-        IReadOnlyList<string>? audioLanguages,
-        IReadOnlyList<string>? subtitleLanguages,
+        IEnumerable<string>? audioLanguages,
+        IEnumerable<string>? subtitleLanguages,
         IFileSystemValidator fileSystemValidator,
         IRequestPropertyValidator requestPropertyValidator,
         ILogger logger,
@@ -45,5 +45,3 @@ internal static class ProfileValidationHelper
         result.AddIfInvalid(slErr is null, nameof(subtitleLanguages), slErr, logger);
     }
 }
-
-

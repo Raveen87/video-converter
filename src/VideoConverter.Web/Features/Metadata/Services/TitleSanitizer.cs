@@ -2,21 +2,14 @@ using System.Text.RegularExpressions;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-public interface ITitleSanitizer
-{
-    string CleanTitle(string title);
-    string CleanTitlePreservingDots(string title);
-    string CleanEpisodeTitle(string title);
-}
-
 public sealed class TitleSanitizer : ITitleSanitizer
 {
     private static readonly string[] QualityPatterns = [
-        "1080p", "720p", "480p", "2160p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc"
+        "1080p", "720p", "480p", "2160p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc",
     ];
 
     private static readonly string[] SourcePatterns = [
-        "web-dl", "dvdrip", "webrip", "bdrip", "pdtv", "hdtv", "bluray", "web", "tv"
+        "web-dl", "dvdrip", "webrip", "bdrip", "pdtv", "hdtv", "bluray", "web", "tv",
     ];
 
     public string CleanTitlePreservingDots(string title)
@@ -46,18 +39,18 @@ public sealed class TitleSanitizer : ITitleSanitizer
             cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
         }
 
-        while (cleaned.Contains(".."))
+        while (cleaned.Contains("..", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("..", ".");
+            cleaned = cleaned.Replace("..", ".", StringComparison.Ordinal);
         }
 
         cleaned = cleaned.TrimEnd('.');
         cleaned = RemoveBracketsAndParentheses(cleaned);
         cleaned = cleaned.Replace('_', ' ').Replace('-', ' ').Trim();
 
-        while (cleaned.Contains("  "))
+        while (cleaned.Contains("  ", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("  ", " ");
+            cleaned = cleaned.Replace("  ", " ", StringComparison.Ordinal);
         }
 
         return cleaned.Trim();
@@ -89,9 +82,9 @@ public sealed class TitleSanitizer : ITitleSanitizer
             cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
         }
 
-        while (cleaned.Contains(".."))
+        while (cleaned.Contains("..", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("..", ".");
+            cleaned = cleaned.Replace("..", ".", StringComparison.Ordinal);
         }
 
         if (IsNumericWithDots(cleaned) || IsTitleWithNumber(cleaned) || IsTitleWithNumber(title))
@@ -102,9 +95,9 @@ public sealed class TitleSanitizer : ITitleSanitizer
         cleaned = RemoveBracketsAndParentheses(cleaned);
         cleaned = cleaned.Replace('.', ' ').Replace('_', ' ').Replace('-', ' ').Trim();
 
-        while (cleaned.Contains("  "))
+        while (cleaned.Contains("  ", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("  ", " ");
+            cleaned = cleaned.Replace("  ", " ", StringComparison.Ordinal);
         }
 
         return cleaned.Trim();
@@ -154,17 +147,17 @@ public sealed class TitleSanitizer : ITitleSanitizer
             cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
         }
 
-        while (cleaned.Contains(".."))
+        while (cleaned.Contains("..", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("..", ".");
+            cleaned = cleaned.Replace("..", ".", StringComparison.Ordinal);
         }
 
         cleaned = RemoveBracketsAndParentheses(cleaned);
         cleaned = cleaned.Replace('.', ' ').Replace('_', ' ').Replace('-', ' ').Trim();
 
-        while (cleaned.Contains("  "))
+        while (cleaned.Contains("  ", StringComparison.Ordinal))
         {
-            cleaned = cleaned.Replace("  ", " ");
+            cleaned = cleaned.Replace("  ", " ", StringComparison.Ordinal);
         }
 
         return cleaned.Trim();
@@ -187,7 +180,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         {
             return false;
         }
-        var dotIndex = title.IndexOf('.');
+        var dotIndex = title.IndexOf('.', StringComparison.Ordinal);
         if (dotIndex > 0 && dotIndex < title.Length - 1)
         {
             var beforeDot = title[..dotIndex];
@@ -207,10 +200,8 @@ public sealed class TitleSanitizer : ITitleSanitizer
             return title;
         }
         var result = title;
-        result = Regex.Replace(result, @"\[.*?\]", "");
-        result = Regex.Replace(result, @"\((?![0-9]{4}\))[^)]*\)", "");
+        result = Regex.Replace(result, @"\[.*?\]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+        result = Regex.Replace(result, @"\((?![0-9]{4}\))[^)]*\)", "", RegexOptions.None, TimeSpan.FromSeconds(1));
         return result.Trim();
     }
 }
-
-

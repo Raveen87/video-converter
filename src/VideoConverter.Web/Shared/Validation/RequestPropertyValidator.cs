@@ -43,13 +43,14 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
         return true;
     }
 
-    public bool IsValidLanguageList(IReadOnlyList<string>? languages, out string? errorMessage)
+    public bool IsValidLanguageList(IEnumerable<string>? languages, out string? errorMessage)
     {
+        var languageList = languages?.ToList();
         errorMessage = null;
 
-        if (languages is { Count: > 0 })
+        if (languageList is { Count: > 0 })
         {
-            var emptyLanguages = languages.Where(string.IsNullOrWhiteSpace).ToList();
+            var emptyLanguages = languageList.Where(string.IsNullOrWhiteSpace).ToList();
             if (emptyLanguages.Any())
             {
                 errorMessage = "Language names must be non-empty.";

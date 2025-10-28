@@ -1,0 +1,16 @@
+# Normalize all text files to LF on checkout/commit
+* text=auto eol=lf
+
+# Mark common binary types as non-text
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.ico -text
+*.pdf -text
+*.zip -text
+*.7z -text
+*.gz -text
+*.db -text
+

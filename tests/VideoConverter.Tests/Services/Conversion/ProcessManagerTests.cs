@@ -1,6 +1,8 @@
 using FluentAssertions;
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
+using VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
@@ -15,7 +17,7 @@ public class ProcessManagerTests
             ExecutablePath = GetLongSleepCommand(),
             Arguments = GetLongSleepArgs(),
             Timeout = TimeSpan.FromMilliseconds(50),
-            CaptureOutput = true
+            CaptureOutput = true,
         };
 
         var result = await pm.RunAsync(request, CancellationToken.None);
@@ -40,5 +42,4 @@ public class ProcessManagerTests
         return ["-c", "sleep 5"]; // ~5s
     }
 }
-
 

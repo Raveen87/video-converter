@@ -1,4 +1,5 @@
 using System.Text.Json;
+
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
@@ -8,6 +9,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
     private readonly string _ffprobePath = options.Value.FfprobePath
         ?? Environment.GetEnvironmentVariable("FFPROBE_PATH")
         ?? "ffprobe";
+
     private readonly IProcessManager _processManager = processManager;
     private readonly ILogger<FfprobeMediaProber> _logger = logger;
 
@@ -21,15 +23,15 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             "-print_format", "json",
             "-show_streams",
             "-show_format",
-            inputPath
+            inputPath,
         };
 
         var procResult = await _processManager.RunAsync(new ProcessRequest
         {
             ExecutablePath = _ffprobePath,
             Arguments = args,
-            CaptureOutput = true
-        }, cancellationToken);
+            CaptureOutput = true,
+        }, cancellationToken).ConfigureAwait(false);
 
         var stdout = procResult.StandardOutput;
         var stderr = procResult.StandardError;
@@ -75,7 +77,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
                     }
                 }
 
-                if (codecType == "video")
+                if (string.Equals(codecType, "video", StringComparison.Ordinal))
                 {
                     if (s.TryGetProperty("width", out var wEl) && wEl.ValueKind == JsonValueKind.Number)
                     {
@@ -92,7 +94,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
                     Index = index,
                     CodecType = codecType!,
                     LanguageTag = lang,
-                    Title = title
+                    Title = title,
                 });
             }
         }
@@ -109,7 +111,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             Streams = streams,
             VideoWidth = width,
             VideoHeight = height,
-            DurationSeconds = durationSeconds
+            DurationSeconds = durationSeconds,
         };
 
         _logger.LogInformation("Media probe completed for {InputPath}: {StreamCount} streams, {Width}x{Height}, {Duration}s",
@@ -118,5 +120,3 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
         return result;
     }
 }
-
-

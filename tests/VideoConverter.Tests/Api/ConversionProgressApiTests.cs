@@ -1,4 +1,5 @@
 using System.Text.Json;
+
 using VideoConverter.Web.Features.Conversions.Dtos;
 
 namespace VideoConverter.Tests.Api;
@@ -15,14 +16,14 @@ public sealed class ConversionProgressApiTests
             PercentageComplete = 45.2,
             CurrentTimeSeconds = 54.3,
             TotalDurationSeconds = 120.0,
-            EstimatedTimeRemaining = TimeSpan.FromMinutes(1.25)
+            EstimatedTimeRemaining = TimeSpan.FromMinutes(1.25),
         };
 
         // Act
         var json = JsonSerializer.Serialize(progress);
         var deserialized = JsonSerializer.Deserialize<ConversionProgress>(json, new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
         });
 
         // Assert
@@ -44,14 +45,14 @@ public sealed class ConversionProgressApiTests
             PercentageComplete = null,
             CurrentTimeSeconds = null,
             TotalDurationSeconds = null,
-            EstimatedTimeRemaining = null
+            EstimatedTimeRemaining = null,
         };
 
         // Act
         var json = JsonSerializer.Serialize(progress);
         var deserialized = JsonSerializer.Deserialize<ConversionProgress>(json, new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
         });
 
         // Assert
@@ -73,14 +74,14 @@ public sealed class ConversionProgressApiTests
             PercentageComplete = 0.0,
             CurrentTimeSeconds = 0.0,
             TotalDurationSeconds = 300.0,
-            EstimatedTimeRemaining = TimeSpan.FromMinutes(5)
+            EstimatedTimeRemaining = TimeSpan.FromMinutes(5),
         };
 
         // Act
         var json = JsonSerializer.Serialize(progress);
         var deserialized = JsonSerializer.Deserialize<ConversionProgress>(json, new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
         });
 
         // Assert
@@ -102,14 +103,14 @@ public sealed class ConversionProgressApiTests
             PercentageComplete = 100.0,
             CurrentTimeSeconds = 120.0,
             TotalDurationSeconds = 120.0,
-            EstimatedTimeRemaining = TimeSpan.Zero
+            EstimatedTimeRemaining = TimeSpan.Zero,
         };
 
         // Act
         var json = JsonSerializer.Serialize(progress);
         var deserialized = JsonSerializer.Deserialize<ConversionProgress>(json, new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
         });
 
         // Assert

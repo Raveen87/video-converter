@@ -1,4 +1,5 @@
 using FluentAssertions;
+
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Integrations;
@@ -54,5 +55,4 @@ public class ProcessManagerDisplayCommandTests
         _ = result.Should().Contain(longArg);
     }
 }
-
 

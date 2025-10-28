@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace VideoConverter.Web.Shared.Validation;
 
 public static class ValidationResultExtensions
@@ -28,5 +26,3 @@ public static class ValidationResultExtensions
         result.Add(fieldName, errorMessage!);
     }
 }
-
-

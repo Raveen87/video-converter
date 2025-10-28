@@ -1,5 +1,7 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Profiles.Dtos;
 using VideoConverter.Web.Features.Profiles.Validation;
 using VideoConverter.Web.Shared.Validation;
@@ -26,5 +28,4 @@ public class ProfilePatchValidatorTests
         _ = result.IsValid.Should().BeFalse();
     }
 }
-
 

@@ -33,5 +33,5 @@ public enum ErrorCode
     FileSystemError = 4002,
     FfmpegError = 4003,
     MetadataServiceError = 4004,
-    InternalServerError = 4999
+    InternalServerError = 4999,
 }

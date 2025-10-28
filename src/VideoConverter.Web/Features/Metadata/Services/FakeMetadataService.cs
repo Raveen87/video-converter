@@ -70,32 +70,34 @@ public class FakeMetadataService : IMetadataService
         return Task.FromResult<TvShowMetadata?>(null);
     }
 
-    private Dictionary<string, MovieMetadata> LoadMovieTestData()
+    private static Dictionary<string, MovieMetadata> LoadMovieTestData()
     {
         return new Dictionary<string, MovieMetadata>
+(StringComparer.Ordinal)
         {
-            ["the matrix_1999"] = new MovieMetadata(
+            ["the matrix_1999"] = new(
                 "The Matrix",
                 1999,
                 "Bluray",
                 "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
                 "https://image.tmdb.org/t/p/w500/f89q3d8Q3hn80D3TVLKaTRO3SxI.jpg"
             ),
-            ["inception_2010"] = new MovieMetadata(
+            ["inception_2010"] = new(
                 "Inception",
                 2010,
                 "WEB-DL",
                 "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
                 "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg"
-            )
+            ),
         };
     }
 
-    private Dictionary<string, TvShowMetadata> LoadTvShowTestData()
+    private static Dictionary<string, TvShowMetadata> LoadTvShowTestData()
     {
         return new Dictionary<string, TvShowMetadata>
+(StringComparer.Ordinal)
         {
-            ["breaking bad_2008"] = new TvShowMetadata(
+            ["breaking bad_2008"] = new(
                 "Breaking Bad",
                 2008,
                 1, // Will be overridden by specific season/episode
@@ -105,7 +107,7 @@ public class FakeMetadataService : IMetadataService
                 "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine in order to secure his family's future.",
                 "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
             ),
-            ["game of thrones_2011"] = new TvShowMetadata(
+            ["game of thrones_2011"] = new(
                 "Game of Thrones",
                 2011,
                 1, // Will be overridden by specific season/episode
@@ -114,7 +116,7 @@ public class FakeMetadataService : IMetadataService
                 "WEBRip",
                 "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north.",
                 "https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg"
-            )
+            ),
         };
     }
 }

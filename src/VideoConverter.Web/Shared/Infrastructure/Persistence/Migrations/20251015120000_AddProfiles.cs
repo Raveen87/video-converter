@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace VideoConverter.Web.Migrations;
 
+#pragma warning disable MA0048 // Migration files should start with date prefix
 /// <inheritdoc />
 public partial class AddProfiles : Migration
 {
@@ -15,13 +16,13 @@ public partial class AddProfiles : Migration
             columns: table => new
             {
                 Id = table.Column<int>(type: "INTEGER", nullable: false)
-                    .Annotation("Sqlite:Autoincrement", true),
+                    .Annotation("Sqlite:Autoincrement", value: true),
                 OutputDirectory = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true),
                 Crf = table.Column<int>(type: "INTEGER", nullable: true),
                 AudioBitrateKbps = table.Column<int>(type: "INTEGER", nullable: true),
                 AudioChannels = table.Column<int>(type: "INTEGER", nullable: true),
                 Resolution = table.Column<int>(type: "INTEGER", nullable: true),
-                MetadataBasedFilename = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true)
+                MetadataBasedFilename = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true),
             },
             constraints: table =>
             {

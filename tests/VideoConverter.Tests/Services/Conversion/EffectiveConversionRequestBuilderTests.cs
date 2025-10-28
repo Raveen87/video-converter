@@ -1,6 +1,9 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Shared.Domain.Entities;
@@ -32,7 +35,7 @@ public class EffectiveConversionRequestBuilderTests
             AudioChannels = AudioChannels.Surround51,
             Resolution = 1080,
             AudioLanguages = ["en", "sv"],
-            SubtitleLanguages = ["sv"]
+            SubtitleLanguages = ["sv"],
         };
 
         var logger = new Mock<ILogger>().Object;
@@ -80,5 +83,4 @@ public class EffectiveConversionRequestBuilderTests
         _ = effective.ProfileId.Should().Be(2);
     }
 }
-
 

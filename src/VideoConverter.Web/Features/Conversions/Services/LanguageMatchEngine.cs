@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Conversions.Services;
@@ -89,7 +90,7 @@ internal static class LanguageMatchEngine
         foreach (var pair in Aliases)
         {
             var aliasList = pair.Value;
-            if (aliasList.Contains(req))
+            if (aliasList.Contains(req, StringComparer.Ordinal))
             {
                 foreach (var a in aliasList)
                 {
@@ -108,7 +109,7 @@ internal static class LanguageMatchEngine
     private static string Normalize(string s)
     {
         var lower = s.Trim().ToLowerInvariant();
-        lower = Regex.Replace(lower, "[^a-z]", "");
+        lower = Regex.Replace(lower, "[^a-z]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
         return lower;
     }
 
@@ -136,21 +137,20 @@ internal static class LanguageMatchEngine
     {
         return new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
-            { Normalize("english"), new[] { "en", "eng", "english" } },
-            { Normalize("swedish"), new[] { "sv", "sve", "swe", "svenska", "swedish" } },
-            { Normalize("vietnamese"), new[] { "vi", "vie", "viet", "vietnamese" } },
-            { Normalize("german"), new[] { "de", "deu", "ger", "deutsch" } },
-            { Normalize("french"), new[] { "fr", "fra", "fre", "francais" } },
-            { Normalize("spanish"), new[] { "es", "spa", "esp", "espanol" } },
-            { Normalize("italian"), new[] { "it", "ita", "italiano" } },
-            { Normalize("japanese"), new[] { "ja", "jpn", "nihongo" } },
-            { Normalize("chinese"), new[] { "zh", "zho", "chi", "han" } },
-            { Normalize("korean"), new[] { "ko", "kor", "hangul" } },
-            { Normalize("norwegian"), new[] { "no", "nor", "norsk" } },
-            { Normalize("danish"), new[] { "da", "dan", "dansk" } },
-            { Normalize("finnish"), new[] { "fi", "fin", "suomi" } },
+            { Normalize("english"), ["en", "eng", "english"] },
+            { Normalize("swedish"), ["sv", "sve", "swe", "svenska", "swedish"] },
+            { Normalize("vietnamese"), ["vi", "vie", "viet", "vietnamese"] },
+            { Normalize("german"), ["de", "deu", "ger", "deutsch"] },
+            { Normalize("french"), ["fr", "fra", "fre", "francais"] },
+            { Normalize("spanish"), ["es", "spa", "esp", "espanol"] },
+            { Normalize("italian"), ["it", "ita", "italiano"] },
+            { Normalize("japanese"), ["ja", "jpn", "nihongo"] },
+            { Normalize("chinese"), ["zh", "zho", "chi", "han"] },
+            { Normalize("korean"), ["ko", "kor", "hangul"] },
+            { Normalize("norwegian"), ["no", "nor", "norsk"] },
+            { Normalize("danish"), ["da", "dan", "dansk"] },
+            { Normalize("finnish"), ["fi", "fin", "suomi"] },
         };
     }
 }
-
 

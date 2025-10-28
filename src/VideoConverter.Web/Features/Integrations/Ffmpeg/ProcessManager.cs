@@ -13,7 +13,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             FileName = executablePath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
         };
 
         foreach (var arg in arguments)
@@ -92,7 +92,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
         }
 
         var waitTask = process.WaitForExitAsync(cancellationToken);
-        var completed = await Task.WhenAny(waitTask, timeoutTask);
+        var completed = await Task.WhenAny(waitTask, timeoutTask).ConfigureAwait(false);
         if (completed == timeoutTask)
         {
             try
@@ -110,7 +110,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
         var stderr = string.Empty;
         if (request.OnStdout is null && request.CaptureOutput)
         {
-            stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         }
         else if (stdoutLines.Count > 0)
         {
@@ -119,7 +119,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
 
         if (request.OnStderr is null && request.CaptureOutput)
         {
-            stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+            stderr = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         }
         else if (stderrLines.Count > 0)
         {
@@ -132,7 +132,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             ExitCode = process.ExitCode,
             ProcessId = process.Id,
             StandardOutput = stdout,
-            StandardError = stderr
+            StandardError = stderr,
         };
 
         if (result.IsSuccess)
@@ -148,14 +148,4 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
     }
 
     // Display command formatting moved to CommandDisplayFormatter
-}
-
-public sealed record ProcessResult
-{
-    public bool IsSuccess { get; init; }
-    public int ExitCode { get; init; }
-    public int ProcessId { get; init; }
-    public string StandardOutput { get; init; } = string.Empty;
-    public string StandardError { get; init; } = string.Empty;
-    public string ErrorMessage { get; init; } = string.Empty;
 }

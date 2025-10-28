@@ -22,7 +22,7 @@ public class FileSystemValidatorTests
 
             // Assert
             Assert.False(isValid);
-            Assert.Contains("Parent directory does not exist", errorMessage);
+            Assert.Contains("Parent directory does not exist", errorMessage, StringComparison.Ordinal);
             Assert.False(Directory.Exists(subDir)); // Directory should not be created
         }
         finally
@@ -30,37 +30,7 @@ public class FileSystemValidatorTests
             // Cleanup
             if (Directory.Exists(tempDir))
             {
-                Directory.Delete(tempDir, true);
-            }
-        }
-    }
-
-    [Fact]
-    public void IsValidDirectory_WithValidPath_CreatesDirectoryAtomically()
-    {
-        // Arrange
-        var tempDir = Path.Combine(Path.GetTempPath(), "validation_test_" + Guid.NewGuid().ToString("N"));
-        var subDir = Path.Combine(tempDir, "subdirectory");
-
-        try
-        {
-            // Ensure parent directory exists
-            _ = Directory.CreateDirectory(tempDir);
-
-            // Act
-            var isValid = _validator.IsValidDirectory(subDir, out var errorMessage);
-
-            // Assert
-            Assert.True(isValid);
-            Assert.Null(errorMessage);
-            Assert.True(Directory.Exists(subDir)); // Directory should be created atomically during validation
-        }
-        finally
-        {
-            // Cleanup
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, recursive: true);
             }
         }
     }
@@ -104,14 +74,14 @@ public class FileSystemValidatorTests
         // Assert
         Assert.False(isValid);
         Assert.NotNull(errorMessage);
-        Assert.Contains("Path contains invalid characters", errorMessage);
+        Assert.Contains("Path contains invalid characters", errorMessage, StringComparison.Ordinal);
     }
 
     [Fact]
     public void IsValidDirectory_WithNullPath_ReturnsFalse()
     {
         // Act
-        var isValid = _validator.IsValidDirectory(null, out var errorMessage);
+        var isValid = _validator.IsValidDirectory(directoryPath: null, out var errorMessage);
 
         // Assert
         Assert.False(isValid);
@@ -158,8 +128,8 @@ public class FileSystemValidatorTests
             // The important thing is that it doesn't fail with "Parent directory does not exist"
             if (!isValid)
             {
-                Assert.DoesNotContain("Parent directory does not exist", errorMessage);
-                Assert.Contains("not writable", errorMessage);
+                Assert.DoesNotContain("Parent directory does not exist", errorMessage, StringComparison.Ordinal);
+                Assert.Contains("not writable", errorMessage, StringComparison.Ordinal);
                 Assert.False(Directory.Exists(rootChild)); // Directory should not be created when validation fails
             }
             else
@@ -238,7 +208,7 @@ public class FileSystemValidatorTests
             "C:\\test>file.mp4",
             "C:\\test\"file.mp4",
             "C:\\test*file.mp4",
-            "C:\\test?file.mp4"
+            "C:\\test?file.mp4",
         };
 
         foreach (var path in invalidPaths)

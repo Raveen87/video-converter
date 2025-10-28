@@ -1,5 +1,5 @@
-using VideoConverter.Web.Features.Metadata.Services;
 using VideoConverter.Web.Features.Metadata.Models;
+using VideoConverter.Web.Features.Metadata.Services;
 
 namespace VideoConverter.Tests.Services;
 
@@ -53,7 +53,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_TvShow_WithoutEpisodeTitle_ShouldReturnCorrectFormat()
     {
         // Arrange
-        var tvShow = new TvShowMetadata("Breaking Bad", 2008, 2, 3, null, "WEBRip", "Episode description", "https://example.com/poster.jpg");
+        var tvShow = new TvShowMetadata("Breaking Bad", 2008, 2, 3, EpisodeTitle: null, "WEBRip", "Episode description", "https://example.com/poster.jpg");
         var extension = ".mp4";
 
         // Act
@@ -67,7 +67,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_TvShow_ShouldSanitizeShowName()
     {
         // Arrange
-        var tvShow = new TvShowMetadata("Show: The Name", 2020, 1, 1, "Episode Title", "TV", null, null);
+        var tvShow = new TvShowMetadata("Show: The Name", 2020, 1, 1, "Episode Title", "TV", Overview: null, PosterUrl: null);
         var extension = ".mkv";
 
         // Act
@@ -151,7 +151,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_Movie_WithoutSource_ShouldNotIncludeSource()
     {
         // Arrange
-        var movie = new MovieMetadata("Test Movie", 2020, null);
+        var movie = new MovieMetadata("Test Movie", 2020, Source: null);
         var extension = ".mp4";
 
         // Act
@@ -179,7 +179,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_TvShow_WithoutSource_ShouldNotIncludeSource()
     {
         // Arrange
-        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", null, null, null);
+        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", Source: null, Overview: null, PosterUrl: null);
         var extension = ".mp4";
 
         // Act
@@ -193,7 +193,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_TvShow_WithEmptySource_ShouldNotIncludeSource()
     {
         // Arrange
-        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", "", null, null);
+        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", "", Overview: null, PosterUrl: null);
         var extension = ".mp4";
 
         // Act

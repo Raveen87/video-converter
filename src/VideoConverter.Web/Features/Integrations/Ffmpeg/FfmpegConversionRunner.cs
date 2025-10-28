@@ -1,6 +1,5 @@
-using VideoConverter.Web.Shared.Domain.Entities;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
 using VideoConverter.Web.Features.Conversions.Services;
+using VideoConverter.Web.Shared.Domain.Entities;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
@@ -11,8 +10,10 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
     private readonly string _ffmpegPath = options.Value.Path
         ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
         ?? "ffmpeg";
+
     private readonly bool _dryRun = options.Value.DryRun
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
+
     private readonly IProcessManager _processManager = processManager;
     private readonly IProgressTracker _progressTracker = progressTracker;
     private readonly IMediaProber _mediaProber = mediaProber;
@@ -29,7 +30,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
 
         var (preflightOk, preflightError) = _dryRun
             ? (true, null)
-            : await _preflightChecker.EnsurePreflightAsync(_ffmpegPath, CancellationToken.None);
+            : await _preflightChecker.EnsurePreflightAsync(_ffmpegPath, CancellationToken.None).ConfigureAwait(false);
         if (!preflightOk)
         {
             _logger.LogError("FFmpeg preflight failed: {PreflightError}", preflightError ?? "Unknown error");
@@ -59,7 +60,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
             {
                 try
                 {
-                    var probe = await _mediaProber.ProbeAsync(conversion.InputPath, CancellationToken.None);
+                    var probe = await _mediaProber.ProbeAsync(conversion.InputPath, CancellationToken.None).ConfigureAwait(false);
                     totalDurationSeconds = probe.DurationSeconds ?? 0;
                     _logger.LogDebug("Probed input file duration: {Duration}s", totalDurationSeconds);
                 }
@@ -110,8 +111,8 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
                     {
                         _progressTracker.UpdateProgress(conversion.Id, seconds);
                     }
-                }
-            }, CancellationToken.None);
+                },
+            }, CancellationToken.None).ConfigureAwait(false);
 
             _runCoordinator.Stop(key);
 
@@ -123,11 +124,9 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
                 _logger.LogInformation("[Converter] Completed successfully: {Cmd}", cmdString);
                 return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString };
             }
-            else
-            {
-                _logger.LogError("FFmpeg conversion failed with exit code {ExitCode}", result.ExitCode);
-                return new ConversionStartResult { IsSuccess = false, ErrorMessage = $"FFmpeg conversion failed with exit code {result.ExitCode}" };
-            }
+
+            _logger.LogError("FFmpeg conversion failed with exit code {ExitCode}", result.ExitCode);
+            return new ConversionStartResult { IsSuccess = false, ErrorMessage = $"FFmpeg conversion failed with exit code {result.ExitCode}" };
         }
         catch (Exception ex)
         {

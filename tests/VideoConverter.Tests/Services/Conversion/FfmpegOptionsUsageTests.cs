@@ -1,6 +1,9 @@
 using FluentAssertions;
+
 using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
+
 using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
@@ -17,9 +20,9 @@ public class FfmpegOptionsUsageTests
             Preset = "3",
             Tune = "film",
             Gop = "60",
-            SvtParams = "film-grain=0", // will be ignored for x264
+            SvtParams = "film-grain=0",
             AudioCodec = "aac",
-            DefaultAudioBitrateKbps = 192
+            DefaultAudioBitrateKbps = 192,
         };
 
         var c = new ConversionEntity
@@ -28,7 +31,7 @@ public class FfmpegOptionsUsageTests
             OutputDirectory = ".",
             Crf = 23,
             AudioBitrateKbps = null,
-            Resolution = 720
+            Resolution = 720,
         };
 
         var args = FfmpegArgumentsBuilder.Build(c, "out.mkv", "Title", NullLogger.Instance, options);
@@ -42,5 +45,4 @@ public class FfmpegOptionsUsageTests
         _ = args.Should().ContainInConsecutiveOrder("-b:a", "192k");
     }
 }
-
 

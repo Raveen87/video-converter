@@ -1,9 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
 using VideoConverter.Web.Shared.Domain.Entities;
 
 namespace VideoConverter.Web.Shared.Infrastructure.Persistence;
@@ -11,6 +7,7 @@ namespace VideoConverter.Web.Shared.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Conversion> Conversions => Set<Conversion>();
+
     public DbSet<Profile> Profiles => Set<Profile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,8 +1,10 @@
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
+
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Tests.Persistence;
 
@@ -15,8 +17,7 @@ public class ProfilePersistenceTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var profile = new Profile
         {
             OutputDirectory = "/videos/output",
@@ -26,7 +27,7 @@ public class ProfilePersistenceTests
             Resolution = 2160,
             MetadataBasedFilename = "Movie.Title.2160p.mkv",
             AudioLanguages = ["en", "sv"],
-            SubtitleLanguages = ["sv"]
+            SubtitleLanguages = ["sv"],
         };
 
         // Act
@@ -52,8 +53,7 @@ public class ProfilePersistenceTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-
-        using var context = new AppDbContext(options);
+        await using var context = new AppDbContext(options);
         var profile = new Profile
         {
             OutputDirectory = null,
@@ -63,7 +63,7 @@ public class ProfilePersistenceTests
             Resolution = null,
             MetadataBasedFilename = null,
             AudioLanguages = null,
-            SubtitleLanguages = null
+            SubtitleLanguages = null,
         };
 
         // Act

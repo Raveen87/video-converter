@@ -1,4 +1,5 @@
 using FluentAssertions;
+
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Services.Conversion;
@@ -27,5 +28,4 @@ public class ProgressOutputParserTests
         _ = ok.Should().BeFalse();
     }
 }
-
 

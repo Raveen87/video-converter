@@ -188,6 +188,6 @@ public class GlobalExceptionHandlerMiddlewareTests
     {
         _ = _context.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(_context.Response.Body);
-        return await reader.ReadToEndAsync();
+        return await reader.ReadToEndAsync(_context.RequestAborted).ConfigureAwait(false);
     }
 }
