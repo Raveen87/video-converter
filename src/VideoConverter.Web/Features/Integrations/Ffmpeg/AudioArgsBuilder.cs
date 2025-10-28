@@ -5,12 +5,12 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 internal static class AudioArgsBuilder
 {
-    public static IReadOnlyList<string> BuildAudioCodecArgs(Conversion conversion)
+    public static IReadOnlyList<string> BuildAudioCodecArgs(Conversion conversion, FfmpegOptions options)
     {
         var args = new List<string>
         {
-            "-c:a", "libopus",
-            "-b:a", (conversion.AudioBitrateKbps ?? 128) + "k",
+            "-c:a", options.AudioCodec,
+            "-b:a", (conversion.AudioBitrateKbps ?? options.DefaultAudioBitrateKbps) + "k",
             "-ac", conversion.AudioChannels?.GetFfmpegChannelLayout() ?? "stereo"
         };
         return args;

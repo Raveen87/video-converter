@@ -25,17 +25,17 @@ internal static class VideoArgsBuilder
         return vf;
     }
 
-    public static IReadOnlyList<string> BuildVideoCodecArgs(Conversion conversion, string vf)
+    public static IReadOnlyList<string> BuildVideoCodecArgs(Conversion conversion, string vf, FfmpegOptions options)
     {
         return [
             "-map", "0:v:0",
-            "-c:v", "libsvtav1",
-            "-pix_fmt", "yuv420p10le",
-            "-preset", "6",
-            "-tune", "0",
-            "-g", "120",
+            "-c:v", options.VideoCodec,
+            "-pix_fmt", options.PixelFormat,
+            "-preset", options.Preset,
+            "-tune", options.Tune,
+            "-g", options.Gop,
             "-crf", conversion.Crf?.ToString() ?? "40",
-            "-svtav1-params", "film-grain=8:film-grain-denoise=0",
+            "-svtav1-params", options.SvtParams,
             "-vf", vf
         ];
     }
