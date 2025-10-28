@@ -8,7 +8,7 @@ namespace VideoConverter.Tests.Features.Conversions;
 
 public class ConversionCreateValidatorTests
 {
-    private readonly ConversionCreateValidator _validator = new(NullLogger<ConversionCreateValidator>.Instance, new FileSystemValidator());
+    private readonly ConversionCreateValidator _validator = new(NullLogger<ConversionCreateValidator>.Instance, new FileSystemValidator(), new RequestPropertyValidator());
 
     [Fact]
     public async Task ValidateAsync_WithValidRequest_ReturnsValid()

@@ -96,43 +96,38 @@ public sealed class FileSystemValidator : IFileSystemValidator
         {
             var fullPath = Path.GetFullPath(directoryPath!);
 
-            // Check if directory exists or create it atomically during validation
+            // If directory exists, ensure it is writable. If it doesn't,
+            // ensure the parent (or root) exists and is writable, but do not create it here.
             if (!Directory.Exists(fullPath))
             {
-                // Check if the parent directory exists and is writable
                 var parentDir = Path.GetDirectoryName(fullPath);
-
-                // Handle root directory children (e.g., "C:\newdir" -> parentDir is null, "/newdir" -> parentDir is "/")
                 if (string.IsNullOrEmpty(parentDir))
                 {
-                    // This is a direct child of the root directory (e.g., "C:\newdir", "/newdir")
-                    // The root directory always exists, so we just need to check if we can write to it
                     var rootDir = Path.GetPathRoot(fullPath);
                     if (string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir))
                     {
                         errorMessage = "Root directory does not exist.";
                         return false;
                     }
-
                     if (!CanWriteToDirectory(rootDir))
                     {
                         errorMessage = "Cannot create directory: root directory is not writable.";
                         return false;
                     }
                 }
-                else if (!Directory.Exists(parentDir))
+                else
                 {
-                    errorMessage = "Parent directory does not exist.";
-                    return false;
+                    if (!Directory.Exists(parentDir))
+                    {
+                        errorMessage = "Parent directory does not exist.";
+                        return false;
+                    }
+                    if (!CanWriteToDirectory(parentDir))
+                    {
+                        errorMessage = "Cannot create directory: parent directory is not writable.";
+                        return false;
+                    }
                 }
-                else if (!CanWriteToDirectory(parentDir))
-                {
-                    errorMessage = "Cannot create directory: parent directory is not writable.";
-                    return false;
-                }
-
-                // Create the directory atomically during validation
-                _ = Directory.CreateDirectory(fullPath);
             }
             else if (!CanWriteToDirectory(fullPath))
             {

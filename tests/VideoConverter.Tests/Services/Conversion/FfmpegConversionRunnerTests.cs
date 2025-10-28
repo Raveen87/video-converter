@@ -27,7 +27,8 @@ public class FfmpegConversionRunnerTests
         var progressParser = new FfmpegProgressOutputParser();
         var preflight = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, processManager);
         var options = Microsoft.Extensions.Options.Options.Create(new FfmpegOptions { Path = configuration["Ffmpeg:Path"], DryRun = true });
-        var runner = new FfmpegConversionRunner(processManager, progressTracker, mediaProber, progressParser, preflight, options, NullLogger<FfmpegConversionRunner>.Instance);
+        var runCoordinator = new ConversionRunCoordinator();
+        var runner = new FfmpegConversionRunner(processManager, progressTracker, mediaProber, progressParser, preflight, runCoordinator, options, NullLogger<FfmpegConversionRunner>.Instance);
 
         var tempOut = Path.Combine(Path.GetTempPath(), "vc-tests-out-" + Guid.NewGuid().ToString("N"));
         var conversion = new ConversionEntity

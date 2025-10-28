@@ -4,10 +4,10 @@ using VideoConverter.Web.Features.Conversions.Services;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegConversionRunner(IProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(IProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, IConversionRunCoordinator runCoordinator, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
 {
-    private static readonly HashSet<string> RunningKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly FfmpegOptions _options = options.Value;
+    private readonly IConversionRunCoordinator _runCoordinator = runCoordinator;
     private readonly string _ffmpegPath = options.Value.Path
         ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
         ?? "ffmpeg";
@@ -37,18 +37,10 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
         }
 
         var key = Path.Combine(conversion.OutputDirectory ?? string.Empty, Path.GetFileNameWithoutExtension(conversion.InputPath ?? string.Empty));
-        if (!_dryRun)
+        if (!_dryRun && !_runCoordinator.TryStart(key))
         {
-            lock (RunningKeys)
-            {
-                if (RunningKeys.Contains(key))
-                {
-                    _logger.LogWarning("Conversion already running for key: {Key}", key);
-                    return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Conversion already running for this input/output." };
-                }
-                _ = RunningKeys.Add(key);
-                _logger.LogDebug("Added conversion key to running set: {Key}", key);
-            }
+            _logger.LogWarning("Conversion already running for key: {Key}", key);
+            return new ConversionStartResult { IsSuccess = false, ErrorMessage = "Conversion already running for this input/output." };
         }
 
         try
@@ -57,10 +49,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
             {
                 _logger.LogError("Invalid conversion parameters - InputPath: {InputPath}, OutputDirectory: {OutputDirectory}",
                     conversion.InputPath, conversion.OutputDirectory);
-                lock (RunningKeys)
-                {
-                    _ = RunningKeys.Remove(key);
-                }
+                _runCoordinator.Stop(key);
                 return new ConversionStartResult { IsSuccess = false, ErrorMessage = "InputPath and OutputDirectory are required." };
             }
 
@@ -93,7 +82,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
             // Build ffmpeg arguments via builder
             var args = FfmpegArgumentsBuilder.Build(conversion, outputFile, videoTitle, _logger, _options);
 
-            var cmdString = ProcessManager.BuildDisplayCommand(_ffmpegPath, args);
+            var cmdString = CommandDisplayFormatter.Build(_ffmpegPath, args);
             _logger.LogInformation("FFmpeg command: {Command}", cmdString);
 
             if (_dryRun)
@@ -124,10 +113,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
                 }
             }, CancellationToken.None);
 
-            lock (RunningKeys)
-            {
-                _ = RunningKeys.Remove(key);
-            }
+            _runCoordinator.Stop(key);
 
             // Stop progress tracking
             _progressTracker.StopTracking(conversion.Id);
@@ -146,10 +132,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception occurred during conversion setup for {InputPath}", conversion.InputPath);
-            lock (RunningKeys)
-            {
-                _ = RunningKeys.Remove(key);
-            }
+            _runCoordinator.Stop(key);
             // Stop progress tracking on error
             _progressTracker.StopTracking(conversion.Id);
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = ex.Message };

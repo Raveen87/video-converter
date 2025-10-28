@@ -5,6 +5,7 @@ public sealed class FfmpegOptions
     public const string SectionName = "Ffmpeg";
 
     public string? Path { get; set; } = "ffmpeg";
+    public string? FfprobePath { get; set; } = "ffprobe";
     public bool DryRun { get; set; }
 
     // Video defaults
