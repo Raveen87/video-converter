@@ -25,7 +25,9 @@ public class FfmpegConversionRunnerTests
         var processManager = new ProcessManager(NullLogger<ProcessManager>.Instance);
         var progressTracker = new Mock<IProgressTracker>().Object;
         var mediaProber = new Mock<IMediaProber>().Object;
-        var runner = new FfmpegConversionRunner(configuration, processManager, progressTracker, mediaProber, NullLogger<FfmpegConversionRunner>.Instance);
+        var progressParser = new FfmpegProgressOutputParser();
+        var preflight = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, processManager);
+        var runner = new FfmpegConversionRunner(configuration, processManager, progressTracker, mediaProber, progressParser, preflight, NullLogger<FfmpegConversionRunner>.Instance);
 
         var tempOut = Path.Combine(Path.GetTempPath(), "vc-tests-out-" + Guid.NewGuid().ToString("N"));
         var conversion = new ConversionEntity
