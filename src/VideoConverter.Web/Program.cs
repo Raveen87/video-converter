@@ -35,6 +35,10 @@ public static class Program
         _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
         _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
         _ = builder.Services.AddSingleton<IMetadataService, TmdbMetadataService>();
+        _ = builder.Services.AddSingleton<ISourceDetector, SourceDetector>();
+        _ = builder.Services.AddSingleton<ITitleSanitizer, TitleSanitizer>();
+        _ = builder.Services.AddSingleton<IMovieFilenameParser, MovieFilenameParser>();
+        _ = builder.Services.AddSingleton<ITvShowFilenameParser, TvShowFilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameParser, FilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
