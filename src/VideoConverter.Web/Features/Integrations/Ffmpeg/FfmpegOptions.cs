@@ -4,7 +4,7 @@ public sealed class FfmpegOptions
 {
     public const string SectionName = "Ffmpeg";
 
-    public string? Path { get; set; }
+    public string? Path { get; set; } = "ffmpeg";
     public bool DryRun { get; set; }
 
     // Video defaults
