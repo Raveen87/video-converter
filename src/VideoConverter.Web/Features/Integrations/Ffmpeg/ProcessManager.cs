@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class ProcessManager(ILogger<ProcessManager> logger)
+public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessManager
 {
     private readonly ILogger<ProcessManager> _logger = logger;
 
@@ -24,115 +24,120 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger)
         return startInfo;
     }
 
-    public async Task<ProcessResult> RunProcessAsync(
-        string executablePath,
-        IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken = default)
+    public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments",
-            executablePath, arguments.Count);
+        _logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments", request.ExecutablePath, request.Arguments.Count);
 
-        var startInfo = BuildStartInfo(executablePath, arguments);
-
-        using var process = new Process { StartInfo = startInfo };
-
-        if (!process.Start())
+        var startInfo = BuildStartInfo(request.ExecutablePath, request.Arguments);
+        if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
         {
-            _logger.LogError("Failed to start process: {Executable}", executablePath);
-            return new ProcessResult { IsSuccess = false, ErrorMessage = "Failed to start process" };
+            startInfo.WorkingDirectory = request.WorkingDirectory;
         }
-
-        _logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
-
-        var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-
-        var result = new ProcessResult
+        if (request.EnvironmentVariables is not null)
         {
-            IsSuccess = process.ExitCode == 0,
-            ExitCode = process.ExitCode,
-            StandardOutput = stdout,
-            StandardError = stderr
-        };
-
-        if (result.IsSuccess)
-        {
-            _logger.LogDebug("Process completed successfully: {Executable}", executablePath);
+            foreach (var kvp in request.EnvironmentVariables)
+            {
+                startInfo.Environment[kvp.Key] = kvp.Value;
+            }
         }
-        else
-        {
-            _logger.LogWarning("Process failed with exit code {ExitCode}: {Error}",
-                process.ExitCode, stderr);
-        }
-
-        return result;
-    }
-
-    public async Task<ProcessResult> RunProcessWithOutputHandlingAsync(
-        string executablePath,
-        IReadOnlyList<string> arguments,
-        Action<string>? onOutput = null,
-        Action<string>? onError = null,
-        CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Starting process with output handling: {Executable}", executablePath);
-
-        var startInfo = BuildStartInfo(executablePath, arguments);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
         if (!process.Start())
         {
-            _logger.LogError("Failed to start process: {Executable}", executablePath);
+            _logger.LogError("Failed to start process: {Executable}", request.ExecutablePath);
             return new ProcessResult { IsSuccess = false, ErrorMessage = "Failed to start process" };
         }
 
         _logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
 
-        // Set up output handling
         var stdoutLines = new List<string>();
         var stderrLines = new List<string>();
-        if (onOutput != null)
+
+        if (request.OnStdout != null)
         {
             process.OutputDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
                     stdoutLines.Add(e.Data);
-                    onOutput(e.Data);
+                    request.OnStdout(e.Data);
                 }
             };
             process.BeginOutputReadLine();
         }
+        else if (request.CaptureOutput)
+        {
+            // read whole stream at end
+        }
 
-        if (onError != null)
+        if (request.OnStderr != null)
         {
             process.ErrorDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
                     stderrLines.Add(e.Data);
-                    onError(e.Data);
+                    request.OnStderr(e.Data);
                 }
             };
             process.BeginErrorReadLine();
         }
 
-        await process.WaitForExitAsync(cancellationToken);
+        var timeoutTask = Task.CompletedTask;
+        using var timeoutCts = request.Timeout.HasValue ? new CancellationTokenSource(request.Timeout.Value) : null;
+        if (timeoutCts is not null)
+        {
+            timeoutTask = Task.Delay(Timeout.InfiniteTimeSpan, timeoutCts.Token);
+        }
+
+        var waitTask = process.WaitForExitAsync(cancellationToken);
+        var completed = await Task.WhenAny(waitTask, timeoutTask);
+        if (completed == timeoutTask)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to kill timed-out process {Pid}", process.Id);
+            }
+            return new ProcessResult { IsSuccess = false, ErrorMessage = "Process timed out" };
+        }
+
+        var stdout = string.Empty;
+        var stderr = string.Empty;
+        if (request.OnStdout is null && request.CaptureOutput)
+        {
+            stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        }
+        else if (stdoutLines.Count > 0)
+        {
+            stdout = string.Join(Environment.NewLine, stdoutLines);
+        }
+
+        if (request.OnStderr is null && request.CaptureOutput)
+        {
+            stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+        }
+        else if (stderrLines.Count > 0)
+        {
+            stderr = string.Join(Environment.NewLine, stderrLines);
+        }
 
         var result = new ProcessResult
         {
             IsSuccess = process.ExitCode == 0,
             ExitCode = process.ExitCode,
             ProcessId = process.Id,
-            StandardOutput = stdoutLines.Count == 0 ? string.Empty : string.Join(Environment.NewLine, stdoutLines),
-            StandardError = stderrLines.Count == 0 ? string.Empty : string.Join(Environment.NewLine, stderrLines)
+            StandardOutput = stdout,
+            StandardError = stderr
         };
 
         if (result.IsSuccess)
         {
-            _logger.LogDebug("Process completed successfully: {Executable}", executablePath);
+            _logger.LogDebug("Process completed successfully: {Executable}", request.ExecutablePath);
         }
         else
         {

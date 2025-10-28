@@ -1,11 +1,10 @@
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 using VideoConverter.Web.Features.Conversions.Services;
-using System.Text.RegularExpressions;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegConversionRunner(IConfiguration configuration, ProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(IConfiguration configuration, IProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
 {
     private static readonly HashSet<string> RunningKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
@@ -13,17 +12,12 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
         ?? "ffmpeg";
     private readonly bool _dryRun = string.Equals(configuration["Ffmpeg:DryRun"], "true", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
-    private readonly ProcessManager _processManager = processManager;
+    private readonly IProcessManager _processManager = processManager;
     private readonly IProgressTracker _progressTracker = progressTracker;
     private readonly IMediaProber _mediaProber = mediaProber;
+    private readonly IProgressOutputParser _progressParser = progressParser;
+    private readonly IFfmpegPreflightChecker _preflightChecker = preflightChecker;
     private readonly ILogger<FfmpegConversionRunner> _logger = logger;
-
-    private static readonly SemaphoreSlim _preflightLock = new(1, 1);
-    private static bool _preflightDone;
-    private static string? _preflightError;
-
-    // Regex to parse ffmpeg progress output: time=HH:MM:SS.ms
-    private static readonly Regex TimeRegex = new(@"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})", RegexOptions.Compiled);
 
     public async Task<ConversionStartResult> StartAsync(Conversion conversion)
     {
@@ -32,11 +26,13 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
 
         await Task.Yield();
 
-        var preflightOk = _dryRun || await EnsurePreflightAsync(_ffmpegPath, _processManager);
+        var (preflightOk, preflightError) = _dryRun
+            ? (true, null)
+            : await _preflightChecker.EnsurePreflightAsync(_ffmpegPath, CancellationToken.None);
         if (!preflightOk)
         {
-            _logger.LogError("FFmpeg preflight failed: {PreflightError}", _preflightError ?? "Unknown error");
-            return new ConversionStartResult { IsSuccess = false, ErrorMessage = _preflightError ?? "FFmpeg preflight failed" };
+            _logger.LogError("FFmpeg preflight failed: {PreflightError}", preflightError ?? "Unknown error");
+            return new ConversionStartResult { IsSuccess = false, ErrorMessage = preflightError ?? "FFmpeg preflight failed" };
         }
 
         var key = Path.Combine(conversion.OutputDirectory ?? string.Empty, Path.GetFileNameWithoutExtension(conversion.InputPath ?? string.Empty));
@@ -111,16 +107,21 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
                 _progressTracker.StartTracking(conversion.Id, totalDurationSeconds);
             }
 
-            var result = await _processManager.RunProcessWithOutputHandlingAsync(
-                _ffmpegPath,
-                args,
-                onOutput: data => _logger.LogInformation("[ffmpeg] {Line}", data),
-                onError: data =>
+            var result = await _processManager.RunAsync(new ProcessRequest
+            {
+                ExecutablePath = _ffmpegPath,
+                Arguments = args,
+                CaptureOutput = true,
+                OnStdout = data => _logger.LogInformation("[ffmpeg] {Line}", data),
+                OnStderr = data =>
                 {
                     _logger.LogInformation("[ffmpeg] {Line}", data);
-                    ParseProgressFromOutput(data, conversion.Id);
-                },
-                CancellationToken.None);
+                    if (_progressParser.TryParseTimeSeconds(data, out var seconds))
+                    {
+                        _progressTracker.UpdateProgress(conversion.Id, seconds);
+                    }
+                }
+            }, CancellationToken.None);
 
             lock (RunningKeys)
             {
@@ -154,86 +155,4 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, Process
         }
     }
 
-    private void ParseProgressFromOutput(string outputLine, int conversionId)
-    {
-        try
-        {
-            var match = TimeRegex.Match(outputLine);
-            if (match.Success)
-            {
-                var hours = int.Parse(match.Groups[1].Value);
-                var minutes = int.Parse(match.Groups[2].Value);
-                var seconds = int.Parse(match.Groups[3].Value);
-                var centiseconds = int.Parse(match.Groups[4].Value);
-
-                var totalSeconds = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100.0);
-                _progressTracker.UpdateProgress(conversionId, totalSeconds);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to parse progress from ffmpeg output: {OutputLine}", outputLine);
-        }
-    }
-
-    private static async Task<bool> EnsurePreflightAsync(string ffmpegPath, ProcessManager processManager)
-    {
-        if (_preflightDone)
-        {
-            return true;
-        }
-
-        await _preflightLock.WaitAsync();
-        try
-        {
-            if (_preflightDone)
-            {
-                return true;
-            }
-
-            try
-            {
-                var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
-                var preflightArgs = new List<string>
-                {
-                    "-hide_banner",
-                    "-loglevel", "error",
-                    "-f", "lavfi",
-                    "-i", "color=c=black:s=1280x720:d=0.1",
-                    "-c:v", "libsvtav1",
-                    "-pix_fmt", "yuv420p10le",
-                    "-preset", "6",
-                    "-tune", "0",
-                    "-crf", "40",
-                    "-svtav1-params", "film-grain=8:film-grain-denoise=0",
-                    "-vf", vf,
-                    "-t", "0.05",
-                    "-f", "null",
-                    "-"
-                };
-
-                var result = await processManager.RunProcessAsync(ffmpegPath, preflightArgs, CancellationToken.None);
-
-                if (!result.IsSuccess)
-                {
-                    _preflightError = string.IsNullOrWhiteSpace(result.StandardError)
-                        ? $"ffmpeg preflight failed with exit code {result.ExitCode}"
-                        : result.StandardError;
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                _preflightError = ex.Message;
-                return false;
-            }
-
-            _preflightDone = true;
-            return true;
-        }
-        finally
-        {
-            _ = _preflightLock.Release();
-        }
-    }
 }

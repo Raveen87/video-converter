@@ -25,10 +25,12 @@ public static class Program
         });
 
         _ = builder.Services.AddHttpClient();
-        _ = builder.Services.AddSingleton<ProcessManager>();
+        _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
         _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
+        _ = builder.Services.AddSingleton<IProgressOutputParser, FfmpegProgressOutputParser>();
+        _ = builder.Services.AddSingleton<IFfmpegPreflightChecker, FfmpegPreflightChecker>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
         _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
