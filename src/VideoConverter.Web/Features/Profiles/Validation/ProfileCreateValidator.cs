@@ -3,11 +3,10 @@ using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web.Features.Profiles.Validation;
 
-public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logger, IFileSystemValidator fileSystemValidator, IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ProfileCreateDto>
+public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logger, IFileSystemValidator fileSystemValidator) : IRequestValidator<ProfileCreateDto>
 {
     private readonly ILogger<ProfileCreateValidator> _logger = logger;
     private readonly IFileSystemValidator _fileSystemValidator = fileSystemValidator;
-    private readonly IRequestPropertyValidator _requestPropertyValidator = requestPropertyValidator;
 
     public Task<ValidationResult> ValidateAsync(ProfileCreateDto request, CancellationToken cancellationToken)
     {
@@ -21,23 +20,30 @@ public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logge
         }
 
         // Validate CRF range when provided
-        result.AddIfInvalid(_requestPropertyValidator.IsValidCrf(request.Crf, out var crfError), nameof(request.Crf), crfError, _logger, request.Crf);
+        var (crfOk, crfErr) = ValidationRules.Crf(request.Crf);
+        result.AddIfInvalid(crfOk, nameof(request.Crf), crfErr, _logger, request.Crf);
 
         // Validate audio bitrate range when provided (kbps)
-        result.AddIfInvalid(_requestPropertyValidator.IsValidAudioBitrate(request.AudioBitrateKbps, out var bitrateError), nameof(request.AudioBitrateKbps), bitrateError, _logger, request.AudioBitrateKbps);
+        var (brOk, brErr) = ValidationRules.AudioBitrate(request.AudioBitrateKbps);
+        result.AddIfInvalid(brOk, nameof(request.AudioBitrateKbps), brErr, _logger, request.AudioBitrateKbps);
 
         // Validate resolution (when provided): allowed values 720, 1080, 2160
-        result.AddIfInvalid(_requestPropertyValidator.IsValidResolution(request.Resolution, out var resolutionError), nameof(request.Resolution), resolutionError, _logger, request.Resolution);
+        var (resOk, resErr) = ValidationRules.Resolution(request.Resolution);
+        result.AddIfInvalid(resOk, nameof(request.Resolution), resErr, _logger, request.Resolution);
 
         // Validate audio channels (when provided)
-        result.AddIfInvalid(_requestPropertyValidator.IsValidAudioChannels(request.AudioChannels, out var audioChannelsError), nameof(request.AudioChannels), audioChannelsError, _logger);
+        var (acOk, acErr) = ValidationRules.AudioChannelsValue(request.AudioChannels);
+        result.AddIfInvalid(acOk, nameof(request.AudioChannels), acErr, _logger);
 
         // Validate metadata based filename when provided
-        result.AddIfInvalid(_requestPropertyValidator.IsValidMetadataBasedFilename(request.MetadataBasedFilename, out var metadataError), nameof(request.MetadataBasedFilename), metadataError, _logger);
+        var (mbfOk, mbfErr) = ValidationRules.MetadataBasedFilename(request.MetadataBasedFilename);
+        result.AddIfInvalid(mbfOk, nameof(request.MetadataBasedFilename), mbfErr, _logger);
 
         // Validate language lists when provided
-        result.AddIfInvalid(_requestPropertyValidator.IsValidLanguageList(request.AudioLanguages, out var audioLangError), nameof(request.AudioLanguages), audioLangError, _logger);
-        result.AddIfInvalid(_requestPropertyValidator.IsValidLanguageList(request.SubtitleLanguages, out var subLangError), nameof(request.SubtitleLanguages), subLangError, _logger);
+        var (alOk, alErr) = ValidationRules.LanguageList(request.AudioLanguages);
+        result.AddIfInvalid(alOk, nameof(request.AudioLanguages), alErr, _logger);
+        var (slOk, slErr) = ValidationRules.LanguageList(request.SubtitleLanguages);
+        result.AddIfInvalid(slOk, nameof(request.SubtitleLanguages), slErr, _logger);
 
         if (result.IsValid)
         {
