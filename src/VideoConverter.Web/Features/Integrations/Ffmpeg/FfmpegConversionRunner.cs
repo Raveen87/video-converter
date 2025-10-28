@@ -4,13 +4,14 @@ using VideoConverter.Web.Features.Conversions.Services;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegConversionRunner(IConfiguration configuration, IProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(IProcessManager processManager, IProgressTracker progressTracker, IMediaProber mediaProber, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
 {
     private static readonly HashSet<string> RunningKeys = new(StringComparer.OrdinalIgnoreCase);
-    private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
+    private readonly FfmpegOptions _options = options.Value;
+    private readonly string _ffmpegPath = options.Value.Path
         ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
         ?? "ffmpeg";
-    private readonly bool _dryRun = string.Equals(configuration["Ffmpeg:DryRun"], "true", StringComparison.OrdinalIgnoreCase)
+    private readonly bool _dryRun = options.Value.DryRun
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
     private readonly IProcessManager _processManager = processManager;
     private readonly IProgressTracker _progressTracker = progressTracker;
@@ -90,7 +91,7 @@ public sealed class FfmpegConversionRunner(IConfiguration configuration, IProces
             _logger.LogDebug("Video title metadata: {VideoTitle}", videoTitle);
 
             // Build ffmpeg arguments via builder
-            var args = FfmpegArgumentsBuilder.Build(conversion, outputFile, videoTitle, _logger);
+            var args = FfmpegArgumentsBuilder.Build(conversion, outputFile, videoTitle, _logger, _options);
 
             var cmdString = ProcessManager.BuildDisplayCommand(_ffmpegPath, args);
             _logger.LogInformation("FFmpeg command: {Command}", cmdString);

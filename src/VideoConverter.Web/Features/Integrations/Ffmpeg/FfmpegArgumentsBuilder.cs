@@ -9,7 +9,8 @@ internal static class FfmpegArgumentsBuilder
         Conversion conversion,
         string outputFile,
         string videoTitle,
-        ILogger logger)
+        ILogger logger,
+        FfmpegOptions options)
     {
         var (targetWidth, targetHeight) = VideoArgsBuilder.GetTargetDimensions(conversion.Resolution);
         logger.LogDebug("Target resolution: {Width}x{Height}", targetWidth, targetHeight);
@@ -22,8 +23,8 @@ internal static class FfmpegArgumentsBuilder
             "-i", conversion.InputPath!
         };
 
-        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf));
-        args.AddRange(AudioArgsBuilder.BuildAudioCodecArgs(conversion));
+        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf, options));
+        args.AddRange(AudioArgsBuilder.BuildAudioCodecArgs(conversion, options));
         args.Add(outputFile);
 
         var externalSubtitlePaths = SubtitleArgsBuilder.ParseExternalSubtitlePaths(conversion.SelectedExternalSubtitlePathsCsv);

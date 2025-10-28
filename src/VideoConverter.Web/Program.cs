@@ -24,6 +24,10 @@ public static class Program
             _ = options.UseSqlite(connectionString);
         });
 
+        // Options
+        _ = builder.Services.Configure<Features.Integrations.Ffmpeg.FfmpegOptions>(
+            builder.Configuration.GetSection(Features.Integrations.Ffmpeg.FfmpegOptions.SectionName));
+
         _ = builder.Services.AddHttpClient();
         _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
