@@ -89,8 +89,7 @@ public class ApiErrorException(
     /// <returns>A dictionary containing the error information.</returns>
     public IDictionary<string, object> ToDictionary()
     {
-        return new Dictionary<string, object>
-(StringComparer.Ordinal)
+        return new Dictionary<string, object>(StringComparer.Ordinal)
         {
             { "statusCode", (int)StatusCode },
             { "errorCode", ErrorCode.ToString() },

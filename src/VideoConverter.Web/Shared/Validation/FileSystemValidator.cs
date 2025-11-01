@@ -109,6 +109,7 @@ public sealed class FileSystemValidator : IFileSystemValidator
                         errorMessage = "Root directory does not exist.";
                         return false;
                     }
+
                     if (!CanWriteToDirectory(rootDir))
                     {
                         errorMessage = "Cannot create directory: root directory is not writable.";
@@ -122,6 +123,7 @@ public sealed class FileSystemValidator : IFileSystemValidator
                         errorMessage = "Parent directory does not exist.";
                         return false;
                     }
+
                     if (!CanWriteToDirectory(parentDir))
                     {
                         errorMessage = "Cannot create directory: parent directory is not writable.";

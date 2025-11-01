@@ -82,7 +82,7 @@ public class FilenameGeneratorTests
     {
         // Arrange
         var movie = new MovieMetadata("Test Movie", 2020, "DVDRip");
-        var extension = "";
+        var extension = string.Empty;
 
         // Act
         var result = _generator.GenerateFilename(movie, extension);
@@ -109,7 +109,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_ShouldHandleEmptyTitle()
     {
         // Arrange
-        var movie = new MovieMetadata("", 2020, "PDTV");
+        var movie = new MovieMetadata(string.Empty, 2020, "PDTV");
         var extension = ".mp4";
 
         // Act
@@ -165,7 +165,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_Movie_WithEmptySource_ShouldNotIncludeSource()
     {
         // Arrange
-        var movie = new MovieMetadata("Test Movie", 2020, "");
+        var movie = new MovieMetadata("Test Movie", 2020, string.Empty);
         var extension = ".mp4";
 
         // Act
@@ -193,7 +193,7 @@ public class FilenameGeneratorTests
     public void GenerateFilename_TvShow_WithEmptySource_ShouldNotIncludeSource()
     {
         // Arrange
-        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", "", Overview: null, PosterUrl: null);
+        var tvShow = new TvShowMetadata("Test Show", 2020, 1, 1, "Episode Title", string.Empty, Overview: null, PosterUrl: null);
         var extension = ".mp4";
 
         // Act

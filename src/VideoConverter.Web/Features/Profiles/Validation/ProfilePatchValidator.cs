@@ -5,19 +5,15 @@ namespace VideoConverter.Web.Features.Profiles.Validation;
 
 public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger, IFileSystemValidator fileSystemValidator, IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ProfilePatchDto>
 {
-    private readonly ILogger<ProfilePatchValidator> _logger = logger;
-    private readonly IFileSystemValidator _fileSystemValidator = fileSystemValidator;
-    private readonly IRequestPropertyValidator _requestPropertyValidator = requestPropertyValidator;
-
-    public Task<ValidationResult> ValidateAsync(ProfilePatchDto request, CancellationToken cancellationToken)
+    public Task<DomainValidationResult> ValidateAsync(ProfilePatchDto request, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting validation for profile patch request");
-        var result = new ValidationResult();
+        logger.LogDebug("Starting validation for profile patch request");
+        var result = new DomainValidationResult();
 
         // Validate output directory when provided
         if (!string.IsNullOrWhiteSpace(request.OutputDirectory))
         {
-            result.AddIfInvalid(_fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, _logger, request.OutputDirectory);
+            result.AddIfInvalid(fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, logger, request.OutputDirectory);
         }
 
         ProfileValidationHelper.ApplyCommon(
@@ -29,18 +25,18 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
             request.MetadataBasedFilename,
             request.AudioLanguages,
             request.SubtitleLanguages,
-            _fileSystemValidator,
-            _requestPropertyValidator,
-            _logger,
+            fileSystemValidator,
+            requestPropertyValidator,
+            logger,
             result);
 
         if (result.IsValid)
         {
-            _logger.LogInformation("Profile patch validation completed successfully");
+            logger.LogInformation("Profile patch validation completed successfully");
         }
         else
         {
-            _logger.LogWarning("Profile patch validation failed with {ErrorCount} errors", result.ToDictionary().Count);
+            logger.LogWarning("Profile patch validation failed with {ErrorCount} errors", result.ToDictionary().Count);
         }
 
         return Task.FromResult(result);

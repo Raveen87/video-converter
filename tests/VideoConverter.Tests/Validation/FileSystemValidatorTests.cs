@@ -92,7 +92,7 @@ public class FileSystemValidatorTests
     public void IsValidDirectory_WithEmptyPath_ReturnsFalse()
     {
         // Act
-        var isValid = _validator.IsValidDirectory("", out var errorMessage);
+        var isValid = _validator.IsValidDirectory(string.Empty, out var errorMessage);
 
         // Assert
         Assert.False(isValid);

@@ -9,12 +9,13 @@ internal static class SubtitleArgsBuilder
         {
             paths.AddRange(csv.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         }
+
         return paths;
     }
 
     public static void AddExternalSubtitleInputs(List<string> args, List<string> externalSubtitlePaths)
     {
-        if (externalSubtitlePaths.Count == 0)
+        if (externalSubtitlePaths.Count is 0)
         {
             return;
         }
@@ -24,6 +25,7 @@ internal static class SubtitleArgsBuilder
         {
             insertInputAt = args.Count;
         }
+
         foreach (var subPath in externalSubtitlePaths)
         {
             args.Insert(insertInputAt, subPath);
@@ -56,7 +58,7 @@ internal static class SubtitleArgsBuilder
 
     public static void MapExternalSubtitleStreams(List<string> args, List<string> externalSubtitlePaths, ref int insertAt)
     {
-        if (externalSubtitlePaths.Count == 0)
+        if (externalSubtitlePaths.Count is 0)
         {
             return;
         }
@@ -72,7 +74,7 @@ internal static class SubtitleArgsBuilder
 
     public static void AddExternalSubtitleLanguages(List<string> args, List<string> externalSubtitlePaths, ref int insertAt, ILogger logger)
     {
-        if (externalSubtitlePaths.Count == 0)
+        if (externalSubtitlePaths.Count is 0)
         {
             return;
         }
@@ -108,6 +110,7 @@ internal static class SubtitleArgsBuilder
         {
             logger.LogWarning(ex, "Failed to extract language tag from subtitle path '{Path}': {Error}", subtitlePath, ex.Message);
         }
+
         return null;
     }
 }

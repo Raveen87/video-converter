@@ -11,8 +11,6 @@ namespace VideoConverter.Web.Features.Profiles.Validation;
 /// </summary>
 public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logger)
 {
-    private readonly ILogger<ProfileExistsValidator> _logger = logger;
-
     /// <summary>
     /// Validates that a profile exists and returns it for read-only access.
     /// </summary>
@@ -23,7 +21,7 @@ public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logge
     /// <exception cref="ApiErrorException">Thrown when the profile is not found.</exception>
     public async Task<Profile> GetProfileForReadAsync(int id, AppDbContext db, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Looking up profile with ID: {ProfileId} for read access", id);
+        logger.LogDebug("Looking up profile with ID: {ProfileId} for read access", id);
 
         var profile = await db.Profiles
             .AsNoTracking()
@@ -31,14 +29,14 @@ public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logge
 
         if (profile is null)
         {
-            _logger.LogWarning("Profile not found with ID: {ProfileId}", id);
+            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ProfileNotFound,
                 $"Profile with ID {id} was not found.",
                 "The requested profile could not be found.");
         }
 
-        _logger.LogDebug("Profile found with ID: {ProfileId}", id);
+        logger.LogDebug("Profile found with ID: {ProfileId}", id);
         return profile;
     }
 
@@ -52,21 +50,21 @@ public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logge
     /// <exception cref="ApiErrorException">Thrown when the profile is not found.</exception>
     public async Task<Profile> GetProfileForUpdateAsync(int id, AppDbContext db, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Looking up profile with ID: {ProfileId} for update access", id);
+        logger.LogDebug("Looking up profile with ID: {ProfileId} for update access", id);
 
         var profile = await db.Profiles
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (profile is null)
         {
-            _logger.LogWarning("Profile not found with ID: {ProfileId}", id);
+            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ProfileNotFound,
                 $"Profile with ID {id} was not found.",
                 "The requested profile could not be found.");
         }
 
-        _logger.LogDebug("Profile found with ID: {ProfileId}", id);
+        logger.LogDebug("Profile found with ID: {ProfileId}", id);
         return profile;
     }
 }

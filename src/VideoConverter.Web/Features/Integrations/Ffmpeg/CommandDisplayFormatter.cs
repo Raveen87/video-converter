@@ -10,6 +10,7 @@ public static class CommandDisplayFormatter
             {
                 return s;
             }
+
             var needsQuotes = s.Any(ch => char.IsWhiteSpace(ch) || "&|><^()'\"".Contains(ch, StringComparison.Ordinal));
             return needsQuotes ? "\"" + s.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"" : s;
         }
@@ -32,7 +33,6 @@ public static class CommandDisplayFormatter
             }
         }
 
-        return Quote(executablePath) + (displayArgs.Count > 0 ? " " + string.Join(" ", displayArgs) : "");
+        return Quote(executablePath) + (displayArgs.Count > 0 ? " " + string.Join(' ', displayArgs) : string.Empty);
     }
 }
-

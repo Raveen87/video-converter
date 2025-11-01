@@ -10,18 +10,15 @@ namespace VideoConverter.Web.Common.Middleware;
 /// </summary>
 public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger)
 {
-    private readonly RequestDelegate _next = next;
-    private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger = logger;
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context).ConfigureAwait(false);
+            await next(context).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+            logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex).ConfigureAwait(false);
         }
     }
@@ -34,7 +31,7 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         object apiError = exception switch
         {
             ApiErrorException apiException => apiException,
-            ValidationException validationEx => validationEx,
+            DomainValidationException validationEx => validationEx,
             ArgumentNullException nullEx => ApiErrorException.ValidationError(
                 nullEx.Message,
                 "A required parameter is missing. Please provide all required information.",
@@ -79,14 +76,14 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         var errorResponse = apiError switch
         {
             ApiErrorException apiException => apiException.ToDictionary(),
-            ValidationException validationException => validationException.ToDictionary(),
+            DomainValidationException validationException => validationException.ToDictionary(),
             _ => throw new InvalidOperationException("Unexpected error type"),
         };
 
         response.StatusCode = apiError switch
         {
             ApiErrorException apiException => (int)apiException.StatusCode,
-            ValidationException => (int)HttpStatusCode.BadRequest,
+            DomainValidationException => (int)HttpStatusCode.BadRequest,
             _ => (int)HttpStatusCode.InternalServerError,
         };
 

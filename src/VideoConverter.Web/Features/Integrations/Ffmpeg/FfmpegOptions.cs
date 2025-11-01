@@ -28,4 +28,3 @@ public sealed class FfmpegOptions
 
     public int DefaultAudioBitrateKbps { get; set; } = 128;
 }
-

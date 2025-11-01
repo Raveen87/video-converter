@@ -51,7 +51,7 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
         if (languageList is { Count: > 0 })
         {
             var emptyLanguages = languageList.Where(string.IsNullOrWhiteSpace).ToList();
-            if (emptyLanguages.Any())
+            if (emptyLanguages.Count > 0)
             {
                 errorMessage = "Language names must be non-empty.";
                 return false;

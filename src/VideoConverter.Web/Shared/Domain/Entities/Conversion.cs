@@ -30,4 +30,3 @@ public class Conversion
 
     public string? MetadataBasedFilename { get; set; } // filename based on metadata lookup
 }
-

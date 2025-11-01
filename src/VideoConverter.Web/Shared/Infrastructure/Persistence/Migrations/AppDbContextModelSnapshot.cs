@@ -14,7 +14,6 @@ namespace VideoConverter.Web.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-#pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
 
             modelBuilder.Entity("VideoConverter.Web.Data.Conversion", b =>
@@ -102,7 +101,6 @@ namespace VideoConverter.Web.Migrations
 
                     b.ToTable("Profiles");
                 });
-#pragma warning restore 612, 618
         }
     }
 }

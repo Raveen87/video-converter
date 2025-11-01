@@ -1,8 +1,8 @@
 namespace VideoConverter.Web.Shared.Validation;
 
-public sealed class ValidationResult
+public sealed class DomainValidationResult
 {
-    public bool IsValid => Errors.Count == 0;
+    public bool IsValid => Errors.Count is 0;
 
     private Dictionary<string, List<string>> Errors { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -12,6 +12,7 @@ public sealed class ValidationResult
         {
             Errors[field] = list = [];
         }
+
         list.Add(message);
     }
 

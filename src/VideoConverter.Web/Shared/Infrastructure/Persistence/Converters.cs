@@ -7,7 +7,7 @@ namespace VideoConverter.Web.Shared.Infrastructure.Persistence;
 
 public static class Converters
 {
-    public static (ValueConverter<IEnumerable<string>?, string?> converter, ValueComparer<IEnumerable<string>?> comparer) CreateStringListJson()
+    public static (ValueConverter<IEnumerable<string>?, string?> Converter, ValueComparer<IEnumerable<string>?> Comparer) CreateStringListJson()
     {
         var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 

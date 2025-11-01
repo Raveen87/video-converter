@@ -153,7 +153,7 @@ public class MetadataServiceTests
     public void FilenameParser_ParseEmptyFilename_ReturnsDefault()
     {
         // Arrange
-        var filename = "";
+        var filename = string.Empty;
 
         // Act
         var result = _filenameParser.ParseFilename(filename);
@@ -475,7 +475,7 @@ public class MetadataServiceTests
     public async Task FakeMetadataService_GetMovieMetadata_WithEmptyTitle_ReturnsNull()
     {
         // Arrange
-        var title = "";
+        var title = string.Empty;
         var year = 2023;
 
         // Act

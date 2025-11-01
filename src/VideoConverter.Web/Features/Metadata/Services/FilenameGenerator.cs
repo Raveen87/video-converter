@@ -4,7 +4,7 @@ using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-public class FilenameGenerator : IFilenameGenerator
+public partial class FilenameGenerator : IFilenameGenerator
 {
     public string GenerateFilename(MediaMetadata metadata, string originalExtension)
     {
@@ -64,10 +64,10 @@ public class FilenameGenerator : IFilenameGenerator
         }
 
         // Remove or replace characters that are not allowed in filenames
-        var sanitized = Regex.Replace(filename, @"[<>:""/\\|?*]", "_", RegexOptions.None, TimeSpan.FromSeconds(1));
+        var sanitized = IllegalPathCharactersRegex().Replace(filename, "_");
 
         // Replace multiple spaces with single space
-        sanitized = Regex.Replace(sanitized, @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(1));
+        sanitized = RepeatingSpacesRegex().Replace(sanitized, " ");
 
         // Remove leading/trailing spaces and dots
         sanitized = sanitized.Trim(' ', '.');
@@ -75,4 +75,10 @@ public class FilenameGenerator : IFilenameGenerator
         // Ensure it's not empty after sanitization
         return string.IsNullOrWhiteSpace(sanitized) ? "Unknown" : sanitized;
     }
+
+    [GeneratedRegex(@"[<>:""/\\|?*]", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex IllegalPathCharactersRegex();
+
+    [GeneratedRegex(@"\s+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RepeatingSpacesRegex();
 }

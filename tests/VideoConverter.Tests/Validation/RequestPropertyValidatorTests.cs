@@ -86,7 +86,7 @@ public class RequestPropertyValidatorTests
     {
         _ = _validator.IsValidLanguageList([""], out var e1).Should().BeFalse();
         _ = e1.Should().Be("Language names must be non-empty.");
-        _ = _validator.IsValidLanguageList(["English", ""], out var e2).Should().BeFalse();
+        _ = _validator.IsValidLanguageList(["English", string.Empty], out var e2).Should().BeFalse();
         _ = e2.Should().Be("Language names must be non-empty.");
         _ = _validator.IsValidLanguageList(["English", "   "], out var e3).Should().BeFalse();
         _ = e3.Should().Be("Language names must be non-empty.");

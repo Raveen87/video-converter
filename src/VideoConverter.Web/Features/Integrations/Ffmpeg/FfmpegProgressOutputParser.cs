@@ -4,12 +4,10 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 public sealed partial class FfmpegProgressOutputParser : IProgressOutputParser
 {
-    private static readonly Regex TimePattern = TimeRegex();
-
     public bool TryParseTimeSeconds(string line, out double seconds)
     {
         seconds = 0;
-        var match = TimePattern.Match(line);
+        var match = TimeRegex().Match(line);
         if (!match.Success)
         {
             return false;
