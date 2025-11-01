@@ -11,8 +11,11 @@ using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
-public class EffectiveConversionRequestBuilderTests
+public class EffectiveConversionRequestBuilderTests()
 {
+    private static readonly EffectiveConversionRequestBuilder EffectiveConversionRequestBuilder
+        = new (new Mock<ILogger<EffectiveConversionRequestBuilder>>().Object);
+
     [Fact]
     public void Build_WithProfileOverrides_UsesProfileValues()
     {
@@ -37,10 +40,8 @@ public class EffectiveConversionRequestBuilderTests
             AudioLanguages = ["en", "sv"],
             SubtitleLanguages = ["sv"],
         };
-
-        var logger = new Mock<ILogger>().Object;
-
-        var effective = EffectiveConversionRequestBuilder.Build(request, profile, logger);
+        
+        var effective = EffectiveConversionRequestBuilder.Build(request, profile);
 
         _ = effective.OutputDirectory.Should().Be("prof-out");
         _ = effective.Crf.Should().Be(20);
@@ -69,9 +70,7 @@ public class EffectiveConversionRequestBuilderTests
 
         var profile = new Profile();
 
-        var logger = new Mock<ILogger>().Object;
-
-        var effective = EffectiveConversionRequestBuilder.Build(request, profile, logger);
+        var effective = EffectiveConversionRequestBuilder.Build(request, profile);
 
         _ = effective.OutputDirectory.Should().Be("req-out");
         _ = effective.Crf.Should().Be(30);
@@ -83,4 +82,3 @@ public class EffectiveConversionRequestBuilderTests
         _ = effective.ProfileId.Should().Be(2);
     }
 }
-

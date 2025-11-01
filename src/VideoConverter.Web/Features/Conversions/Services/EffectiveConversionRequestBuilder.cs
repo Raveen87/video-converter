@@ -3,12 +3,11 @@ using VideoConverter.Web.Shared.Domain.Entities;
 
 namespace VideoConverter.Web.Features.Conversions.Services;
 
-public static class EffectiveConversionRequestBuilder
+public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionRequestBuilder> logger)
 {
-    public static ConversionCreateDto Build(
+    public ConversionCreateDto Build(
         ConversionCreateDto request,
-        Profile? profile,
-        ILogger logger)
+        Profile? profile)
     {
         var outputDirectory = profile?.OutputDirectory ?? request.OutputDirectory;
         logger.LogDebug(

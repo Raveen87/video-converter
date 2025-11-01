@@ -20,6 +20,13 @@ public static class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Configure logging
+        _ = builder.Logging
+            .ClearProviders()
+            .AddConfiguration(builder.Configuration.GetSection("Logging"))
+            .AddConsole()
+            .AddDebug();
+
         _ = builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=conversions.db";
@@ -48,6 +55,7 @@ public static class Program
         _ = builder.Services.AddSingleton<ITvShowFilenameParser, TvShowFilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameParser, FilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
+        _ = builder.Services.AddSingleton<EffectiveConversionRequestBuilder>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
@@ -57,13 +65,17 @@ public static class Program
         _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
         _ = builder.Services.AddControllers().AddNewtonsoftJson();
 
+        // Register instance-based endpoint handlers
+        _ = builder.Services.AddScoped<ProfilesEndpoints>();
+
         var app = builder.Build();
 
         // Add global exception handling middleware
         _ = app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
         // Log service initialization
-        var logger = app.Services.GetRequiredService<ILogger<object>>();
+        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("Video Converter service starting up");
 
         // Ensure database exists

@@ -5,7 +5,10 @@ using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataService> logger, IConfiguration configuration) : IMetadataService
+public class TmdbMetadataService(
+    ILogger<TmdbMetadataService> logger,
+    HttpClient httpClient,
+    IConfiguration configuration) : IMetadataService
 {
     private readonly string _apiKey = configuration["Tmdb:ApiKey"] ?? throw new InvalidOperationException("TMDb API key not configured");
 

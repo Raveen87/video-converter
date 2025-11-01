@@ -26,17 +26,18 @@ public static class ConversionsApi
         AppDbContext db,
         IRequestValidator<ConversionCreateDto> validator,
         IConversionService conversionService,
-        ILogger logger,
         ProfileExistsValidator profileExistsValidator,
+        EffectiveConversionRequestBuilder effectiveRequestBuilder,
         ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+
         var profile = request.ProfileId is not null
             ? await profileExistsValidator.GetProfileForReadAsync(request.ProfileId.Value, db, CancellationToken.None)
                 .ConfigureAwait(false)
             : null;
 
-        var builderLogger = loggerFactory.CreateLogger("EffectiveConversionRequestBuilder");
-        var effectiveRequest = EffectiveConversionRequestBuilder.Build(request, profile, builderLogger);
+        var effectiveRequest = effectiveRequestBuilder.Build(request, profile);
 
         var validation = await validator.ValidateAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
@@ -69,8 +70,9 @@ public static class ConversionsApi
         }
     }
 
-    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILogger logger)
+    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Listing all conversions");
 
         var items = await db.Conversions
@@ -87,8 +89,9 @@ public static class ConversionsApi
         int id,
         AppDbContext db,
         IConversionRunner runner,
-        ILogger logger)
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
 
         var conversion = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false);
@@ -120,8 +123,9 @@ public static class ConversionsApi
     private static async Task<IResult> StartNextConversionAsync(
         AppDbContext db,
         IConversionRunner runner,
-        ILogger logger)
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Starting next conversion from queue");
 
         var conversion = await db.Conversions
@@ -167,8 +171,9 @@ public static class ConversionsApi
         int id,
         AppDbContext db,
         IProgressTracker progressTracker,
-        ILogger logger)
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
 
         // Check if conversion exists in database
