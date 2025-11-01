@@ -12,6 +12,7 @@ public sealed class ConversionRunCoordinator : IConversionRunCoordinator
             {
                 return false;
             }
+
             _ = RunningKeys.Add(key);
             return true;
         }

@@ -7,7 +7,6 @@ namespace VideoConverter.Web.Features.Conversions.Services;
 public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgressTracker
 {
     private readonly ConcurrentDictionary<int, ProgressState> _activeConversions = new();
-    private readonly ILogger<ProgressTracker> _logger = logger;
 
     public void StartTracking(int conversionId, double totalDurationSeconds)
     {
@@ -20,15 +19,17 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
         };
 
         _ = _activeConversions.AddOrUpdate(conversionId, state, (_, _) => state);
-        _logger.LogDebug("Started tracking conversion {ConversionId} with duration {Duration}s",
-            conversionId, totalDurationSeconds);
+        logger.LogDebug(
+            "Started tracking conversion {ConversionId} with duration {Duration}s",
+            conversionId,
+            totalDurationSeconds);
     }
 
     public void UpdateProgress(int conversionId, double currentTimeSeconds)
     {
         if (!_activeConversions.TryGetValue(conversionId, out var state))
         {
-            _logger.LogWarning("Attempted to update progress for untracked conversion {ConversionId}", conversionId);
+            logger.LogWarning("Attempted to update progress for untracked conversion {ConversionId}", conversionId);
             return;
         }
 
@@ -44,19 +45,23 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
         // Calculate ETA based on conversion speed
         CalculateEta(state);
 
-        _logger.LogDebug("Updated progress for conversion {ConversionId}: {Percentage:F1}% ({CurrentTime}s/{TotalDuration}s)",
-            conversionId, state.PercentageComplete, currentTimeSeconds, state.TotalDurationSeconds);
+        logger.LogDebug(
+            "Updated progress for conversion {ConversionId}: {Percentage:F1}% ({CurrentTime}s/{TotalDuration}s)",
+            conversionId,
+            state.PercentageComplete,
+            currentTimeSeconds,
+            state.TotalDurationSeconds);
     }
 
     public void StopTracking(int conversionId)
     {
         if (_activeConversions.TryRemove(conversionId, out var _))
         {
-            _logger.LogDebug("Stopped tracking conversion {ConversionId}", conversionId);
+            logger.LogDebug("Stopped tracking conversion {ConversionId}", conversionId);
         }
     }
 
-    public ConversionProgress? GetProgress(int conversionId)
+    public ConversionProgress GetProgress(int conversionId)
     {
         if (_activeConversions.TryGetValue(conversionId, out var state))
         {

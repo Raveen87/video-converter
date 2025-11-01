@@ -4,16 +4,12 @@ using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-public sealed class TvShowFilenameParser : ITvShowFilenameParser
+public sealed partial class TvShowFilenameParser : ITvShowFilenameParser
 {
-    private static readonly Regex TvShowPattern = new(
-        @"^(?<show>.*?)[\s\.\-_]+(?:S(?<season>\d{1,2})E(?<episode>\d{1,2})|(?<season>\d{1,2})x(?<episode>\d{1,2}))[\s\.\-_]*(?<episodeTitle>.*)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
-
     public bool TryParse(string filenameWithoutExtension, out ParsedFilename parsed, string? source, ITitleSanitizer sanitizer)
     {
         parsed = default!;
-        var tvMatch = TvShowPattern.Match(filenameWithoutExtension);
+        var tvMatch = TvShowRegex().Match(filenameWithoutExtension);
         if (!tvMatch.Success)
         {
             return false;
@@ -36,8 +32,10 @@ public sealed class TvShowFilenameParser : ITvShowFilenameParser
             season,
             episode,
             episodeTitle,
-            source
-        );
+            source);
         return true;
     }
+
+    [GeneratedRegex(@"^(?<show>.*?)[\s\.\-_]+(?:S(?<season>\d{1,2})E(?<episode>\d{1,2})|(?<season>\d{1,2})x(?<episode>\d{1,2}))[\s\.\-_]*(?<episodeTitle>.*)", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TvShowRegex();
 }

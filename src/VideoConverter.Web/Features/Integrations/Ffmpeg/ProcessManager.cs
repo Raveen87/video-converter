@@ -4,35 +4,16 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessManager
 {
-    private readonly ILogger<ProcessManager> _logger = logger;
-
-    private static ProcessStartInfo BuildStartInfo(string executablePath, IReadOnlyList<string> arguments)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executablePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-
-        foreach (var arg in arguments)
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
-
-        return startInfo;
-    }
-
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments", request.ExecutablePath, request.Arguments.Count);
+        logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments", request.ExecutablePath, request.Arguments.Count);
 
         var startInfo = BuildStartInfo(request.ExecutablePath, request.Arguments);
         if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
         {
             startInfo.WorkingDirectory = request.WorkingDirectory;
         }
+
         if (request.EnvironmentVariables is not null)
         {
             foreach (var kvp in request.EnvironmentVariables)
@@ -45,16 +26,16 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
 
         if (!process.Start())
         {
-            _logger.LogError("Failed to start process: {Executable}", request.ExecutablePath);
+            logger.LogError("Failed to start process: {Executable}", request.ExecutablePath);
             return new ProcessResult { IsSuccess = false, ErrorMessage = "Failed to start process" };
         }
 
-        _logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
+        logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
 
         var stdoutLines = new List<string>();
         var stderrLines = new List<string>();
 
-        if (request.OnStdout != null)
+        if (request.OnStdout is not null)
         {
             process.OutputDataReceived += (_, e) =>
             {
@@ -71,7 +52,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             // read whole stream at end
         }
 
-        if (request.OnStderr != null)
+        if (request.OnStderr is not null)
         {
             process.ErrorDataReceived += (_, e) =>
             {
@@ -85,7 +66,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
         }
 
         var timeoutTask = Task.CompletedTask;
-        using var timeoutCts = request.Timeout.HasValue ? new CancellationTokenSource(request.Timeout.Value) : null;
+        using var timeoutCts = request.Timeout is not null ? new CancellationTokenSource(request.Timeout.Value) : null;
         if (timeoutCts is not null)
         {
             timeoutTask = Task.Delay(Timeout.InfiniteTimeSpan, timeoutCts.Token);
@@ -101,8 +82,9 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to kill timed-out process {Pid}", process.Id);
+                logger.LogWarning(ex, "Failed to kill timed-out process {Pid}", process.Id);
             }
+
             return new ProcessResult { IsSuccess = false, ErrorMessage = "Process timed out" };
         }
 
@@ -128,7 +110,7 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
 
         var result = new ProcessResult
         {
-            IsSuccess = process.ExitCode == 0,
+            IsSuccess = process.ExitCode is 0,
             ExitCode = process.ExitCode,
             ProcessId = process.Id,
             StandardOutput = stdout,
@@ -137,15 +119,31 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
 
         if (result.IsSuccess)
         {
-            _logger.LogDebug("Process completed successfully: {Executable}", request.ExecutablePath);
+            logger.LogDebug("Process completed successfully: {Executable}", request.ExecutablePath);
         }
         else
         {
-            _logger.LogWarning("Process failed with exit code {ExitCode}. Stderr: {Stderr}", process.ExitCode, result.StandardError);
+            logger.LogWarning("Process failed with exit code {ExitCode}. Stderr: {Stderr}", process.ExitCode, result.StandardError);
         }
 
         return result;
     }
 
-    // Display command formatting moved to CommandDisplayFormatter
+    private static ProcessStartInfo BuildStartInfo(string executablePath, IReadOnlyList<string> arguments)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executablePath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+
+        foreach (var arg in arguments)
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
+        return startInfo;
+    }
 }

@@ -5,7 +5,7 @@ namespace VideoConverter.Web.Common.Exceptions;
 /// <summary>
 /// Custom exception for validation errors that provides field-specific error information.
 /// </summary>
-public class ValidationException(
+public class DomainValidationException(
     string errorMessage,
     string userFriendlyMessage,
     IDictionary<string, string[]>? fieldErrors = null,
@@ -27,11 +27,10 @@ public class ValidationException(
     /// <returns>A dictionary containing the error information.</returns>
     public IDictionary<string, object> ToDictionary()
     {
-        var result = new Dictionary<string, object>
-(StringComparer.Ordinal)
+        var result = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             { "statusCode", (int)HttpStatusCode.BadRequest },
-            { "errorCode", ErrorCode.ValidationFailed.ToString() },
+            { "errorCode", nameof(ErrorCode.ValidationFailed) },
             { "errorMessage", Message },
             { "userFriendlyMessage", UserFriendlyMessage },
             { "timestamp", DateTime.UtcNow },

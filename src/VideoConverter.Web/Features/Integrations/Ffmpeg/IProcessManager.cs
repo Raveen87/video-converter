@@ -4,4 +4,3 @@ public interface IProcessManager
 {
     Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default);
 }
-

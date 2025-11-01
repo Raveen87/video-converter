@@ -16,7 +16,7 @@ internal static class ProfileValidationHelper
         IFileSystemValidator fileSystemValidator,
         IRequestPropertyValidator requestPropertyValidator,
         ILogger logger,
-        ValidationResult result)
+        DomainValidationResult result)
     {
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {

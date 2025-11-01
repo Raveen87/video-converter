@@ -4,7 +4,7 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 internal static class VideoArgsBuilder
 {
-    public static (int width, int height) GetTargetDimensions(int? targetHeight)
+    public static (int Width, int Height) GetTargetDimensions(int? targetHeight)
     {
         var height = targetHeight ?? 720;
         var width = height switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
@@ -19,8 +19,9 @@ internal static class VideoArgsBuilder
             filters.Add("crop=" + detectedCrop);
             logger.LogDebug("Using detected crop: {DetectedCrop}", detectedCrop);
         }
+
         filters.Add($"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos");
-        var vf = string.Join(",", filters);
+        var vf = string.Join(',', filters);
         logger.LogDebug("Video filters: {VideoFilters}", vf);
         return vf;
     }

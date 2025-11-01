@@ -2,7 +2,8 @@ namespace VideoConverter.Web.Shared.Validation;
 
 public static class ValidationResultExtensions
 {
-    public static void AddIfInvalid(this ValidationResult result,
+    public static void AddIfInvalid(
+        this DomainValidationResult result,
         bool isValid,
         string fieldName,
         string? errorMessage,

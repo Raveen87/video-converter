@@ -4,7 +4,7 @@ using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Conversions.Services;
 
-internal static class LanguageMatchEngine
+internal static partial class LanguageMatchEngine
 {
     private static readonly Dictionary<string, string> FullNameToIso3 = BuildFullNameToIso3();
     private static readonly Dictionary<string, string[]> Aliases = BuildAliases();
@@ -26,8 +26,11 @@ internal static class LanguageMatchEngine
         {
             var reqKey = Normalize(req);
             var candidates = GetCandidateTokens(reqKey);
-            logger.LogDebug("Searching for {Kind} language '{RequestedLanguage}' with candidates: {Candidates}",
-                kind, req, string.Join(", ", candidates));
+            logger.LogDebug(
+                "Searching for {Kind} language '{RequestedLanguage}' with candidates: {Candidates}",
+                kind,
+                req,
+                string.Join(", ", candidates));
 
             var found = streams.Find(s => MatchesStream(s, candidates));
             if (found is null)
@@ -36,8 +39,11 @@ internal static class LanguageMatchEngine
                 throw new InvalidOperationException($"Requested {kind} language '{req}' not found in input file.");
             }
 
-            logger.LogDebug("Matched {Kind} language '{RequestedLanguage}' to stream index {StreamIndex}",
-                kind, req, found.Index);
+            logger.LogDebug(
+                "Matched {Kind} language '{RequestedLanguage}' to stream index {StreamIndex}",
+                kind,
+                req,
+                found.Index);
             matched.Add(found.Index);
         }
 
@@ -77,6 +83,7 @@ internal static class LanguageMatchEngine
         {
             _ = tokens.Add(iso3);
         }
+
         if (Aliases.TryGetValue(req, out var aliasArr))
         {
             foreach (var a in aliasArr)
@@ -96,6 +103,7 @@ internal static class LanguageMatchEngine
                 {
                     _ = tokens.Add(a);
                 }
+
                 if (FullNameToIso3.TryGetValue(pair.Key, out var iso))
                 {
                     _ = tokens.Add(iso);
@@ -109,7 +117,7 @@ internal static class LanguageMatchEngine
     private static string Normalize(string s)
     {
         var lower = s.Trim().ToLowerInvariant();
-        lower = Regex.Replace(lower, "[^a-z]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+        lower = EverythingExceptEnglishLettersRegex().Replace(lower, string.Empty);
         return lower;
     }
 
@@ -152,5 +160,7 @@ internal static class LanguageMatchEngine
             { Normalize("finnish"), ["fi", "fin", "suomi"] },
         };
     }
-}
 
+    [GeneratedRegex("[^a-z]", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EverythingExceptEnglishLettersRegex();
+}

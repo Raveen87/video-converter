@@ -2,6 +2,8 @@ using System.Text.Json;
 
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
+using static System.Text.Json.JsonValueKind;
+
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger) : IMediaProber
@@ -10,12 +12,9 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
         ?? Environment.GetEnvironmentVariable("FFPROBE_PATH")
         ?? "ffprobe";
 
-    private readonly IProcessManager _processManager = processManager;
-    private readonly ILogger<FfprobeMediaProber> _logger = logger;
-
     public async Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting media probe for: {InputPath}", inputPath);
+        logger.LogDebug("Starting media probe for: {InputPath}", inputPath);
 
         var args = new[]
         {
@@ -26,12 +25,14 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             inputPath,
         };
 
-        var procResult = await _processManager.RunAsync(new ProcessRequest
-        {
-            ExecutablePath = _ffprobePath,
-            Arguments = args,
-            CaptureOutput = true,
-        }, cancellationToken).ConfigureAwait(false);
+        var procResult = await processManager.RunAsync(
+            new ProcessRequest
+            {
+                ExecutablePath = _ffprobePath,
+                Arguments = args,
+                CaptureOutput = true,
+            },
+            cancellationToken).ConfigureAwait(false);
 
         var stdout = procResult.StandardOutput;
         var stderr = procResult.StandardError;
@@ -39,19 +40,23 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
         if (!procResult.IsSuccess)
         {
             var cmd = CommandDisplayFormatter.Build(_ffprobePath, args);
-            _logger.LogError("ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Stderr: {Error}",
-                inputPath, procResult.ExitCode, cmd, stderr);
+            logger.LogError(
+                "ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Stderr: {Error}",
+                inputPath,
+                procResult.ExitCode,
+                cmd,
+                stderr);
             throw new InvalidOperationException("ffprobe failed: " + stderr);
         }
 
-        _logger.LogDebug("ffprobe completed successfully for: {InputPath}", inputPath);
+        logger.LogDebug("ffprobe completed successfully for: {InputPath}", inputPath);
 
         using var doc = JsonDocument.Parse(stdout);
         var streams = new List<MediaStream>();
         int? width = null;
         int? height = null;
         double? durationSeconds = null;
-        if (doc.RootElement.TryGetProperty("streams", out var streamsEl) && streamsEl.ValueKind == JsonValueKind.Array)
+        if (doc.RootElement.TryGetProperty("streams", out var streamsEl) && streamsEl.ValueKind is JsonValueKind.Array)
         {
             foreach (var s in streamsEl.EnumerateArray())
             {
@@ -65,13 +70,14 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
 
                 string? lang = null;
                 string? title = null;
-                if (s.TryGetProperty("tags", out var tags) && tags.ValueKind == JsonValueKind.Object)
+                if (s.TryGetProperty("tags", out var tags) && tags.ValueKind is JsonValueKind.Object)
                 {
-                    if (tags.TryGetProperty("language", out var langEl) && langEl.ValueKind == JsonValueKind.String)
+                    if (tags.TryGetProperty("language", out var langEl) && langEl.ValueKind is JsonValueKind.String)
                     {
                         lang = langEl.GetString();
                     }
-                    if (tags.TryGetProperty("title", out var titleEl) && titleEl.ValueKind == JsonValueKind.String)
+
+                    if (tags.TryGetProperty("title", out var titleEl) && titleEl.ValueKind is JsonValueKind.String)
                     {
                         title = titleEl.GetString();
                     }
@@ -79,11 +85,12 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
 
                 if (string.Equals(codecType, "video", StringComparison.Ordinal))
                 {
-                    if (s.TryGetProperty("width", out var wEl) && wEl.ValueKind == JsonValueKind.Number)
+                    if (s.TryGetProperty("width", out var wEl) && wEl.ValueKind is Number)
                     {
                         width = wEl.GetInt32();
                     }
-                    if (s.TryGetProperty("height", out var hEl) && hEl.ValueKind == JsonValueKind.Number)
+
+                    if (s.TryGetProperty("height", out var hEl) && hEl.ValueKind is Number)
                     {
                         height = hEl.GetInt32();
                     }
@@ -99,8 +106,8 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             }
         }
 
-        if (doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind == JsonValueKind.Object &&
-            formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind == JsonValueKind.String &&
+        if (doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind is JsonValueKind.Object &&
+            formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind is JsonValueKind.String &&
             double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dur))
         {
             durationSeconds = dur;
@@ -114,8 +121,13 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             DurationSeconds = durationSeconds,
         };
 
-        _logger.LogInformation("Media probe completed for {InputPath}: {StreamCount} streams, {Width}x{Height}, {Duration}s",
-            inputPath, streams.Count, width, height, durationSeconds);
+        logger.LogInformation(
+            "Media probe completed for {InputPath}: {StreamCount} streams, {Width}x{Height}, {Duration}s",
+            inputPath,
+            streams.Count,
+            width,
+            height,
+            durationSeconds);
 
         return result;
     }

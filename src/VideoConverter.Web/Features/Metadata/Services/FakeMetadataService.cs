@@ -2,8 +2,6 @@ using VideoConverter.Web.Features.Metadata.Models;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-#pragma warning disable S1075 // URIs should not be hardcoded - This is test data
-
 public class FakeMetadataService : IMetadataService
 {
     private readonly Dictionary<string, MovieMetadata> _movieData;
@@ -38,7 +36,7 @@ public class FakeMetadataService : IMetadataService
 
         // Try with any year from the data
         var anyYearKey = _movieData.Keys.FirstOrDefault(k => k.StartsWith($"{title.ToLowerInvariant()}_", StringComparison.OrdinalIgnoreCase));
-        return anyYearKey != null && _movieData.TryGetValue(anyYearKey, out var anyYearMovie)
+        return anyYearKey is not null && _movieData.TryGetValue(anyYearKey, out var anyYearMovie)
             ? Task.FromResult<MovieMetadata?>(anyYearMovie)
             : Task.FromResult<MovieMetadata?>(null);
     }
@@ -72,8 +70,7 @@ public class FakeMetadataService : IMetadataService
 
     private static Dictionary<string, MovieMetadata> LoadMovieTestData()
     {
-        return new Dictionary<string, MovieMetadata>
-(StringComparer.Ordinal)
+        return new Dictionary<string, MovieMetadata>(StringComparer.Ordinal)
         {
             ["the matrix_1999"] = new(
                 "The Matrix",
@@ -94,8 +91,7 @@ public class FakeMetadataService : IMetadataService
 
     private static Dictionary<string, TvShowMetadata> LoadTvShowTestData()
     {
-        return new Dictionary<string, TvShowMetadata>
-(StringComparer.Ordinal)
+        return new Dictionary<string, TvShowMetadata>(StringComparer.Ordinal)
         {
             ["breaking bad_2008"] = new(
                 "Breaking Bad",

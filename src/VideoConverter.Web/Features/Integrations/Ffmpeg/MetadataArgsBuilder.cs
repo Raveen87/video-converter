@@ -22,4 +22,3 @@ internal static class MetadataArgsBuilder
         args.Insert(insertAt, "0");
     }
 }
-

@@ -7,8 +7,6 @@ namespace VideoConverter.Web.Features.Metadata.Services;
 
 public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataService> logger, IConfiguration configuration) : IMetadataService
 {
-    private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<TmdbMetadataService> _logger = logger;
     private readonly string _apiKey = configuration["Tmdb:ApiKey"] ?? throw new InvalidOperationException("TMDb API key not configured");
 
     public async Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, string? source = null, CancellationToken cancellationToken = default)
@@ -16,12 +14,12 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
         try
         {
             var query = Uri.EscapeDataString(title);
-            var yearParam = year.HasValue ? $"&year={year.Value}" : string.Empty;
+            var yearParam = year is not null ? $"&year={year.Value}" : string.Empty;
             var url = $"https://api.themoviedb.org/3/search/movie?api_key={_apiKey}&query={query}{yearParam}";
 
-            _logger.LogDebug("Searching for movie: {Title} (Year: {Year})", title, year);
+            logger.LogDebug("Searching for movie: {Title} (Year: {Year})", title, year);
 
-            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(response);
 
             if (searchResult?.Results?.Count > 0)
@@ -32,16 +30,15 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
                     ExtractYear(movie.ReleaseDate),
                     source,
                     movie.Overview,
-                    GetPosterUrl(movie.PosterPath)
-                );
+                    GetPosterUrl(movie.PosterPath));
             }
 
-            _logger.LogWarning("No movie found for: {Title} (Year: {Year})", title, year);
+            logger.LogWarning("No movie found for: {Title} (Year: {Year})", title, year);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching movie metadata for: {Title}", title);
+            logger.LogError(ex, "Error fetching movie metadata for: {Title}", title);
             return null;
         }
     }
@@ -51,12 +48,12 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
         try
         {
             var query = Uri.EscapeDataString(showName);
-            var yearParam = firstAiredYear.HasValue ? $"&first_air_date_year={firstAiredYear.Value}" : string.Empty;
+            var yearParam = firstAiredYear is not null ? $"&first_air_date_year={firstAiredYear.Value}" : string.Empty;
             var url = $"https://api.themoviedb.org/3/search/tv?api_key={_apiKey}&query={query}{yearParam}";
 
-            _logger.LogDebug("Searching for TV show: {ShowName} (Year: {Year})", showName, firstAiredYear);
+            logger.LogDebug("Searching for TV show: {ShowName} (Year: {Year})", showName, firstAiredYear);
 
-            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
             var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(response);
 
             if (searchResult?.Results?.Count > 0)
@@ -74,31 +71,15 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
                     episodeDetails?.Name,
                     source,
                     episodeDetails?.Overview ?? show.Overview,
-                    GetPosterUrl(show.PosterPath)
-                );
+                    GetPosterUrl(show.PosterPath));
             }
 
-            _logger.LogWarning("No TV show found for: {ShowName} (Year: {Year})", showName, firstAiredYear);
+            logger.LogWarning("No TV show found for: {ShowName} (Year: {Year})", showName, firstAiredYear);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching TV show metadata for: {ShowName}", showName);
-            return null;
-        }
-    }
-
-    private async Task<TmdbEpisodeDetails?> GetEpisodeDetailsAsync(int showId, int season, int episode, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}?api_key={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error fetching episode details for show {ShowId}, season {Season}, episode {Episode}", showId, season, episode);
+            logger.LogError(ex, "Error fetching TV show metadata for: {ShowName}", showName);
             return null;
         }
     }
@@ -113,6 +94,21 @@ public class TmdbMetadataService(HttpClient httpClient, ILogger<TmdbMetadataServ
     private static string? GetPosterUrl(string? posterPath)
     {
         return string.IsNullOrWhiteSpace(posterPath) ? null : $"https://image.tmdb.org/t/p/w500{posterPath}";
+    }
+
+    private async Task<TmdbEpisodeDetails?> GetEpisodeDetailsAsync(int showId, int season, int episode, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}?api_key={_apiKey}";
+            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
+            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(response);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error fetching episode details for show {ShowId}, season {Season}, episode {Episode}", showId, season, episode);
+            return null;
+        }
     }
 
     // TMDb API response models

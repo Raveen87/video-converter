@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace VideoConverter.Web.Features.Metadata.Services;
 
-public sealed class TitleSanitizer : ITitleSanitizer
+public sealed partial class TitleSanitizer : ITitleSanitizer
 {
     private static readonly string[] QualityPatterns = [
         "1080p", "720p", "480p", "2160p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc",
@@ -36,7 +36,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         foreach (var pattern in QualityPatterns)
         {
             cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
-            cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
+            cleaned = cleaned.Replace($".{pattern}", string.Empty, StringComparison.OrdinalIgnoreCase);
         }
 
         while (cleaned.Contains("..", StringComparison.Ordinal))
@@ -79,7 +79,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         foreach (var pattern in QualityPatterns)
         {
             cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
-            cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
+            cleaned = cleaned.Replace($".{pattern}", string.Empty, StringComparison.OrdinalIgnoreCase);
         }
 
         while (cleaned.Contains("..", StringComparison.Ordinal))
@@ -126,7 +126,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         foreach (var pattern in QualityPatterns)
         {
             cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
-            cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
+            cleaned = cleaned.Replace($".{pattern}", string.Empty, StringComparison.OrdinalIgnoreCase);
         }
 
         foreach (var pattern in SourcePatterns)
@@ -144,7 +144,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         foreach (var pattern in SourcePatterns)
         {
             cleaned = cleaned.Replace($".{pattern}.", ".", StringComparison.OrdinalIgnoreCase);
-            cleaned = cleaned.Replace($".{pattern}", "", StringComparison.OrdinalIgnoreCase);
+            cleaned = cleaned.Replace($".{pattern}", string.Empty, StringComparison.OrdinalIgnoreCase);
         }
 
         while (cleaned.Contains("..", StringComparison.Ordinal))
@@ -169,6 +169,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         {
             return false;
         }
+
         var nonNumericNonDotChars = title.Count(c => !char.IsDigit(c) && c != '.');
         var totalChars = title.Length;
         return nonNumericNonDotChars <= totalChars * 0.2;
@@ -180,6 +181,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
         {
             return false;
         }
+
         var dotIndex = title.IndexOf('.', StringComparison.Ordinal);
         if (dotIndex > 0 && dotIndex < title.Length - 1)
         {
@@ -190,6 +192,7 @@ public sealed class TitleSanitizer : ITitleSanitizer
                 return true;
             }
         }
+
         return false;
     }
 
@@ -199,9 +202,16 @@ public sealed class TitleSanitizer : ITitleSanitizer
         {
             return title;
         }
+
         var result = title;
-        result = Regex.Replace(result, @"\[.*?\]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
-        result = Regex.Replace(result, @"\((?![0-9]{4}\))[^)]*\)", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+        result = SquareBracketsRegex().Replace(result, string.Empty);
+        result = NonYearWithinParenthesisRegex().Replace(result, string.Empty);
         return result.Trim();
     }
+
+    [GeneratedRegex(@"\[.*?\]", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SquareBracketsRegex();
+
+    [GeneratedRegex(@"\((?![0-9]{4}\))[^)]*\)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex NonYearWithinParenthesisRegex();
 }

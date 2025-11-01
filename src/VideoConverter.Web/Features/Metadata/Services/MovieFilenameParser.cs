@@ -6,13 +6,9 @@ namespace VideoConverter.Web.Features.Metadata.Services;
 
 public sealed partial class MovieFilenameParser : IMovieFilenameParser
 {
-    private static readonly Regex MoviePattern = MovieRegex();
-
-    private static readonly Regex YearPattern = YearRegex();
-
     public bool TryParse(string filenameWithoutExtension, out ParsedFilename parsed, string? source, ITitleSanitizer sanitizer)
     {
-        var movieMatch = MoviePattern.Match(filenameWithoutExtension);
+        var movieMatch = MovieRegex().Match(filenameWithoutExtension);
         if (movieMatch.Success)
         {
             var year = int.Parse(movieMatch.Groups["year"].Value);
@@ -28,13 +24,13 @@ public sealed partial class MovieFilenameParser : IMovieFilenameParser
             return true;
         }
 
-        var yearMatch = YearPattern.Match(filenameWithoutExtension);
+        var yearMatch = YearRegex().Match(filenameWithoutExtension);
         if (yearMatch.Success)
         {
             var year = int.Parse(yearMatch.Value);
             if (year is >= 1900 and <= 2030)
             {
-                var title = sanitizer.CleanTitle(filenameWithoutExtension.Replace(yearMatch.Value, "", StringComparison.Ordinal));
+                var title = sanitizer.CleanTitle(filenameWithoutExtension.Replace(yearMatch.Value, string.Empty, StringComparison.Ordinal));
                 parsed = new ParsedFilename(filenameWithoutExtension, MediaType.Movie, title, year, Season: null, Episode: null, EpisodeTitle: null, source);
                 return true;
             }

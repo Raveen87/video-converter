@@ -13,6 +13,7 @@ using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web;
 
+#pragma warning disable MA0109
 public static class Program
 {
     public static void Main(string[] args)

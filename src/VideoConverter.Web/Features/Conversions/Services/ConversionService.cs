@@ -17,10 +17,16 @@ public sealed class ConversionService(
     IFilenameGenerator filenameGenerator,
     ILogger<ConversionService> logger) : IConversionService
 {
+    private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
+    private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
+    private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
+
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Creating conversion for input: {InputPath}, output: {OutputDirectory}",
-            request.InputPath, request.OutputDirectory);
+        logger.LogInformation(
+            "Creating conversion for input: {InputPath}, output: {OutputDirectory}",
+            request.InputPath,
+            request.OutputDirectory);
 
         // Process audio language requirements
         var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
@@ -56,10 +62,15 @@ public sealed class ConversionService(
             MetadataBasedFilename = metadataBasedFilename,
         };
 
-        logger.LogInformation("Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
-            conversion.Crf, conversion.AudioBitrateKbps, conversion.Resolution,
-            audioProcessing.AudioIndicesCsv ?? "none", subtitleProcessing.SubtitleIndicesCsv ?? "none",
-            subtitleProcessing.ExternalSubtitlePathsCsv ?? "none", detectedCrop ?? "none");
+        logger.LogInformation(
+            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
+            conversion.Crf,
+            conversion.AudioBitrateKbps,
+            conversion.Resolution,
+            audioProcessing.AudioIndicesCsv ?? "none",
+            subtitleProcessing.SubtitleIndicesCsv ?? "none",
+            subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
+            detectedCrop ?? "none");
 
         return conversion;
     }
@@ -67,7 +78,7 @@ public sealed class ConversionService(
     private static int DetermineAudioBitrate(int? requestedBitrate, AudioChannels? audioChannels)
     {
         // If bitrate is explicitly provided, use it
-        if (requestedBitrate.HasValue)
+        if (requestedBitrate is not null)
         {
             return requestedBitrate.Value;
         }
@@ -75,6 +86,29 @@ public sealed class ConversionService(
         // Otherwise, use default bitrate based on audio channels
         var channels = audioChannels ?? AudioChannels.Stereo20;
         return channels.GetDefaultBitrate();
+    }
+
+    private static string? FindExternalSubtitle(string inputPath, string language)
+    {
+        var videoDir = Path.GetDirectoryName(inputPath) ?? string.Empty;
+        var videoBase = Path.GetFileNameWithoutExtension(inputPath);
+        var tagsToTry = GetSubtitleTags(language);
+
+        return tagsToTry.Select(tag => Path.Combine(videoDir, videoBase + "." + tag + ".srt"))
+            .FirstOrDefault(File.Exists);
+    }
+
+    private static IEnumerable<string> GetSubtitleTags(string language)
+    {
+        var key = language.Trim().ToLowerInvariant();
+
+        return key switch
+        {
+            _ when SubtitleTagsSwedish.Contains(key, StringComparer.Ordinal) => SubtitleTagsSwedish,
+            _ when SubtitleTagsEnglish.Contains(key, StringComparer.Ordinal) => SubtitleTagsEnglish,
+            _ when SubtitleTagsVietnamese.Contains(key, StringComparer.Ordinal) => SubtitleTagsVietnamese,
+            _ => [key], // Fallback: if a tag-like short code is provided, just try it
+        };
     }
 
     private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, CancellationToken cancellationToken)
@@ -91,10 +125,12 @@ public sealed class ConversionService(
             MediaMetadata? metadata = null;
 
             // Look up metadata based on parsed information
-            if (parsedFilename.DetectedType == MediaType.Movie)
+            if (parsedFilename.DetectedType is MediaType.Movie)
             {
-                logger.LogDebug("Looking up movie metadata for: {Title} (Year: {Year})",
-                    parsedFilename.Title, parsedFilename.Year);
+                logger.LogDebug(
+                    "Looking up movie metadata for: {Title} (Year: {Year})",
+                    parsedFilename.Title,
+                    parsedFilename.Year);
 
                 metadata = await metadataService.GetMovieMetadataAsync(
                     parsedFilename.Title ?? "Unknown",
@@ -102,10 +138,13 @@ public sealed class ConversionService(
                     parsedFilename.Source,
                     cancellationToken).ConfigureAwait(false);
             }
-            else if (parsedFilename.DetectedType == MediaType.TvShow)
+            else if (parsedFilename.DetectedType is MediaType.TvShow)
             {
-                logger.LogDebug("Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
-                    parsedFilename.Title, parsedFilename.Season, parsedFilename.Episode);
+                logger.LogDebug(
+                    "Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
+                    parsedFilename.Title,
+                    parsedFilename.Season,
+                    parsedFilename.Episode);
 
                 metadata = await metadataService.GetTvShowMetadataAsync(
                     parsedFilename.Title ?? "Unknown",
@@ -142,15 +181,18 @@ public sealed class ConversionService(
             return new AudioProcessingResult();
         }
 
-        logger.LogDebug("Processing audio language requirements: {AudioLanguages}",
+        logger.LogDebug(
+            "Processing audio language requirements: {AudioLanguages}",
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
         var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
-        var audioIndicesCsv = string.Join(",", matched);
+        var audioIndicesCsv = string.Join(',', matched);
 
-        logger.LogInformation("Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
-            audioIndicesCsv, string.Join(", ", requested));
+        logger.LogInformation(
+            "Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
+            audioIndicesCsv,
+            string.Join(", ", requested));
 
         return new AudioProcessingResult { AudioIndicesCsv = audioIndicesCsv };
     }
@@ -164,7 +206,8 @@ public sealed class ConversionService(
             return new SubtitleProcessingResult();
         }
 
-        logger.LogDebug("Processing subtitle language requirements: {SubtitleLanguages}",
+        logger.LogDebug(
+            "Processing subtitle language requirements: {SubtitleLanguages}",
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
@@ -177,8 +220,10 @@ public sealed class ConversionService(
             {
                 var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
                 matchedIndices.AddRange(idx);
-                logger.LogDebug("Found subtitle stream for language '{Language}': indices {Indices}",
-                    lang, string.Join(",", idx));
+                logger.LogDebug(
+                    "Found subtitle stream for language '{Language}': indices {Indices}",
+                    lang,
+                    string.Join(',', idx));
             }
             catch (Exception ex)
             {
@@ -198,11 +243,13 @@ public sealed class ConversionService(
             }
         }
 
-        var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(",", matchedIndices) : null;
+        var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
         var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
 
-        logger.LogInformation("Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
-            subtitleIndicesCsv ?? "none", externalSubtitlePathsCsv ?? "none");
+        logger.LogInformation(
+            "Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
+            subtitleIndicesCsv ?? "none",
+            externalSubtitlePathsCsv ?? "none");
 
         return new SubtitleProcessingResult
         {
@@ -225,8 +272,10 @@ public sealed class ConversionService(
             var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
             if (probe.VideoHeight is not null && request.Resolution > probe.VideoHeight)
             {
-                logger.LogWarning("Resolution validation failed: requested {RequestedResolution}p exceeds source {SourceHeight}p",
-                    request.Resolution, probe.VideoHeight);
+                logger.LogWarning(
+                    "Resolution validation failed: requested {RequestedResolution}p exceeds source {SourceHeight}p",
+                    request.Resolution,
+                    probe.VideoHeight);
                 throw new InvalidOperationException($"Requested resolution {request.Resolution}p exceeds source height {probe.VideoHeight}p.");
             }
         }
@@ -238,6 +287,7 @@ public sealed class ConversionService(
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
+
             // Continue without validation if we can't determine source height
         }
     }
@@ -268,41 +318,6 @@ public sealed class ConversionService(
             return null;
         }
     }
-
-    private static string? FindExternalSubtitle(string inputPath, string language)
-    {
-        var videoDir = Path.GetDirectoryName(inputPath) ?? string.Empty;
-        var videoBase = Path.GetFileNameWithoutExtension(inputPath) ?? string.Empty;
-        var tagsToTry = GetSubtitleTags(language);
-
-        foreach (var tag in tagsToTry)
-        {
-            var path = Path.Combine(videoDir, videoBase + "." + tag + ".srt");
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> GetSubtitleTags(string language)
-    {
-        var key = language.Trim().ToLowerInvariant();
-
-        return key switch
-        {
-            _ when SubtitleTagsSwedish.Contains(key, StringComparer.Ordinal) => SubtitleTagsSwedish,
-            _ when SubtitleTagsEnglish.Contains(key, StringComparer.Ordinal) => SubtitleTagsEnglish,
-            _ when SubtitleTagsVietnamese.Contains(key, StringComparer.Ordinal) => SubtitleTagsVietnamese,
-            _ => [key], // Fallback: if a tag-like short code is provided, just try it
-        };
-    }
-
-    private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
-    private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
-    private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
 
     private sealed record AudioProcessingResult
     {

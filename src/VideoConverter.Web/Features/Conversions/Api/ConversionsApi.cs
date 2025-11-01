@@ -30,9 +30,10 @@ public static class ConversionsApi
         ProfileExistsValidator profileExistsValidator,
         ILoggerFactory loggerFactory)
     {
-        var profile = request.ProfileId.HasValue
+        var profile = request.ProfileId is not null
             ? await profileExistsValidator.GetProfileForReadAsync(request.ProfileId.Value, db, CancellationToken.None)
-.ConfigureAwait(false) : null;
+                .ConfigureAwait(false)
+            : null;
 
         var builderLogger = loggerFactory.CreateLogger("EffectiveConversionRequestBuilder");
         var effectiveRequest = EffectiveConversionRequestBuilder.Build(request, profile, builderLogger);
@@ -40,7 +41,8 @@ public static class ConversionsApi
         var validation = await validator.ValidateAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
         {
-            logger.LogWarning("Validation failed for conversion request: {ValidationErrors}",
+            logger.LogWarning(
+                "Validation failed for conversion request: {ValidationErrors}",
                 string.Join("; ", validation.ToDictionary().SelectMany(kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}"))));
             return Results.ValidationProblem(validation.ToDictionary());
         }
@@ -136,19 +138,25 @@ public static class ConversionsApi
                 "There are no conversions available to start.");
         }
 
-        logger.LogInformation("Starting next conversion {ConversionId} for input: {InputPath}",
-            conversion.Id, conversion.InputPath);
+        logger.LogInformation(
+            "Starting next conversion {ConversionId} for input: {InputPath}",
+            conversion.Id,
+            conversion.InputPath);
 
         var result = await runner.StartAsync(conversion).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            logger.LogInformation("Next conversion {ConversionId} started successfully with PID: {ProcessId}",
-                conversion.Id, result.ProcessId);
+            logger.LogInformation(
+                "Next conversion {ConversionId} started successfully with PID: {ProcessId}",
+                conversion.Id,
+                result.ProcessId);
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId = conversion.Id });
         }
 
-        logger.LogError("Failed to start next conversion {ConversionId}: {ErrorMessage}",
-            conversion.Id, result.ErrorMessage);
+        logger.LogError(
+            "Failed to start next conversion {ConversionId}: {ErrorMessage}",
+            conversion.Id,
+            result.ErrorMessage);
         throw ApiErrorException.BusinessError(
             ErrorCode.ProcessStartFailed,
             result.ErrorMessage ?? "Unknown error occurred",
@@ -177,8 +185,11 @@ public static class ConversionsApi
         // Get progress from tracker
         var progress = progressTracker.GetProgress(id);
 
-        logger.LogDebug("Retrieved progress for conversion {ConversionId}: Status={Status}, Percentage={Percentage}%",
-            id, progress?.Status, progress?.PercentageComplete);
+        logger.LogDebug(
+            "Retrieved progress for conversion {ConversionId}: Status={Status}, Percentage={Percentage}%",
+            id,
+            progress?.Status,
+            progress?.PercentageComplete);
 
         return Results.Ok(progress);
     }

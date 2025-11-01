@@ -33,7 +33,7 @@ public static class ProfilesApi
         if (!validationResult.IsValid)
         {
             logger.LogWarning("Profile creation validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
-            throw new ValidationException(
+            throw new DomainValidationException(
                 "Validation failed.",
                 "The request contains invalid data.",
                 validationResult.ToDictionary());
@@ -124,7 +124,7 @@ public static class ProfilesApi
         if (!validationResult.IsValid)
         {
             logger.LogWarning("Profile update validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
-            throw new ValidationException(
+            throw new DomainValidationException(
                 "Validation failed.",
                 "The request contains invalid data.",
                 validationResult.ToDictionary());

@@ -2,11 +2,10 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logger, IProcessManager processManager) : IFfmpegPreflightChecker, IDisposable
 {
-    private readonly ILogger<FfmpegPreflightChecker> _logger = logger;
     private readonly SemaphoreSlim _preflightLock = new(1, 1);
     private bool _preflightDone;
 
-    public async Task<(bool ok, string? error)> EnsurePreflightAsync(string ffmpegPath, CancellationToken cancellationToken)
+    public async Task<(bool Ok, string? Error)> EnsurePreflightAsync(string ffmpegPath, CancellationToken cancellationToken)
     {
         if (_preflightDone)
         {
@@ -21,7 +20,7 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
                 return (true, null);
             }
 
-            _logger.LogDebug("Running ffmpeg preflight check using: {Path}", ffmpegPath);
+            logger.LogDebug("Running ffmpeg preflight check using: {Path}", ffmpegPath);
             try
             {
                 var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
@@ -43,30 +42,32 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
                     "-",
                 };
 
-                var result = await processManager.RunAsync(new ProcessRequest
-                {
-                    ExecutablePath = ffmpegPath,
-                    Arguments = preflightArgs,
-                    CaptureOutput = true,
-                }, cancellationToken).ConfigureAwait(false);
+                var result = await processManager.RunAsync(
+                    new ProcessRequest
+                    {
+                        ExecutablePath = ffmpegPath,
+                        Arguments = preflightArgs,
+                        CaptureOutput = true,
+                    },
+                    cancellationToken).ConfigureAwait(false);
 
                 if (!result.IsSuccess)
                 {
                     var error = string.IsNullOrWhiteSpace(result.StandardError)
-                        ? $"ffmpeg preflight failed with exit code {result.ExitCode}"
+                        ? $"FFmpeg preflight failed with exit code {result.ExitCode}"
                         : result.StandardError;
-                    _logger.LogError("FFmpeg preflight failed: {Error}", error);
+                    logger.LogError("FFmpeg preflight failed: {Error}", error);
                     return (false, error);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "FFmpeg preflight threw an exception");
+                logger.LogError(ex, "FFmpeg preflight threw an exception");
                 return (false, ex.Message);
             }
 
             _preflightDone = true;
-            _logger.LogInformation("FFmpeg preflight succeeded");
+            logger.LogInformation("FFmpeg preflight succeeded");
             return (true, null);
         }
         finally
