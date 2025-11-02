@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using VideoConverter.Web.Features.Metadata.Models;
 
@@ -11,6 +12,11 @@ public class TmdbMetadataService(
     HttpClient httpClient,
     IConfiguration configuration) : IMetadataService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly string _apiKey = configuration["Tmdb:ApiKey"] ?? throw new InvalidOperationException("TMDb API key not configured");
 
     public async Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, string? source = null, CancellationToken cancellationToken = default)
@@ -24,7 +30,7 @@ public class TmdbMetadataService(
             logger.LogDebug("Searching for movie: {Title} (Year: {Year})", title, year);
 
             var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
-            var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(responseString);
+            var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(responseString, JsonOptions);
 
             if (searchResult?.Results?.Count > 0)
             {
@@ -58,7 +64,7 @@ public class TmdbMetadataService(
             logger.LogDebug("Searching for TV show: {ShowName} (Year: {Year})", showName, firstAiredYear);
 
             var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
-            var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(responseString);
+            var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(responseString, JsonOptions);
 
             if (searchResult?.Results?.Count > 0)
             {
@@ -103,7 +109,7 @@ public class TmdbMetadataService(
         {
             var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}";
             var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(responseString);
+            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(responseString, JsonOptions);
         }
         catch (Exception ex)
         {
@@ -128,13 +134,24 @@ public class TmdbMetadataService(
     }
 
     // TMDb API response models
-    private sealed record TmdbMovieSearchResult(List<TmdbMovie>? Results);
+    private sealed record TmdbMovieSearchResult([property: JsonPropertyName("results")] List<TmdbMovie>? Results);
 
-    private sealed record TmdbMovie(string Title, string? ReleaseDate, string? Overview, string? PosterPath);
+    private sealed record TmdbMovie(
+        [property: JsonPropertyName("title")] string Title,
+        [property: JsonPropertyName("release_date")] string? ReleaseDate,
+        [property: JsonPropertyName("overview")] string? Overview,
+        [property: JsonPropertyName("poster_path")] string? PosterPath);
 
-    private sealed record TmdbTvSearchResult(List<TmdbTvShow>? Results);
+    private sealed record TmdbTvSearchResult([property: JsonPropertyName("results")] List<TmdbTvShow>? Results);
 
-    private sealed record TmdbTvShow(int Id, string Name, string? FirstAirDate, string? Overview, string? PosterPath);
+    private sealed record TmdbTvShow(
+        [property: JsonPropertyName("id")] int Id,
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("first_air_date")] string? FirstAirDate,
+        [property: JsonPropertyName("overview")] string? Overview,
+        [property: JsonPropertyName("poster_path")] string? PosterPath);
 
-    private sealed record TmdbEpisodeDetails(string Name, string? Overview);
+    private sealed record TmdbEpisodeDetails(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("overview")] string? Overview);
 }
