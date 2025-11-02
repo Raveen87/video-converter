@@ -78,12 +78,12 @@ public static class Program
         var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("Video Converter service starting up");
 
-        // Ensure database exists
+        // Apply database migrations
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            _ = db.Database.EnsureCreated();
-            logger.LogInformation("Database initialized successfully");
+            db.Database.Migrate();
+            logger.LogInformation("Database migrated successfully");
         }
 
         _ = app.MapGet("/", () => "OK");

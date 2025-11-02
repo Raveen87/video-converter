@@ -94,6 +94,14 @@ namespace VideoConverter.Web.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AudioLanguages")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubtitleLanguages")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Resolution")
                         .HasColumnType("INTEGER");
 

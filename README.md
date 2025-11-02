@@ -10,6 +10,8 @@ Minimal scaffold for a cross-platform video conversion service in C#/.NET 10 RC.
 dotnet build
 dotnet run --project src/VideoConverter.Web
 dotnet test
+
+dotnet ef database update --project src/VideoConverter.Web --startup-project src/VideoConverter.Web
 ```
 
 ### API
@@ -94,8 +96,10 @@ dotnet test
 
 ### Persistence
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
+- On startup, the app applies pending EF Core migrations automatically (`Database.Migrate()`), so new columns (e.g., `AudioChannels`) are added seamlessly.
+- If you previously ran an older build that created the database without migrations and you hit a schema error, restart the app to let it apply migrations. As a last resort for local dev, you can delete the `conversions.db` file to recreate from scratch.
 - Override via environment variables, user secrets, or appsettings.
- - Profiles store `audioLanguages` and `subtitleLanguages` as JSON text columns.
+- Profiles store `audioLanguages` and `subtitleLanguages` as JSON text columns.
 
 ### Testing
 - Integration tests use `WebApplicationFactory` and override the SQLite path per run.
@@ -283,7 +287,7 @@ When a conversion is queued, the service automatically looks up metadata for the
 4. **Fallback**: If metadata lookup fails, uses the original filename
 
 #### Configuration
-- **TMDb API Key**: Set `Tmdb:ApiKey` in configuration or environment variables
+- **TMDb API Key**: Set `Tmdb:ApiKey` in configuration or environment variables. The service authenticates to TMDb using the HTTP Authorization header with a Bearer token. Do not append `api_key` as a query parameter.
 - **Filename sanitization**: Special characters are replaced with underscores for filesystem compatibility
 - **Error handling**: Graceful fallback to original filename if metadata service is unavailable
 
