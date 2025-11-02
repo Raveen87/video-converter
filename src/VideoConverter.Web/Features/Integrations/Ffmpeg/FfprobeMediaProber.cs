@@ -31,6 +31,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
                 ExecutablePath = _ffprobePath,
                 Arguments = args,
                 CaptureOutput = true,
+                Timeout = TimeSpan.FromSeconds(10),
             },
             cancellationToken).ConfigureAwait(false);
 
@@ -40,13 +41,19 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
         if (!procResult.IsSuccess)
         {
             var cmd = CommandDisplayFormatter.Build(_ffprobePath, args);
+            var errorDetails = ExtractErrorDetails(stderr, procResult);
+
             logger.LogError(
-                "ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Stderr: {Error}",
+                "ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Error: {Error}",
                 inputPath,
                 procResult.ExitCode,
                 cmd,
-                stderr);
-            throw new InvalidOperationException("ffprobe failed: " + stderr);
+                errorDetails);
+
+            var message = string.IsNullOrWhiteSpace(errorDetails)
+                ? $"ffprobe failed with exit code {procResult.ExitCode}"
+                : $"ffprobe failed: {errorDetails}";
+            throw new InvalidOperationException(message);
         }
 
         logger.LogDebug("ffprobe completed successfully for: {InputPath}", inputPath);
@@ -130,5 +137,16 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
             durationSeconds);
 
         return result;
+    }
+
+    private static string ExtractErrorDetails(string stderr, ProcessResult procResult)
+    {
+#pragma warning disable IDE0046
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            return stderr;
+        }
+
+        return !string.IsNullOrWhiteSpace(procResult.ErrorMessage) ? procResult.ErrorMessage : string.Empty;
     }
 }

@@ -22,47 +22,66 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             }
         }
 
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+        using var process = new Process();
+        process.StartInfo = startInfo;
+        process.EnableRaisingEvents = true;
 
-        if (!process.Start())
+        try
         {
-            logger.LogError("Failed to start process: {Executable}", request.ExecutablePath);
-            return new ProcessResult { IsSuccess = false, ErrorMessage = "Failed to start process" };
+            if (!process.Start())
+            {
+                logger.LogError("Failed to start process: {Executable}", request.ExecutablePath);
+                return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Failed to start process" };
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception while starting process: {Executable}", request.ExecutablePath);
+            return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = ex.Message };
         }
 
         logger.LogDebug("Process started with PID: {ProcessId}", process.Id);
 
         var stdoutLines = new List<string>();
         var stderrLines = new List<string>();
+        Task<string>? readStdoutTask = null;
+        Task<string>? readStderrTask = null;
 
-        if (request.OnStdout is not null)
+        var usingStdoutEvents = request.OnStdout is not null;
+        var usingStderrEvents = request.OnStderr is not null;
+
+        if (usingStdoutEvents)
         {
             process.OutputDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
                     stdoutLines.Add(e.Data);
-                    request.OnStdout(e.Data);
+                    request.OnStdout!(e.Data);
                 }
             };
             process.BeginOutputReadLine();
         }
         else if (request.CaptureOutput)
         {
-            // read whole stream at end
+            readStdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         }
 
-        if (request.OnStderr is not null)
+        if (usingStderrEvents)
         {
             process.ErrorDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
                     stderrLines.Add(e.Data);
-                    request.OnStderr(e.Data);
+                    request.OnStderr!(e.Data);
                 }
             };
             process.BeginErrorReadLine();
+        }
+        else if (request.CaptureOutput)
+        {
+            readStderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
         }
 
         var timeoutTask = Task.CompletedTask;
@@ -72,8 +91,14 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
             timeoutTask = Task.Delay(Timeout.InfiniteTimeSpan, timeoutCts.Token);
         }
 
-        var waitTask = process.WaitForExitAsync(cancellationToken);
-        var completed = await Task.WhenAny(waitTask, timeoutTask).ConfigureAwait(false);
+        var waitTask = process.WaitForExitAsync(CancellationToken.None);
+        var tasksToWait = new List<Task> { waitTask, timeoutTask };
+        if (cancellationToken.CanBeCanceled)
+        {
+            tasksToWait.Add(Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken));
+        }
+
+        var completed = await Task.WhenAny(tasksToWait).ConfigureAwait(false);
         if (completed == timeoutTask)
         {
             try
@@ -85,23 +110,37 @@ public sealed class ProcessManager(ILogger<ProcessManager> logger) : IProcessMan
                 logger.LogWarning(ex, "Failed to kill timed-out process {Pid}", process.Id);
             }
 
-            return new ProcessResult { IsSuccess = false, ErrorMessage = "Process timed out" };
+            return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process timed out" };
+        }
+
+        if (completed != waitTask && completed != timeoutTask)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to kill canceled process {Pid}", process.Id);
+            }
+
+            return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process canceled" };
         }
 
         var stdout = string.Empty;
         var stderr = string.Empty;
-        if (request.OnStdout is null && request.CaptureOutput)
+        if (!usingStdoutEvents && request.CaptureOutput && readStdoutTask is not null)
         {
-            stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            stdout = await readStdoutTask.ConfigureAwait(false);
         }
         else if (stdoutLines.Count > 0)
         {
             stdout = string.Join(Environment.NewLine, stdoutLines);
         }
 
-        if (request.OnStderr is null && request.CaptureOutput)
+        if (!usingStderrEvents && request.CaptureOutput && readStderrTask is not null)
         {
-            stderr = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            stderr = await readStderrTask.ConfigureAwait(false);
         }
         else if (stderrLines.Count > 0)
         {
