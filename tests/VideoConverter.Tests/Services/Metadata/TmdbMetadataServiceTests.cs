@@ -191,6 +191,64 @@ public class TmdbMetadataServiceTests
         _ = result.Overview.Should().Be("Pilot episode");
     }
 
+    [Fact]
+    public async Task GetTvShowDetailsAsync_DeserializesTvShowDetails_ForEntourage()
+    {
+        // Arrange
+        var handler = new ShowDetailsStubHttpMessageHandler(TmdbShowDetailsJson);
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token"
+            })
+            .Build();
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration);
+
+        // Act
+        var result = await service.GetTvShowDetailsAsync(1940);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result!.Id.Should().Be(1940);
+        _ = result.Name.Should().Be("Entourage");
+        _ = result.FirstAirDate.Should().Be("2004-07-18");
+        _ = result.NumberOfSeasons.Should().Be(8);
+        _ = result.NumberOfEpisodes.Should().Be(96);
+        _ = result.Genres!.Select(g => g.Name).Should().Contain(new[] { "Comedy", "Drama" });
+        _ = result.Networks![0].Name.Should().Be("HBO");
+        _ = result.LastEpisodeToAir!.Name.Should().Be("The End");
+        _ = result.LastEpisodeToAir.SeasonNumber.Should().Be(8);
+        _ = result.LastEpisodeToAir.EpisodeNumber.Should().Be(8);
+        _ = result.PosterPath.Should().Be("/kLKP8zrArBtBboGz3qJOuMGC7rL.jpg");
+    }
+
+    private sealed class ShowDetailsStubHttpMessageHandler(string showDetailsJson) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
+            if (!hasAuth)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+            }
+
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            string body = string.Empty;
+            if (path.EndsWith("/tv/1940", StringComparison.OrdinalIgnoreCase))
+            {
+                body = showDetailsJson;
+            }
+
+            using var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            return Task.FromResult(response);
+        }
+    }
+
     private sealed class StubHttpMessageHandler(string searchJson, string episodeJson) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

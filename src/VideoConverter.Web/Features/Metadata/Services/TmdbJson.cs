@@ -26,6 +26,11 @@ internal static class TmdbJson
         return JsonSerializer.Deserialize<TmdbEpisodeDetails>(json, Options);
     }
 
+    public static TmdbTvShowDetailsResponse? DeserializeTvShowDetails(string json)
+    {
+        return JsonSerializer.Deserialize<TmdbTvShowDetailsResponse>(json, Options);
+    }
+
     internal sealed record TmdbMovieSearchResult([property: JsonPropertyName("results")] List<TmdbMovie>? Results);
 
     internal sealed record TmdbMovie(
