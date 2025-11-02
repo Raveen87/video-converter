@@ -14,7 +14,7 @@ namespace VideoConverter.Tests.Services.Conversion;
 public class EffectiveConversionRequestBuilderTests()
 {
     private static readonly EffectiveConversionRequestBuilder EffectiveConversionRequestBuilder
-        = new (new Mock<ILogger<EffectiveConversionRequestBuilder>>().Object);
+        = new(new Mock<ILogger<EffectiveConversionRequestBuilder>>().Object);
 
     [Fact]
     public void Build_WithProfileOverrides_UsesProfileValues()
@@ -40,7 +40,7 @@ public class EffectiveConversionRequestBuilderTests()
             AudioLanguages = ["en", "sv"],
             SubtitleLanguages = ["sv"],
         };
-        
+
         var effective = EffectiveConversionRequestBuilder.Build(request, profile);
 
         _ = effective.OutputDirectory.Should().Be("prof-out");

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 using VideoConverter.Web.Features.Metadata.Models;
@@ -18,22 +19,22 @@ public class TmdbMetadataService(
         {
             var query = Uri.EscapeDataString(title);
             var yearParam = year is not null ? $"&year={year.Value}" : string.Empty;
-            var url = $"https://api.themoviedb.org/3/search/movie?api_key={_apiKey}&query={query}{yearParam}";
+            var url = $"https://api.themoviedb.org/3/search/movie?query={query}{yearParam}";
 
             logger.LogDebug("Searching for movie: {Title} (Year: {Year})", title, year);
 
-            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
-            var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(response);
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var searchResult = JsonSerializer.Deserialize<TmdbMovieSearchResult>(responseString);
 
             if (searchResult?.Results?.Count > 0)
             {
                 var movie = searchResult.Results[0];
                 return new MovieMetadata(
                     movie.Title,
-                    ExtractYear(movie.ReleaseDate),
+                    Helpers.ExtractYear(movie.ReleaseDate),
                     source,
                     movie.Overview,
-                    GetPosterUrl(movie.PosterPath));
+                    Helpers.GetPosterUrl(movie.PosterPath));
             }
 
             logger.LogWarning("No movie found for: {Title} (Year: {Year})", title, year);
@@ -52,12 +53,12 @@ public class TmdbMetadataService(
         {
             var query = Uri.EscapeDataString(showName);
             var yearParam = firstAiredYear is not null ? $"&first_air_date_year={firstAiredYear.Value}" : string.Empty;
-            var url = $"https://api.themoviedb.org/3/search/tv?api_key={_apiKey}&query={query}{yearParam}";
+            var url = $"https://api.themoviedb.org/3/search/tv?query={query}{yearParam}";
 
             logger.LogDebug("Searching for TV show: {ShowName} (Year: {Year})", showName, firstAiredYear);
 
-            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
-            var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(response);
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var searchResult = JsonSerializer.Deserialize<TmdbTvSearchResult>(responseString);
 
             if (searchResult?.Results?.Count > 0)
             {
@@ -68,13 +69,13 @@ public class TmdbMetadataService(
 
                 return new TvShowMetadata(
                     show.Name,
-                    ExtractYear(show.FirstAirDate),
+                    Helpers.ExtractYear(show.FirstAirDate),
                     season,
                     episode,
                     episodeDetails?.Name,
                     source,
                     episodeDetails?.Overview ?? show.Overview,
-                    GetPosterUrl(show.PosterPath));
+                    Helpers.GetPosterUrl(show.PosterPath));
             }
 
             logger.LogWarning("No TV show found for: {ShowName} (Year: {Year})", showName, firstAiredYear);
@@ -87,30 +88,42 @@ public class TmdbMetadataService(
         }
     }
 
-    private static int ExtractYear(string? dateString)
+    private async Task<string> GetAuthorizedStringAsync(string url, CancellationToken cancellationToken)
     {
-        return string.IsNullOrWhiteSpace(dateString) || !DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
-            ? 0
-            : date.Year;
-    }
-
-    private static string? GetPosterUrl(string? posterPath)
-    {
-        return string.IsNullOrWhiteSpace(posterPath) ? null : $"https://image.tmdb.org/t/p/w500{posterPath}";
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        using var response = await httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+        _ = response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<TmdbEpisodeDetails?> GetEpisodeDetailsAsync(int showId, int season, int episode, CancellationToken cancellationToken)
     {
         try
         {
-            var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}?api_key={_apiKey}";
-            var response = await httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(response);
+            var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{season}/episode/{episode}";
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            return JsonSerializer.Deserialize<TmdbEpisodeDetails>(responseString);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Error fetching episode details for show {ShowId}, season {Season}, episode {Episode}", showId, season, episode);
             return null;
+        }
+    }
+
+    private static class Helpers
+    {
+        public static int ExtractYear(string? dateString)
+        {
+            return string.IsNullOrWhiteSpace(dateString) || !DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+                ? 0
+                : date.Year;
+        }
+
+        public static string? GetPosterUrl(string? posterPath)
+        {
+            return string.IsNullOrWhiteSpace(posterPath) ? null : $"https://image.tmdb.org/t/p/w500{posterPath}";
         }
     }
 
