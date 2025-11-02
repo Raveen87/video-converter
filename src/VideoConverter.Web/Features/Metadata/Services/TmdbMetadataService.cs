@@ -87,6 +87,21 @@ public class TmdbMetadataService(
         }
     }
 
+    public async Task<TmdbTvShowDetailsResponse?> GetTvShowDetailsAsync(int showId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/tv/{showId}";
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            return TmdbJson.DeserializeTvShowDetails(responseString);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error fetching TV show details for show {ShowId}", showId);
+            return null;
+        }
+    }
+
     private async Task<string> GetAuthorizedStringAsync(string url, CancellationToken cancellationToken)
     {
         using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
