@@ -102,6 +102,21 @@ public class TmdbMetadataService(
         }
     }
 
+    public async Task<TmdbSeasonDetailsResponse?> GetTvSeasonDetailsAsync(int showId, int seasonNumber, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/tv/{showId}/season/{seasonNumber}";
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            return TmdbJson.DeserializeTvSeasonDetails(responseString);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error fetching season details for show {ShowId}, season {Season}", showId, seasonNumber);
+            return null;
+        }
+    }
+
     private async Task<string> GetAuthorizedStringAsync(string url, CancellationToken cancellationToken)
     {
         using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);

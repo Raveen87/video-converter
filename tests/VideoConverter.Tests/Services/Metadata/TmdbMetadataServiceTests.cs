@@ -163,6 +163,59 @@ public class TmdbMetadataServiceTests
     }
     """;
 
+    private const string TmdbSeason1DetailsJson = """
+    {
+        "_id": "52571bd519c29571140e52ff",
+        "air_date": "2004-07-18",
+        "episodes": [
+            {
+                "air_date": "2004-07-18",
+                "episode_number": 1,
+                "episode_type": "standard",
+                "id": 130868,
+                "name": "Entourage",
+                "overview": "Basking in the adulation from his latest movie premiere, Hollywood 'it' actor Vince Chase joins childhood pals Eric, Drama and Turtle to debate the pros and cons of attending their tenth high-school reunion back east. Meanwhile, Eric – Vince's de facto manager – incurs the wrath of Vince's agent Ari by advising Vince to pass on a script he hasn't even read. On the domestic-security front, Turtle agrees to test the mettle of the entourage's new guard dog, a Rottweiler named Ahnold.",
+                "production_code": "",
+                "runtime": null,
+                "season_number": 1,
+                "show_id": 1940,
+                "still_path": "/uIxT23dBItswBgIXGe1Hcwyvd24.jpg",
+                "vote_average": 7.4,
+                "vote_count": 7
+            },
+            {
+                "air_date": "2004-07-25",
+                "episode_number": 2,
+                "episode_type": "standard",
+                "id": 130858,
+                "name": "The Review",
+                "overview": "Ignoring the cautionary portents of a negative review, Vince ramps up his already-excessive spending by leasing a new Rolls-Royce. Ari urges Vince to get a \"real\" manager, causing a wounded Eric to do some soul-searching. Meanwhile, Drama skips a \"Vagina Monologues\" rehearsal (go figure) to join Vince and the entourage at a wild party hosted by a sexy actress.",
+                "production_code": "",
+                "runtime": null,
+                "season_number": 1,
+                "show_id": 1940,
+                "still_path": "/sWKfyeUKKutl6LgKzYMa3ytzVbH.jpg",
+                "vote_average": 7.4,
+                "vote_count": 8
+            }
+        ],
+        "name": "Season 1",
+        "networks": [
+            {
+                "id": 49,
+                "logo_path": "/tuomPhY2UtuPTqqFnKMVHvSb724.png",
+                "name": "HBO",
+                "origin_country": "US"
+            }
+        ],
+        "overview": "Vince, Eric, Drama, and Turtle begin living it up in the wake of Vince's latest hit, while the boys clash with Ari, attend a slew of wild parties, and decide on Vince's next starring role: an independent film set in Queens and directed by a loose cannon named Billy Walsh.",
+        "id": 5633,
+        "poster_path": "/uxIB6pCQgelxxcZmIwas6L9YHm0.jpg",
+        "season_number": 1,
+        "vote_average": 7.6
+    }
+    """;
+
     [Fact]
     public async Task GetTvShowMetadataAsync_DeserializesTmdbSearchResult_ForEntourage()
     {
@@ -189,6 +242,61 @@ public class TmdbMetadataServiceTests
         _ = result.PosterUrl.Should().Be("https://image.tmdb.org/t/p/w500/kLKP8zrArBtBboGz3qJOuMGC7rL.jpg");
         _ = result.EpisodeTitle.Should().Be("Pilot");
         _ = result.Overview.Should().Be("Pilot episode");
+    }
+
+    [Fact]
+    public async Task GetTvSeasonDetailsAsync_DeserializesSeasonEpisodes_ForEntourageS1()
+    {
+        // Arrange
+        var handler = new SeasonDetailsStubHttpMessageHandler(TmdbSeason1DetailsJson);
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token"
+            })
+            .Build();
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration);
+
+        // Act
+        var result = await service.GetTvSeasonDetailsAsync(1940, 1);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result!.Id.Should().Be(5633);
+        _ = result.SeasonNumber.Should().Be(1);
+        _ = result.Name.Should().Be("Season 1");
+        _ = result.Episodes.Should().NotBeNull();
+        _ = result.Episodes!.Count.Should().BeGreaterThanOrEqualTo(2);
+        _ = result.Episodes![0].EpisodeNumber.Should().Be(1);
+        _ = result.Episodes![0].Name.Should().Be("Entourage");
+        _ = result.Networks![0].Name.Should().Be("HBO");
+    }
+
+    private sealed class SeasonDetailsStubHttpMessageHandler(string seasonDetailsJson) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
+            if (!hasAuth)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+            }
+
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            string body = string.Empty;
+            if (path.EndsWith("/tv/1940/season/1", StringComparison.OrdinalIgnoreCase))
+            {
+                body = seasonDetailsJson;
+            }
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            return Task.FromResult(response);
+        }
     }
 
     [Fact]
@@ -242,7 +350,7 @@ public class TmdbMetadataServiceTests
                 body = showDetailsJson;
             }
 
-            using var response = new HttpResponseMessage(HttpStatusCode.OK);
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
             response.Content = new StringContent(body, Encoding.UTF8, "application/json");
             response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
             return Task.FromResult(response);
