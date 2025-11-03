@@ -10,4 +10,5 @@ public record ProfileCreateDto(
     int? Resolution,
     string? MetadataBasedFilename,
     IReadOnlyList<string>? AudioLanguages,
-    IReadOnlyList<string>? SubtitleLanguages);
+    IReadOnlyList<string>? SubtitleLanguages,
+    string? OutputFilenameTemplate = null);

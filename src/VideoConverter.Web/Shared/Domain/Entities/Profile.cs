@@ -18,6 +18,8 @@ public class Profile
 
     public string? MetadataBasedFilename { get; set; }
 
+    public string? OutputFilenameTemplate { get; set; }
+
     public IEnumerable<string>? AudioLanguages { get; set; }
 
     public IEnumerable<string>? SubtitleLanguages { get; set; }

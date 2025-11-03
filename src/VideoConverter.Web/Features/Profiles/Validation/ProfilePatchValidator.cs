@@ -30,6 +30,10 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
             logger,
             result);
 
+        // Validate optional output filename template
+        _ = requestPropertyValidator.IsValidFilenameTemplate(request.OutputFilenameTemplate, out var tmplErr);
+        result.AddIfInvalid(tmplErr is null, nameof(request.OutputFilenameTemplate), tmplErr, logger);
+
         if (result.IsValid)
         {
             logger.LogInformation("Profile patch validation completed successfully");

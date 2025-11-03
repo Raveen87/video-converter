@@ -43,5 +43,8 @@ internal static class ProfileValidationHelper
 
         _ = requestPropertyValidator.IsValidLanguageList(subtitleLanguages, out var slErr);
         result.AddIfInvalid(slErr is null, nameof(subtitleLanguages), slErr, logger);
+
+        // Validate optional output filename template when provided
+        // Note: This helper doesn't receive the template itself, validators will validate it separately when available.
     }
 }

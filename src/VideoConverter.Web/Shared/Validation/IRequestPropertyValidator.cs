@@ -15,4 +15,6 @@ public interface IRequestPropertyValidator
     bool IsValidAudioChannels(AudioChannels? audioChannels, out string? errorMessage);
 
     bool IsValidMetadataBasedFilename(string? metadataBasedFilename, out string? errorMessage);
+
+    bool IsValidFilenameTemplate(string? template, out string? errorMessage);
 }

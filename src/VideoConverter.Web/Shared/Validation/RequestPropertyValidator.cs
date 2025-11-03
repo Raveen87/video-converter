@@ -102,4 +102,29 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
 
         return true;
     }
+
+    public bool IsValidFilenameTemplate(string? template, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            return true; // optional
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (template.IndexOfAny(invalidChars) >= 0)
+        {
+            errorMessage = "OutputFilenameTemplate contains invalid characters for filenames.";
+            return false;
+        }
+
+        if (template.Length > 1024)
+        {
+            errorMessage = "OutputFilenameTemplate is too long (maximum 1024 characters).";
+            return false;
+        }
+
+        return true;
+    }
 }

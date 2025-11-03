@@ -39,6 +39,10 @@ public sealed class ConversionCreateValidator(ILogger<ConversionCreateValidator>
         _ = requestPropertyValidator.IsValidAudioChannels(request.AudioChannels, out var acErr);
         result.AddIfInvalid(acErr is null, nameof(request.AudioChannels), acErr, logger);
 
+        // Validate optional output filename template on request (used only when no profile is specified)
+        _ = requestPropertyValidator.IsValidFilenameTemplate(request.OutputFilenameTemplate, out var tmplErr);
+        result.AddIfInvalid(tmplErr is null, nameof(request.OutputFilenameTemplate), tmplErr, logger);
+
         if (result.IsValid)
         {
             logger.LogInformation("Validation completed successfully");
