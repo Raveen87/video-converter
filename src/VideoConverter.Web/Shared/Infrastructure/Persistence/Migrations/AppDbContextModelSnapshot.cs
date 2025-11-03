@@ -14,9 +14,10 @@ namespace VideoConverter.Web.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
+#pragma warning disable 612, 618
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
 
-            modelBuilder.Entity("VideoConverter.Web.Data.Conversion", b =>
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.Conversion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -71,7 +72,7 @@ namespace VideoConverter.Web.Migrations
                     b.ToTable("Conversions");
                 });
 
-            modelBuilder.Entity("VideoConverter.Web.Data.Profile", b =>
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.Profile", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -82,6 +83,10 @@ namespace VideoConverter.Web.Migrations
 
                     b.Property<int?>("AudioChannels")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("AudioLanguages")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("Crf")
                         .HasColumnType("INTEGER");
@@ -94,21 +99,22 @@ namespace VideoConverter.Web.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AudioLanguages")
-                        .HasMaxLength(4096)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SubtitleLanguages")
-                        .HasMaxLength(4096)
+                    b.Property<string>("OutputFilenameTemplate")
+                        .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Resolution")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SubtitleLanguages")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Profiles");
                 });
+#pragma warning restore 612, 618
         }
     }
 }

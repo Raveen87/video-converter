@@ -10,7 +10,9 @@ public class TmdbMetadataService(
     HttpClient httpClient,
     IConfiguration configuration) : IMetadataService
 {
-    private readonly string _apiKey = configuration["Tmdb:ApiKey"] ?? throw new InvalidOperationException("TMDb API key not configured");
+    private readonly string _apiKey = configuration["TMDB:API_KEY"]
+        ?? configuration["Tmdb:ApiKey"]
+        ?? throw new InvalidOperationException("TMDb API key not configured");
 
     public async Task<MovieMetadata?> GetMovieMetadataAsync(string title, int? year = null, string? source = null, CancellationToken cancellationToken = default)
     {

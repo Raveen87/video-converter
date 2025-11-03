@@ -10,6 +10,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
+      - CONFIG__TMDB__API_KEY=${CONFIG__TMDB__API_KEY}
     volumes:
       - ./data:/app/data
       - ./temp:/app/temp

@@ -125,7 +125,10 @@ Environment/app settings:
 - `Ffmpeg:Path` or `FFMPEG_PATH`: Path to ffmpeg executable (default: `ffmpeg` in PATH)
 - `Ffmpeg:FfprobePath` or `FFPROBE_PATH`: Path to ffprobe executable (default: `ffprobe` in PATH)
 - `Ffmpeg:DryRun` or `FFMPEG_DRYRUN`: When `true`, the service will not spawn ffmpeg; it returns the built command string. Useful for tests and diagnostics.
-- `Tmdb:ApiKey` or `TMDB_API_KEY`: The Movie Database (TMDb) API key for metadata lookup (required for metadata-based file naming)
+- TMDb API key (required for metadata-based file naming):
+  - `Tmdb:ApiKey` (e.g., env var `Tmdb__ApiKey` or in `appsettings.json`)
+  - `.env` (preferred for local dev): `CONFIG__TMDB__API_KEY=your_key`
+  - Alternative env var: `TMDB__API_KEY`
 
 Filename template default (service-wide):
 
