@@ -28,7 +28,7 @@ public class FilenameTemplateEngineTests
 
         var result = _engine.Render(meta, ".mp4", template);
 
-        _ = result.Should().Be("Yellowstone.2018.S01E01.Daybreak.HDTV.mp4".Replace(".2018.", ".2018"));
+        _ = result.Should().Be("Yellowstone.2018.S01E01.Daybreak.HDTV.mp4");
     }
 
     [Fact]
