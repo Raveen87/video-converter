@@ -27,10 +27,15 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
-      "profileId": 1
+      "profileId": 1,
+      "outputFilenameTemplate": "{Title}[.{Year}][S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]"
     }
     ```
   - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`, `audioLanguages`, `subtitleLanguages`). For each property, if the profile value is present (non-null/non-empty for lists), it is used; otherwise, the request value is used. Values are never merged per-property.
+  - Filename template precedence:
+    1) If a profile is specified and includes `OutputFilenameTemplate`, that template is used
+    2) If no profile is specified, `outputFilenameTemplate` from the request is used (if provided)
+    3) Otherwise, the service default template is used (see Config)
   - Responses:
     - 201 Created with created item
     - 400 Bad Request if validation fails (see Validation section)
@@ -121,6 +126,23 @@ Environment/app settings:
 - `Ffmpeg:FfprobePath` or `FFPROBE_PATH`: Path to ffprobe executable (default: `ffprobe` in PATH)
 - `Ffmpeg:DryRun` or `FFMPEG_DRYRUN`: When `true`, the service will not spawn ffmpeg; it returns the built command string. Useful for tests and diagnostics.
 - `Tmdb:ApiKey` or `TMDB_API_KEY`: The Movie Database (TMDb) API key for metadata lookup (required for metadata-based file naming)
+
+Filename template default (service-wide):
+
+```json
+"FilenameTemplate": {
+  "DefaultTemplate": "{Title}[.{Year}][S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]"
+}
+```
+
+Template tokens:
+- `{Title}`: Movie title or TV show name
+- `{Year}`: Movie year or TV first aired year
+- `{Season}` / `{Episode}`: Integers, support formatting like `{Season:00}`
+- `{EpisodeName}`: TV episode title
+- `{Source}`: Optional source tag (e.g., WEB-DL, HDTV)
+
+Optional segments: wrap in `[...]` to include only when all tokens inside have values.
 
 FFmpeg options (appsettings.json):
 

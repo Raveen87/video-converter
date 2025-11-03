@@ -42,6 +42,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(1024);
         _ = profileEntity.Property(p => p.MetadataBasedFilename)
             .HasMaxLength(1024);
+        _ = profileEntity.Property(p => p.OutputFilenameTemplate)
+            .HasMaxLength(1024);
 
         // Configure JSON storage for language lists
         var (listToJson, listComparer) = Converters.CreateStringListJson();

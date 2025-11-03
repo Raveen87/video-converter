@@ -16,6 +16,8 @@ public class ProfilePatchDto
 
     public string? MetadataBasedFilename { get; set; }
 
+    public string? OutputFilenameTemplate { get; set; }
+
     public IEnumerable<string>? AudioLanguages { get; init; }
 
     public IEnumerable<string>? SubtitleLanguages { get; init; }

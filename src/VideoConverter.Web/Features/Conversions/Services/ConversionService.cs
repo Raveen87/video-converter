@@ -15,6 +15,8 @@ public sealed class ConversionService(
     IMetadataService metadataService,
     IFilenameParser filenameParser,
     IFilenameGenerator filenameGenerator,
+    IFilenameTemplateEngine filenameTemplateEngine,
+    Microsoft.Extensions.Options.IOptions<FilenameTemplateOptions> filenameTemplateOptions,
     ILogger<ConversionService> logger) : IConversionService
 {
     private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
@@ -41,7 +43,8 @@ public sealed class ConversionService(
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
-        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate, cancellationToken)
+            .ConfigureAwait(false);
 
         // Determine audio bitrate based on audio channels
         var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
@@ -111,7 +114,7 @@ public sealed class ConversionService(
         };
     }
 
-    private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, CancellationToken cancellationToken)
+    private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, string? template, CancellationToken cancellationToken)
     {
         try
         {
@@ -157,7 +160,9 @@ public sealed class ConversionService(
 
             if (metadata is not null)
             {
-                var generatedFilename = filenameGenerator.GenerateFilename(metadata, extension);
+                var generatedFilename = template is not null
+                    ? filenameTemplateEngine.Render(metadata, extension, template)
+                    : filenameGenerator.GenerateFilename(metadata, extension);
                 logger.LogInformation("Generated metadata-based filename: {GeneratedFilename}", generatedFilename);
                 return generatedFilename;
             }

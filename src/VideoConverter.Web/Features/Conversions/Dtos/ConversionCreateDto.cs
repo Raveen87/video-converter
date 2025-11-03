@@ -11,4 +11,5 @@ public record ConversionCreateDto(
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
-    int? ProfileId);
+    int? ProfileId,
+    string? OutputFilenameTemplate = null);

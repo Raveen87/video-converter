@@ -48,6 +48,7 @@ public static class Program
         });
 
         _ = builder.Services.Configure<FfmpegOptions>(builder.Configuration.GetSection(FfmpegOptions.SectionName));
+        _ = builder.Services.Configure<FilenameTemplateOptions>(builder.Configuration.GetSection(FilenameTemplateOptions.SectionName));
         _ = builder.Services.AddHttpClient();
         _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
@@ -69,6 +70,7 @@ public static class Program
         _ = builder.Services.AddSingleton<ITvShowFilenameParser, TvShowFilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameParser, FilenameParser>();
         _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
+        _ = builder.Services.AddSingleton<IFilenameTemplateEngine, FilenameTemplateEngine>();
         _ = builder.Services.AddSingleton<EffectiveConversionRequestBuilder>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();

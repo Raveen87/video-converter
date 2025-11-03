@@ -10,6 +10,7 @@ using VideoConverter.Web.Features.Integrations.Ffmpeg;
 using VideoConverter.Web.Features.Metadata.Models;
 using VideoConverter.Web.Features.Metadata.Services;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
+using Microsoft.Extensions.Options;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
@@ -22,6 +23,7 @@ public class ConversionServiceTests
     private readonly Mock<IMetadataService> _mockMetadataService;
     private readonly Mock<IFilenameParser> _mockFilenameParser;
     private readonly Mock<IFilenameGenerator> _mockFilenameGenerator;
+    private readonly Mock<IFilenameTemplateEngine> _mockTemplateEngine;
     private readonly Mock<ILogger<ConversionService>> _mockLogger;
     private readonly ConversionService _conversionService;
 
@@ -34,6 +36,7 @@ public class ConversionServiceTests
         _mockMetadataService = new Mock<IMetadataService>();
         _mockFilenameParser = new Mock<IFilenameParser>();
         _mockFilenameGenerator = new Mock<IFilenameGenerator>();
+        _mockTemplateEngine = new Mock<IFilenameTemplateEngine>();
         _mockLogger = new Mock<ILogger<ConversionService>>();
 
         _conversionService = new ConversionService(
@@ -44,6 +47,8 @@ public class ConversionServiceTests
             _mockMetadataService.Object,
             _mockFilenameParser.Object,
             _mockFilenameGenerator.Object,
+            _mockTemplateEngine.Object,
+            Options.Create(new FilenameTemplateOptions { DefaultTemplate = null }),
             _mockLogger.Object);
     }
 

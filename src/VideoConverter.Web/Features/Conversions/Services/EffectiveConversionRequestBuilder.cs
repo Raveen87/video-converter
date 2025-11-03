@@ -17,6 +17,8 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
         var audioLanguages = ChooseList(profile?.AudioLanguages, request.AudioLanguages, "AudioLanguages");
         var subtitleLanguages = ChooseList(profile?.SubtitleLanguages, request.SubtitleLanguages, "SubtitleLanguages");
 
+        var effectiveTemplate = ResolveTemplate(profile, request.OutputFilenameTemplate);
+
         return request with
         {
             OutputDirectory = outputDirectory,
@@ -27,6 +29,7 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
             AudioLanguages = audioLanguages,
             SubtitleLanguages = subtitleLanguages,
             ProfileId = request.ProfileId,
+            OutputFilenameTemplate = effectiveTemplate,
         };
 
         string ChooseRef(string? profileValue, string requestValue, string field)
@@ -54,5 +57,15 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
             logger.LogDebug("Using {Source} value for {Field}: {Value}", source, field, chosen is null ? "<null>" : string.Join(", ", chosen));
             return chosen;
         }
+    }
+
+    private static string? ResolveTemplate(Profile? profile, string? requestTemplate)
+    {
+        static string? Normalize(string? s)
+        {
+            return string.IsNullOrWhiteSpace(s) ? null : s;
+        }
+
+        return profile is not null ? Normalize(profile.OutputFilenameTemplate) : Normalize(requestTemplate);
     }
 }
