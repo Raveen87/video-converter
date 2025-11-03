@@ -21,49 +21,10 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
             }
 
             logger.LogDebug("Running ffmpeg preflight check using: {Path}", ffmpegPath);
-            try
+            var (ok, error) = await TryRunPreflightAsync(ffmpegPath, cancellationToken).ConfigureAwait(false);
+            if (!ok)
             {
-                var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
-                var preflightArgs = new List<string>
-                {
-                    "-hide_banner",
-                    "-loglevel", "error",
-                    "-f", "lavfi",
-                    "-i", "color=c=black:s=1280x720:d=0.1",
-                    "-c:v", "libsvtav1",
-                    "-pix_fmt", "yuv420p10le",
-                    "-preset", "6",
-                    "-tune", "0",
-                    "-crf", "40",
-                    "-svtav1-params", "film-grain=8:film-grain-denoise=0",
-                    "-vf", vf,
-                    "-t", "0.05",
-                    "-f", "null",
-                    "-",
-                };
-
-                var result = await processManager.RunAsync(
-                    new ProcessRequest
-                    {
-                        ExecutablePath = ffmpegPath,
-                        Arguments = preflightArgs,
-                        CaptureOutput = true,
-                    },
-                    cancellationToken).ConfigureAwait(false);
-
-                if (!result.IsSuccess)
-                {
-                    var error = string.IsNullOrWhiteSpace(result.StandardError)
-                        ? $"FFmpeg preflight failed with exit code {result.ExitCode}"
-                        : result.StandardError;
-                    logger.LogError("FFmpeg preflight failed: {Error}", error);
-                    return (false, error);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "FFmpeg preflight threw an exception");
-                return (false, ex.Message);
+                return (false, error);
             }
 
             _preflightDone = true;
@@ -80,5 +41,37 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
     {
         _preflightLock.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private async Task<(bool Ok, string? Error)> TryRunPreflightAsync(string ffmpegPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var preflightArgs = FfmpegPreflightArgsBuilder.Build();
+            var result = await processManager.RunAsync(
+                new ProcessRequest
+                {
+                    ExecutablePath = ffmpegPath,
+                    Arguments = preflightArgs,
+                    CaptureOutput = true,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            if (!result.IsSuccess)
+            {
+                var error = string.IsNullOrWhiteSpace(result.StandardError)
+                    ? $"FFmpeg preflight failed with exit code {result.ExitCode}"
+                    : result.StandardError;
+                logger.LogError("FFmpeg preflight failed: {Error}", error);
+                return (false, error);
+            }
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "FFmpeg preflight threw an exception");
+            return (false, ex.Message);
+        }
     }
 }

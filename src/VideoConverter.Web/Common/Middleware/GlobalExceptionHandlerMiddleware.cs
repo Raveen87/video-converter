@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text.Json;
 
 using VideoConverter.Web.Common.Exceptions;
@@ -8,7 +7,7 @@ namespace VideoConverter.Web.Common.Middleware;
 /// <summary>
 /// Middleware for handling exceptions globally and converting them to structured API responses.
 /// </summary>
-public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger)
+public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger, IApiErrorMapper mapper)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -19,73 +18,18 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         catch (Exception ex)
         {
             logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex).ConfigureAwait(false);
+            await HandleExceptionAsync(context, ex, mapper).ConfigureAwait(false);
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception, IApiErrorMapper mapper)
     {
         var response = context.Response;
         response.ContentType = "application/json";
 
-        object apiError = exception switch
-        {
-            ApiErrorException apiException => apiException,
-            DomainValidationException validationEx => validationEx,
-            ArgumentNullException nullEx => ApiErrorException.ValidationError(
-                nullEx.Message,
-                "A required parameter is missing. Please provide all required information.",
-                nullEx),
-            ArgumentException argEx => ApiErrorException.ValidationError(
-                argEx.Message,
-                "The provided input is invalid. Please check your request and try again.",
-                argEx),
-            InvalidOperationException opEx => ApiErrorException.BusinessError(
-                ErrorCode.InvalidConversionState,
-                opEx.Message,
-                "The requested operation cannot be completed in the current state.",
-                opEx),
-            FileNotFoundException fileEx => ApiErrorException.NotFound(
-                ErrorCode.FileNotFound,
-                fileEx.Message,
-                "The requested file could not be found.",
-                fileEx),
-            DirectoryNotFoundException dirEx => ApiErrorException.NotFound(
-                ErrorCode.FileNotFound,
-                dirEx.Message,
-                "The requested directory could not be found.",
-                dirEx),
-            UnauthorizedAccessException authEx => new ApiErrorException(
-                HttpStatusCode.Forbidden,
-                ErrorCode.InternalServerError,
-                authEx.Message,
-                "You do not have permission to access this resource.",
-                authEx),
-            TimeoutException timeoutEx => ApiErrorException.ServerError(
-                ErrorCode.InternalServerError,
-                timeoutEx.Message,
-                "The operation timed out. Please try again later.",
-                timeoutEx),
-            _ => ApiErrorException.ServerError(
-                ErrorCode.InternalServerError,
-                "An unexpected error occurred.",
-                "An unexpected error occurred. Please try again later.",
-                exception),
-        };
-
-        var errorResponse = apiError switch
-        {
-            ApiErrorException apiException => apiException.ToDictionary(),
-            DomainValidationException validationException => validationException.ToDictionary(),
-            _ => throw new InvalidOperationException("Unexpected error type"),
-        };
-
-        response.StatusCode = apiError switch
-        {
-            ApiErrorException apiException => (int)apiException.StatusCode,
-            DomainValidationException => (int)HttpStatusCode.BadRequest,
-            _ => (int)HttpStatusCode.InternalServerError,
-        };
+        var apiError = mapper.Map(exception);
+        var errorResponse = mapper.ToResponse(apiError);
+        response.StatusCode = mapper.GetStatusCode(apiError);
 
         var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
         {

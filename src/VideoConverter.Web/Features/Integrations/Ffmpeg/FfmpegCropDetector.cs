@@ -28,15 +28,9 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         foreach (var ts in timestamps)
         {
             var crop = await DetectAtAsync(inputPath, ts, cancellationToken).ConfigureAwait(false);
-            if (TryParseArea(crop, out var area) && area > bestArea)
+            if (!TryUpdateBestCrop(crop, ts, ref bestCrop, ref bestArea))
             {
-                logger.LogDebug(
-                    "New best crop found at {Timestamp}s: {Crop} (area: {Area})",
-                    ts,
-                    crop,
-                    area);
-                bestArea = area;
-                bestCrop = crop;
+                continue;
             }
         }
 
@@ -98,14 +92,10 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         return false;
     }
 
-    private async Task<string?> DetectAtAsync(string inputPath, double timestampSeconds, CancellationToken cancellationToken)
+    private static List<string> BuildCropDetectArgs(string inputPath, double timestampSeconds)
     {
-        logger.LogDebug("Detecting crop at {Timestamp}s for {InputPath}", timestampSeconds, inputPath);
-
-        // Use cropdetect filter for a short segment around the timestamp
-        var filter = "cropdetect=24:16:0"; // 24 dB threshold, 16 round value, 0 resets
-        var args = new List<string>
-        {
+        var filter = "cropdetect=24:16:0";
+        return [
             "-v", "error",
             "-ss", timestampSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "-i", inputPath,
@@ -113,8 +103,41 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
             "-vf", filter,
             "-f", "null",
             "-",
-        };
+        ];
+    }
 
+    private static string? ParseBestCropFromStderr(string stderr)
+    {
+        string? best = null;
+        foreach (var line in stderr.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var idx = line.IndexOf("crop=", StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+            {
+                continue;
+            }
+
+            var token = line[(idx + 5)..].Trim();
+            var end = token.IndexOf(' ', StringComparison.Ordinal);
+            if (end > 0)
+            {
+                token = token[..end];
+            }
+
+            end = token.IndexOf(',', StringComparison.Ordinal);
+            if (end > 0)
+            {
+                token = token[..end];
+            }
+
+            best = token;
+        }
+
+        return best;
+    }
+
+    private ProcessStartInfo BuildProcessStartInfo(List<string> args)
+    {
         var psi = new ProcessStartInfo
         {
             FileName = _ffmpegPath,
@@ -126,6 +149,16 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         {
             psi.ArgumentList.Add(a);
         }
+
+        return psi;
+    }
+
+    private async Task<string?> DetectAtAsync(string inputPath, double timestampSeconds, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Detecting crop at {Timestamp}s for {InputPath}", timestampSeconds, inputPath);
+
+        var args = BuildCropDetectArgs(inputPath, timestampSeconds);
+        var psi = BuildProcessStartInfo(args);
 
         using var proc = new Process();
         proc.StartInfo = psi;
@@ -150,31 +183,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
                 stderr);
         }
 
-        // Parse last crop= line; ffmpeg prints lines like: crop=w:h:x:y
-        string? best = null;
-        foreach (var line in stderr.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var idx = line.IndexOf("crop=", StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0)
-            {
-                var token = line[(idx + 5)..].Trim();
-
-                // sometimes additional text may follow; take until whitespace or comma
-                var end = token.IndexOf(' ', StringComparison.Ordinal);
-                if (end > 0)
-                {
-                    token = token[..end];
-                }
-
-                end = token.IndexOf(',', StringComparison.Ordinal);
-                if (end > 0)
-                {
-                    token = token[..end];
-                }
-
-                best = token;
-            }
-        }
+        var best = ParseBestCropFromStderr(stderr);
 
         if (!string.IsNullOrWhiteSpace(best))
         {
@@ -182,5 +191,18 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         }
 
         return best;
+    }
+
+    private bool TryUpdateBestCrop(string? crop, double ts, ref string? bestCrop, ref long bestArea)
+    {
+        if (TryParseArea(crop, out var area) && area > bestArea)
+        {
+            logger.LogDebug("New best crop found at {Timestamp}s: {Crop} (area: {Area})", ts, crop, area);
+            bestArea = area;
+            bestCrop = crop;
+            return true;
+        }
+
+        return false;
     }
 }

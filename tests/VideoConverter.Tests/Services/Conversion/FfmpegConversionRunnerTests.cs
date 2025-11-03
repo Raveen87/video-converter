@@ -28,12 +28,16 @@ public class FfmpegConversionRunnerTests
 
         var processManager = new ProcessManager(NullLogger<ProcessManager>.Instance);
         var progressTracker = new Mock<IProgressTracker>().Object;
-        var mediaProber = new Mock<IMediaProber>().Object;
         var progressParser = new FfmpegProgressOutputParser();
         var preflight = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, processManager);
         var options = Microsoft.Extensions.Options.Options.Create(new FfmpegOptions { Path = configuration["Ffmpeg:Path"], DryRun = true });
         var runCoordinator = new ConversionRunCoordinator();
-        var runner = new FfmpegConversionRunner(processManager, progressTracker, mediaProber, progressParser, preflight, runCoordinator, options, NullLogger<FfmpegConversionRunner>.Instance);
+        var outputPlanner = new Mock<IConversionOutputPlanner>();
+        outputPlanner.Setup(p => p.Plan(It.IsAny<ConversionEntity>()))
+            .Returns((ConversionEntity c) => (Path.Combine(c.OutputDirectory!, Path.GetFileNameWithoutExtension(c.InputPath) + ".mkv"), Path.GetFileNameWithoutExtension(c.InputPath)));
+        var durationProvider = new Mock<IMediaDurationProvider>();
+        durationProvider.Setup(p => p.GetDurationSecondsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        var runner = new FfmpegConversionRunner(processManager, progressTracker, progressParser, preflight, runCoordinator, outputPlanner.Object, durationProvider.Object, options, NullLogger<FfmpegConversionRunner>.Instance);
 
         var tempOut = Path.Combine(Path.GetTempPath(), "vc-tests-out-" + Guid.NewGuid().ToString("N"));
         var conversion = new ConversionEntity

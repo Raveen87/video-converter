@@ -9,47 +9,13 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
         ConversionCreateDto request,
         Profile? profile)
     {
-        var outputDirectory = profile?.OutputDirectory ?? request.OutputDirectory;
-        logger.LogDebug(
-            "Using {Source} value for OutputDirectory: {Value}",
-            SourceRef(profile?.OutputDirectory),
-            outputDirectory);
-
-        var crf = profile?.Crf ?? request.Crf;
-        logger.LogDebug(
-            "Using {Source} value for Crf: {Value}",
-            Source(profile?.Crf),
-            crf);
-
-        var audioBitrate = profile?.AudioBitrateKbps ?? request.AudioBitrateKbps;
-        logger.LogDebug(
-            "Using {Source} value for AudioBitrateKbps: {Value}",
-            Source(profile?.AudioBitrateKbps),
-            audioBitrate);
-
-        var audioChannels = profile?.AudioChannels ?? request.AudioChannels;
-        logger.LogDebug(
-            "Using {Source} value for AudioChannels: {Value}",
-            Source(profile?.AudioChannels),
-            audioChannels);
-
-        var resolution = profile?.Resolution ?? request.Resolution;
-        logger.LogDebug(
-            "Using {Source} value for Resolution: {Value}",
-            Source(profile?.Resolution),
-            resolution);
-
-        var audioLanguages = (profile?.AudioLanguages?.ToList() is { Count: > 0 }) ? profile!.AudioLanguages : request.AudioLanguages;
-        logger.LogDebug(
-            "Using {Source} value for AudioLanguages: {Value}",
-            SourceList(profile?.AudioLanguages),
-            audioLanguages is null ? "<null>" : string.Join(", ", audioLanguages));
-
-        var subtitleLanguages = (profile?.SubtitleLanguages?.ToList() is { Count: > 0 }) ? profile!.SubtitleLanguages : request.SubtitleLanguages;
-        logger.LogDebug(
-            "Using {Source} value for SubtitleLanguages: {Value}",
-            SourceList(profile?.SubtitleLanguages),
-            subtitleLanguages is null ? "<null>" : string.Join(", ", subtitleLanguages));
+        var outputDirectory = ChooseRef(profile?.OutputDirectory, request.OutputDirectory, "OutputDirectory");
+        var crf = Choose(profile?.Crf, request.Crf, "Crf");
+        var audioBitrate = Choose(profile?.AudioBitrateKbps, request.AudioBitrateKbps, "AudioBitrateKbps");
+        var audioChannels = Choose(profile?.AudioChannels, request.AudioChannels, "AudioChannels");
+        var resolution = Choose(profile?.Resolution, request.Resolution, "Resolution");
+        var audioLanguages = ChooseList(profile?.AudioLanguages, request.AudioLanguages, "AudioLanguages");
+        var subtitleLanguages = ChooseList(profile?.SubtitleLanguages, request.SubtitleLanguages, "SubtitleLanguages");
 
         return request with
         {
@@ -63,20 +29,30 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
             ProfileId = request.ProfileId,
         };
 
-        string SourceRef(string? profileValue)
+        string ChooseRef(string? profileValue, string requestValue, string field)
         {
-            return !string.IsNullOrWhiteSpace(profileValue) ? "profile" : "request";
+            var source = !string.IsNullOrWhiteSpace(profileValue) ? "profile" : "request";
+            var chosen = !string.IsNullOrWhiteSpace(profileValue) ? profileValue! : requestValue;
+            logger.LogDebug("Using {Source} value for {Field}: {Value}", source, field, chosen);
+            return chosen;
         }
 
-        string Source<T>(T? profileValue)
+        T? Choose<T>(T? profileValue, T? requestValue, string field)
             where T : struct
         {
-            return profileValue is not null ? "profile" : "request";
+            var source = profileValue is not null ? "profile" : "request";
+            var chosen = profileValue is not null ? profileValue : requestValue;
+            logger.LogDebug("Using {Source} value for {Field}: {Value}", source, field, chosen);
+            return chosen;
         }
 
-        string SourceList(IEnumerable<string>? profileList)
+        IReadOnlyList<string>? ChooseList(IEnumerable<string>? profileList, IEnumerable<string>? requestList, string field)
         {
-            return profileList?.ToList() is { Count: > 0 } ? "profile" : "request";
+            var hasProfile = profileList?.ToList() is { Count: > 0 } p ? p : null;
+            var source = hasProfile is not null ? "profile" : "request";
+            var chosen = hasProfile ?? requestList?.ToList();
+            logger.LogDebug("Using {Source} value for {Field}: {Value}", source, field, chosen is null ? "<null>" : string.Join(", ", chosen));
+            return chosen;
         }
     }
 }

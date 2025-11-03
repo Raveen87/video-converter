@@ -13,13 +13,15 @@ public class GlobalExceptionHandlerMiddlewareTests
     private readonly Mock<RequestDelegate> _nextMock;
     private readonly Mock<ILogger<GlobalExceptionHandlerMiddleware>> _loggerMock;
     private readonly GlobalExceptionHandlerMiddleware _middleware;
+    private readonly IApiErrorMapper _mapper;
     private readonly DefaultHttpContext _context;
 
     public GlobalExceptionHandlerMiddlewareTests()
     {
         _nextMock = new Mock<RequestDelegate>();
         _loggerMock = new Mock<ILogger<GlobalExceptionHandlerMiddleware>>();
-        _middleware = new GlobalExceptionHandlerMiddleware(_nextMock.Object, _loggerMock.Object);
+        _mapper = new ApiErrorMapper();
+        _middleware = new GlobalExceptionHandlerMiddleware(_nextMock.Object, _loggerMock.Object, _mapper);
         _context = new DefaultHttpContext();
     }
 

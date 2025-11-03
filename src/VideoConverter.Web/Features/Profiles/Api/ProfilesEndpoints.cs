@@ -85,7 +85,18 @@ public sealed class ProfilesEndpoints(
 
         var profile = await _existsValidator.GetProfileForUpdateAsync(id, _db, cancellationToken).ConfigureAwait(false);
 
-        var patchModel = new ProfilePatchDto
+        var patchModel = CreatePatchModelFrom(profile);
+        ApplyPatchOrThrow(patchDocument, patchModel, id);
+        await ValidatePatchedModelOrThrow(patchModel, cancellationToken).ConfigureAwait(false);
+        UpdateProfileFromPatch(profile, patchModel);
+        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
+        return Results.Ok(ToDto(profile));
+    }
+
+    private static ProfilePatchDto CreatePatchModelFrom(Profile profile)
+    {
+        return new ProfilePatchDto
         {
             OutputDirectory = profile.OutputDirectory,
             Crf = profile.Crf,
@@ -96,44 +107,6 @@ public sealed class ProfilesEndpoints(
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
         };
-
-        try
-        {
-            patchDocument.ApplyTo(patchModel);
-        }
-        catch (JsonPatchException ex)
-        {
-            _logger.LogWarning(ex, "Invalid patch document for profile {ProfileId}", id);
-            throw ApiErrorException.ValidationError(
-                ex.Message,
-                "Failed to apply the requested updates.",
-                ex);
-        }
-
-        // Validate the patched model
-        var validationResult = await _patchValidator.ValidateAsync(patchModel, cancellationToken).ConfigureAwait(false);
-        if (!validationResult.IsValid)
-        {
-            _logger.LogWarning("Profile update validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
-            throw new DomainValidationException(
-                "Validation failed.",
-                "The request contains invalid data.",
-                validationResult.ToDictionary());
-        }
-
-        profile.OutputDirectory = patchModel.OutputDirectory;
-        profile.Crf = patchModel.Crf;
-        profile.AudioBitrateKbps = patchModel.AudioBitrateKbps;
-        profile.AudioChannels = patchModel.AudioChannels;
-        profile.Resolution = patchModel.Resolution;
-        profile.MetadataBasedFilename = patchModel.MetadataBasedFilename;
-        profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
-        profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
-
-        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
-        return Results.Ok(ToDto(profile));
     }
 
     private static ProfileDto ToDto(Profile profile)
@@ -148,5 +121,40 @@ public sealed class ProfilesEndpoints(
             profile.MetadataBasedFilename,
             profile.AudioLanguages,
             profile.SubtitleLanguages);
+    }
+
+    private static void UpdateProfileFromPatch(Profile profile, ProfilePatchDto patchModel)
+    {
+        profile.OutputDirectory = patchModel.OutputDirectory;
+        profile.Crf = patchModel.Crf;
+        profile.AudioBitrateKbps = patchModel.AudioBitrateKbps;
+        profile.AudioChannels = patchModel.AudioChannels;
+        profile.Resolution = patchModel.Resolution;
+        profile.MetadataBasedFilename = patchModel.MetadataBasedFilename;
+        profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
+        profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
+    }
+
+    private void ApplyPatchOrThrow(JsonPatchDocument<ProfilePatchDto> patchDocument, ProfilePatchDto patchModel, int id)
+    {
+        try
+        {
+            patchDocument.ApplyTo(patchModel);
+        }
+        catch (JsonPatchException ex)
+        {
+            _logger.LogWarning(ex, "Invalid patch document for profile {ProfileId}", id);
+            throw ApiErrorException.ValidationError(ex.Message, "Failed to apply the requested updates.", ex);
+        }
+    }
+
+    private async Task ValidatePatchedModelOrThrow(ProfilePatchDto patchModel, CancellationToken cancellationToken)
+    {
+        var validationResult = await _patchValidator.ValidateAsync(patchModel, cancellationToken).ConfigureAwait(false);
+        if (!validationResult.IsValid)
+        {
+            _logger.LogWarning("Profile update validation failed with {ErrorCount} errors", validationResult.ToDictionary().Count);
+            throw new DomainValidationException("Validation failed.", "The request contains invalid data.", validationResult.ToDictionary());
+        }
     }
 }

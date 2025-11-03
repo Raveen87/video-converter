@@ -59,7 +59,7 @@ public class TmdbMetadataService(
             var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
             var searchResult = TmdbJson.DeserializeTvSearchResult(responseString);
 
-            if (searchResult?.Results?.Count > 0)
+            if (searchResult?.Results?.Count is > 0)
             {
                 var show = searchResult.Results[0];
 
@@ -75,6 +75,12 @@ public class TmdbMetadataService(
                     source,
                     episodeDetails?.Overview ?? show.Overview,
                     Helpers.GetPosterUrl(show.PosterPath));
+            }
+
+            var fallback = await TryBuildTvShowMetadataFromSearchJsonAsync(responseString, showName, season, episode, source, cancellationToken).ConfigureAwait(false);
+            if (fallback is not null)
+            {
+                return fallback;
             }
 
             logger.LogWarning("No TV show found for: {ShowName} (Year: {Year})", showName, firstAiredYear);
@@ -139,6 +145,42 @@ public class TmdbMetadataService(
             logger.LogWarning(ex, "Error fetching episode details for show {ShowId}, season {Season}, episode {Episode}", showId, season, episode);
             return null;
         }
+    }
+
+    private async Task<TvShowMetadata?> TryBuildTvShowMetadataFromSearchJsonAsync(string responseString, string showName, int season, int episode, string? source, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(responseString);
+            if (doc.RootElement.TryGetProperty("results", out var resultsEl) && resultsEl.ValueKind is System.Text.Json.JsonValueKind.Array)
+            {
+                var first = resultsEl.EnumerateArray().FirstOrDefault();
+                if (first.ValueKind is System.Text.Json.JsonValueKind.Object && first.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var id))
+                {
+                    var name = first.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : showName;
+                    var firstAirDate = first.TryGetProperty("first_air_date", out var fadEl) ? fadEl.GetString() : null;
+                    var overview = first.TryGetProperty("overview", out var ovEl) ? ovEl.GetString() : null;
+                    var poster = first.TryGetProperty("poster_path", out var ppEl) ? ppEl.GetString() : null;
+
+                    var episodeDetails = await GetEpisodeDetailsAsync(id, season, episode, cancellationToken).ConfigureAwait(false);
+                    return new TvShowMetadata(
+                        name ?? showName,
+                        Helpers.ExtractYear(firstAirDate),
+                        season,
+                        episode,
+                        episodeDetails?.Name,
+                        source,
+                        episodeDetails?.Overview ?? overview,
+                        Helpers.GetPosterUrl(poster));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Fallback parsing failed for TV search response");
+        }
+
+        return null;
     }
 
     private static class Helpers
