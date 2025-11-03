@@ -8,7 +8,9 @@ internal static class TmdbJson
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+
+        // Use explicit JsonPropertyName attributes; no naming policy needed
+        PropertyNamingPolicy = null,
     };
 
     public static TmdbMovieSearchResult? DeserializeMovieSearchResult(string json)

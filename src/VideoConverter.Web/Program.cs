@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Common.Middleware;
 using VideoConverter.Web.Features.Conversions.Api;
 using VideoConverter.Web.Features.Conversions.Services;
@@ -19,24 +20,34 @@ public static class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        ConfigureLogging(builder);
+        ConfigureServices(builder);
 
-        // Configure logging
+        var app = builder.Build();
+        ConfigureMiddleware(app);
+        ApplyMigrations(app);
+        MapEndpoints(app);
+        app.Run();
+    }
+
+    private static void ConfigureLogging(WebApplicationBuilder builder)
+    {
         _ = builder.Logging
             .ClearProviders()
             .AddConfiguration(builder.Configuration.GetSection("Logging"))
             .AddConsole()
             .AddDebug();
+    }
 
+    private static void ConfigureServices(WebApplicationBuilder builder)
+    {
         _ = builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=conversions.db";
             _ = options.UseSqlite(connectionString);
         });
 
-        // Options
-        _ = builder.Services.Configure<FfmpegOptions>(
-            builder.Configuration.GetSection(FfmpegOptions.SectionName));
-
+        _ = builder.Services.Configure<FfmpegOptions>(builder.Configuration.GetSection(FfmpegOptions.SectionName));
         _ = builder.Services.AddHttpClient();
         _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
         _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
@@ -45,6 +56,9 @@ public static class Program
         _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
         _ = builder.Services.AddSingleton<IProgressOutputParser, FfmpegProgressOutputParser>();
         _ = builder.Services.AddSingleton<IFfmpegPreflightChecker, FfmpegPreflightChecker>();
+        _ = builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
+        _ = builder.Services.AddSingleton<IConversionOutputPlanner, ConversionOutputPlanner>();
+        _ = builder.Services.AddSingleton<IMediaDurationProvider, MediaDurationProvider>();
         _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
         _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
@@ -64,34 +78,33 @@ public static class Program
         _ = builder.Services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
         _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
         _ = builder.Services.AddControllers().AddNewtonsoftJson();
-
-        // Register instance-based endpoint handlers
         _ = builder.Services.AddScoped<ProfilesEndpoints>();
+    }
 
-        var app = builder.Build();
-
-        // Add global exception handling middleware
+    private static void ConfigureMiddleware(WebApplication app)
+    {
         _ = app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+    }
 
-        // Log service initialization
+    private static void ApplyMigrations(WebApplication app)
+    {
         var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("Video Converter service starting up");
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+        logger.LogInformation("Database migrated successfully");
+    }
 
-        // Apply database migrations
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.Migrate();
-            logger.LogInformation("Database migrated successfully");
-        }
-
+    private static void MapEndpoints(WebApplication app)
+    {
         _ = app.MapGet("/", () => "OK");
         ConversionsApi.MapEndpoints(app);
         ProfilesApi.MapEndpoints(app);
+        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("API endpoints mapped successfully");
-
         logger.LogInformation("Video Converter service started successfully");
-        app.Run();
     }
 }
