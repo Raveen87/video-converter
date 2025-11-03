@@ -19,7 +19,14 @@ public static class Program
 {
     public static void Main(string[] args)
     {
+        dotenv.net.DotEnv.Fluent()
+            .WithProbeForEnv(probeLevelsToSearch: 6)
+            .WithTrimValues()
+            .WithOverwriteExistingVars()
+            .Load();
+
         var builder = WebApplication.CreateBuilder(args);
+        _ = builder.Configuration.AddEnvironmentVariables("CONFIG__");
         ConfigureLogging(builder);
         ConfigureServices(builder);
 
