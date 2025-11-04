@@ -27,5 +27,3 @@ public class FfprobeJsonParserTests
         _ = result.Streams[1].Title.Should().Be("Stereo");
     }
 }
-
-

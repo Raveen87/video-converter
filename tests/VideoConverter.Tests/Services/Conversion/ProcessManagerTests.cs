@@ -38,8 +38,8 @@ public class ProcessManagerTests
             // ping -n 5 127.0.0.1
             return ["-n", "5", "127.0.0.1"]; // ~4s
         }
+
         // sh -c "sleep 5"
         return ["-c", "sleep 5"]; // ~5s
     }
 }
-

@@ -23,7 +23,7 @@ public class FilenameTemplateEngineTests
     [Fact]
     public void Render_TvShow_UsesTemplateWithPaddingAndEpisodeName()
     {
-        var template = "{Title}[.{Year}][S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]";
+        var template = "{Title}[.{Year}][.S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]";
         var meta = new TvShowMetadata("Yellowstone", 2018, 1, 1, "Daybreak", "HDTV");
 
         var result = _engine.Render(meta, ".mp4", template);
@@ -42,5 +42,3 @@ public class FilenameTemplateEngineTests
         _ = result.Should().Be("Breaking BadS02E03.mkv");
     }
 }
-
-

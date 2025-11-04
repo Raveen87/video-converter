@@ -275,32 +275,6 @@ public class TmdbMetadataServiceTests
         _ = result.Networks![0].Name.Should().Be("HBO");
     }
 
-    private sealed class SeasonDetailsStubHttpMessageHandler(string seasonDetailsJson) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
-            if (!hasAuth)
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
-            }
-
-            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
-            string body = string.Empty;
-            if (path.EndsWith("/tv/1940/season/1", StringComparison.OrdinalIgnoreCase))
-            {
-                body = seasonDetailsJson;
-            }
-
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            };
-            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
-            return Task.FromResult(response);
-        }
-    }
-
     [Fact]
     public async Task GetTvShowDetailsAsync_DeserializesTvShowDetails_ForEntourage()
     {
@@ -335,6 +309,32 @@ public class TmdbMetadataServiceTests
         _ = result.PosterPath.Should().Be("/kLKP8zrArBtBboGz3qJOuMGC7rL.jpg");
     }
 
+    private sealed class SeasonDetailsStubHttpMessageHandler(string seasonDetailsJson) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
+            if (!hasAuth)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+            }
+
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            string body = string.Empty;
+            if (path.EndsWith("/tv/1940/season/1", StringComparison.OrdinalIgnoreCase))
+            {
+                body = seasonDetailsJson;
+            }
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            return Task.FromResult(response);
+        }
+    }
+
     private sealed class ShowDetailsStubHttpMessageHandler(string showDetailsJson) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -365,7 +365,6 @@ public class TmdbMetadataServiceTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-
             string body = string.Empty;
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
             if (path.Contains("/search/tv", StringComparison.OrdinalIgnoreCase))

@@ -16,4 +16,3 @@ public sealed class FakeConversionRunner : IConversionRunner
         return Task.FromResult(result);
     }
 }
-

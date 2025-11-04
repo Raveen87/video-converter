@@ -46,7 +46,7 @@ public class ConversionCreateValidatorTests
             AudioBitrateKbps: 500,
             AudioChannels: (Web.Shared.Domain.ValueObjects.AudioChannels)99,
             Resolution: 1440,
-            AudioLanguages: [""],
+            AudioLanguages: [string.Empty],
             SubtitleLanguages: ["   "],
             ProfileId: null);
 
@@ -56,4 +56,3 @@ public class ConversionCreateValidatorTests
         _ = dict.Keys.Should().Contain([nameof(request.InputPath), nameof(request.OutputDirectory), nameof(request.Crf), nameof(request.AudioBitrateKbps), nameof(request.Resolution), nameof(request.AudioLanguages), nameof(request.SubtitleLanguages), nameof(request.AudioChannels)]);
     }
 }
-

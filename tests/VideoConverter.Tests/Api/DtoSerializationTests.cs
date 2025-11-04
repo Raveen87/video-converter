@@ -47,4 +47,3 @@ public class DtoSerializationTests
         _ = back!.CreatedAtUtc.Should().BeCloseTo(dto.CreatedAtUtc, TimeSpan.FromSeconds(2));
     }
 }
-

@@ -8,19 +8,6 @@ namespace VideoConverter.Tests.Services.Conversion;
 
 public class MediaDurationProviderTests
 {
-    private sealed class StubMediaProber(double? duration, Exception? toThrow = null) : IMediaProber
-    {
-        public Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken)
-        {
-            if (toThrow is not null)
-            {
-                throw toThrow;
-            }
-
-            return Task.FromResult(new MediaProbeResult { Streams = new List<MediaStream>(), DurationSeconds = duration });
-        }
-    }
-
     [Fact]
     public async Task GetDurationSecondsAsync_ReturnsDuration_OnSuccess()
     {
@@ -40,6 +27,17 @@ public class MediaDurationProviderTests
         var dur = await provider.GetDurationSecondsAsync("x", CancellationToken.None);
         _ = dur.Should().Be(0);
     }
+
+    private sealed class StubMediaProber(double? duration, Exception? toThrow = null) : IMediaProber
+    {
+        public Task<MediaProbeResult> ProbeAsync(string inputPath, CancellationToken cancellationToken)
+        {
+            if (toThrow is not null)
+            {
+                throw toThrow;
+            }
+
+            return Task.FromResult(new MediaProbeResult { Streams = new List<MediaStream>(), DurationSeconds = duration });
+        }
+    }
 }
-
-

@@ -17,7 +17,14 @@ public class ProfileCreateValidatorTests
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "vc-prof-" + Guid.NewGuid().ToString("N"));
         _ = Directory.CreateDirectory(tempDir);
-        var dto = new ProfileCreateDto(tempDir, 20, 192, AudioChannels: null, 1080, MetadataBasedFilename: "bla", AudioLanguages: null,
+        var dto = new ProfileCreateDto(
+            tempDir,
+            20,
+            192,
+            AudioChannels: null,
+            1080,
+            MetadataBasedFilename: "bla",
+            AudioLanguages: null,
             SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         try
@@ -41,4 +48,3 @@ public class ProfileCreateValidatorTests
         _ = result.IsValid.Should().BeFalse();
     }
 }
-

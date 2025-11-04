@@ -57,5 +57,3 @@ public class EffectiveConversionRequestBuilderTemplateTests
         _ = effective.OutputFilenameTemplate.Should().Be("{Title}-{Year}");
     }
 }
-
-
