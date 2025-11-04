@@ -156,7 +156,7 @@ public sealed class DirectoryQueueService(
             .Select(c => c.InputPath)
             .ToListAsync(cancellationToken: ct)
             .ConfigureAwait(false);
-        return new HashSet<string>(inputs, StringComparer.OrdinalIgnoreCase);
+        return new HashSet<string>(inputs.Where(path => path != null), StringComparer.OrdinalIgnoreCase);
     }
 
     private ConversionCreateDto BuildEffectiveRequest(DirectoryQueueRequestDto request, string inputPath, Shared.Domain.Entities.Profile? profile)
