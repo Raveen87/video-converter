@@ -292,8 +292,7 @@ public class MetadataServiceTests
         _ = result.DetectedType.Should().Be(expectedType);
     }
 
-    #region Edge Case Tests
-
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithSpecialCharacters_HandlesCorrectly()
     {
@@ -310,6 +309,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2003);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithVeryLongTitle_HandlesCorrectly()
     {
@@ -327,6 +327,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2023);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithUnicodeCharacters_HandlesCorrectly()
     {
@@ -343,6 +344,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2023);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithNumbersInTitle_HandlesCorrectly()
     {
@@ -359,6 +361,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2023);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithInvalidYear_ReturnsNullYear()
     {
@@ -375,6 +378,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().BeNull(); // Should be null for invalid year
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithVeryOldYear_HandlesCorrectly()
     {
@@ -391,6 +395,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(1920);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseTvShowFilename_WithHighSeasonEpisode_HandlesCorrectly()
     {
@@ -409,6 +414,7 @@ public class MetadataServiceTests
         _ = result.EpisodeTitle.Should().Be("Final Episode");
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithMultipleDots_HandlesCorrectly()
     {
@@ -425,6 +431,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2023);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithNoExtension_HandlesCorrectly()
     {
@@ -441,6 +448,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2023);
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public void FilenameParser_ParseFilename_WithOnlyNumbers_HandlesCorrectly()
     {
@@ -457,6 +465,7 @@ public class MetadataServiceTests
         _ = result.Year.Should().BeNull(); // No valid year detected
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public async Task FakeMetadataService_GetMovieMetadata_WithNullTitle_ReturnsNull()
     {
@@ -471,6 +480,7 @@ public class MetadataServiceTests
         _ = result.Should().BeNull();
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public async Task FakeMetadataService_GetMovieMetadata_WithEmptyTitle_ReturnsNull()
     {
@@ -485,6 +495,7 @@ public class MetadataServiceTests
         _ = result.Should().BeNull();
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public async Task FakeMetadataService_GetTvShowMetadata_WithInvalidSeason_ReturnsNull()
     {
@@ -501,6 +512,7 @@ public class MetadataServiceTests
         _ = result.Should().BeNull();
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public async Task FakeMetadataService_GetTvShowMetadata_WithInvalidEpisode_ReturnsNull()
     {
@@ -517,6 +529,7 @@ public class MetadataServiceTests
         _ = result.Should().BeNull();
     }
 
+    [Trait("Category", "EdgeCase")]
     [Fact]
     public async Task FakeMetadataService_GetTvShowMetadata_WithVeryHighSeasonEpisode_ReturnsNull()
     {
@@ -533,10 +546,7 @@ public class MetadataServiceTests
         _ = result.Should().BeNull();
     }
 
-    #endregion
-
-    #region Source Parsing Tests
-
+    [Trait("Category", "SourceParsing")]
     [Fact]
     public void FilenameParser_ParseMovieFilename_WithBluraySource_ShouldDetectSource()
     {
@@ -554,6 +564,7 @@ public class MetadataServiceTests
         _ = result.Source.Should().Be("Bluray");
     }
 
+    [Trait("Category", "SourceParsing")]
     [Fact]
     public void FilenameParser_ParseTvShowFilename_WithHDTVSource_ShouldDetectSource()
     {
@@ -573,6 +584,7 @@ public class MetadataServiceTests
         _ = result.Source.Should().Be("HDTV");
     }
 
+    [Trait("Category", "SourceParsing")]
     [Theory]
     [InlineData("Bluray")]
     [InlineData("DVDRip")]
@@ -598,6 +610,4 @@ public class MetadataServiceTests
         _ = result.Year.Should().Be(2020);
         _ = result.Source.Should().Be(source);
     }
-
-    #endregion
 }

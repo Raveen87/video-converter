@@ -5,7 +5,6 @@ dotnet_diagnostic.MA0015.severity = none    # Specify the parameter name in Argu
 
 dotnet_diagnostic.SA0001.severity = none    # XML comment analysis is disabled due to project configuration
 dotnet_diagnostic.SA1101.severity = none    # Prefix local calls with this
-dotnet_diagnostic.SA1124.severity = none    #FIXME, Do not use regions
 dotnet_diagnostic.SA1200.severity = none    # Using directive must appear within a namespace declaration
 dotnet_diagnostic.SA1309.severity = none    # Field names must not begin with an underscore
 dotnet_diagnostic.SA1600.severity = none    # Elements must be documented
