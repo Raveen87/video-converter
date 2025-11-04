@@ -35,6 +35,7 @@ public static class TestDataFactory
         {
             list.Add(new MediaStream { Index = i, CodecType = "audio", LanguageTag = threeLetterLanguageTags[i] });
         }
+
         return list;
     }
 
@@ -45,4 +46,3 @@ public static class TestDataFactory
         return path;
     }
 }
-

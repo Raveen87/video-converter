@@ -22,4 +22,3 @@ public sealed class FakeMediaProber : IMediaProber
         return Task.FromResult(result);
     }
 }
-

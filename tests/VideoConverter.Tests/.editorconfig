@@ -3,15 +3,10 @@ root = true
 [*]
 dotnet_diagnostic.MA0015.severity = none    # Specify the parameter name in ArgumentException
 
-# Suppress StyleCop SA0001: XML comment analysis disabled (we don't rely on XML docs for analysis)
-dotnet_diagnostic.SA0001.severity = none
-
-# StyleCop: disable categories by default, opt-in specific rules
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
-dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+dotnet_diagnostic.SA0001.severity = none    # XML comment analysis is disabled due to project configuration
+dotnet_diagnostic.SA1101.severity = none    # Prefix local calls with this
+dotnet_diagnostic.SA1124.severity = none    #FIXME, Do not use regions
+dotnet_diagnostic.SA1200.severity = none    # Using directive must appear within a namespace declaration
+dotnet_diagnostic.SA1309.severity = none    # Field names must not begin with an underscore
+dotnet_diagnostic.SA1600.severity = none    # Elements must be documented
+dotnet_diagnostic.SA1633.severity = none    # File must have header

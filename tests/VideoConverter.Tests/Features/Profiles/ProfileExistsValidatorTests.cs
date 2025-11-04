@@ -36,4 +36,3 @@ public class ProfileExistsValidatorTests
         _ = ex.ErrorCode.Should().Be(ErrorCode.ProfileNotFound);
     }
 }
-

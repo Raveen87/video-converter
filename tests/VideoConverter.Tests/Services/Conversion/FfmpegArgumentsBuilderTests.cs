@@ -57,6 +57,7 @@ public class FfmpegArgumentsBuilderTests
                 break;
             }
         }
+
         _ = hasInternalSubMap.Should().BeTrue();
     }
 
@@ -144,4 +145,3 @@ public class FfmpegArgumentsBuilderTests
         return FfmpegArgumentsBuilder.Build(c, outFile, title, NullLogger.Instance, opts);
     }
 }
-

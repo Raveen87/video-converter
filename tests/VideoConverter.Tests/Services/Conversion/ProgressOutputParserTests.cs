@@ -28,4 +28,3 @@ public class ProgressOutputParserTests
         _ = ok.Should().BeFalse();
     }
 }
-

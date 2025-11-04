@@ -28,4 +28,3 @@ public class ProfilePatchValidatorTests
         _ = result.IsValid.Should().BeFalse();
     }
 }
-

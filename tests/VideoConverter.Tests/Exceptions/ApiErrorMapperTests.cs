@@ -30,5 +30,3 @@ public class ApiErrorMapperTests
         _ = status.Should().Be((int)HttpStatusCode.BadRequest);
     }
 }
-
-

@@ -65,4 +65,3 @@ public class FfmpegPreflightCheckerTests
         _ = err.Should().Contain("boom");
     }
 }
-

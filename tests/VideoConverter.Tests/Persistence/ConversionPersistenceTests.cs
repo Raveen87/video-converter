@@ -115,4 +115,3 @@ public class ConversionPersistenceTests
         _ = retrieved.DetectedCrop.Should().BeNull();
     }
 }
-

@@ -195,6 +195,7 @@ public class FileSystemValidatorTests
         // Assert
         Assert.False(isValid);
         Assert.NotNull(errorMessage);
+
         // Should fail at path validation level before reaching directory validation
     }
 

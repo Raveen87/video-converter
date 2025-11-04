@@ -41,4 +41,3 @@ public class LanguageMatchEngineTests
         _ = act.Should().Throw<InvalidOperationException>();
     }
 }
-

@@ -17,8 +17,7 @@ public class FfmpegConversionRunnerTests
     [Fact]
     public async Task StartAsync_DryRun_ReturnsCommandString()
     {
-        var inMemorySettings = new Dictionary<string, string?>
-(StringComparer.Ordinal)
+        var inMemorySettings = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["Ffmpeg:Path"] = "ffmpeg",
             ["Ffmpeg:DryRun"] = "true",

@@ -45,4 +45,3 @@ public class FfmpegOptionsUsageTests
         _ = args.Should().ContainInConsecutiveOrder("-b:a", "192k");
     }
 }
-

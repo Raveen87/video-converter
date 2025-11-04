@@ -1,3 +1,5 @@
+using dotenv.net;
+
 using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Web.Common.Exceptions;
@@ -19,7 +21,7 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        dotenv.net.DotEnv.Fluent()
+        DotEnv.Fluent()
             .WithProbeForEnv(probeLevelsToSearch: 6)
             .WithTrimValues()
             .WithOverwriteExistingVars()

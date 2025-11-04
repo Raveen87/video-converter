@@ -55,4 +55,3 @@ public class ProcessManagerDisplayCommandTests
         _ = result.Should().Contain(longArg);
     }
 }
-

@@ -38,5 +38,3 @@ public class ConversionOutputPlannerTests
         _ = title.Should().Be("movie");
     }
 }
-
-
