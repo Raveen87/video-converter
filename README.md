@@ -28,7 +28,7 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
       "profileId": 1,
-      "outputFilenameTemplate": "{Title}[.{Year}][S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]"
+      "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}"
     }
     ```
   - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`, `audioLanguages`, `subtitleLanguages`). For each property, if the profile value is present (non-null/non-empty for lists), it is used; otherwise, the request value is used. Values are never merged per-property.
@@ -134,18 +134,20 @@ Filename template default (service-wide):
 
 ```json
 "FilenameTemplate": {
-  "DefaultTemplate": "{Title}[.{Year}][S{Season:00}E{Episode:00}][.{EpisodeName}][.{Source}]"
+  "DefaultTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}"
 }
 ```
 
-Template tokens:
+Template directives:
 - `{Title}`: Movie title or TV show name
 - `{Year}`: Movie year or TV first aired year
 - `{Season}` / `{Episode}`: Integers, support formatting like `{Season:00}`
 - `{EpisodeName}`: TV episode title
 - `{Source}`: Optional source tag (e.g., WEB-DL, HDTV)
 
-Optional segments: wrap in `[...]` to include only when all tokens inside have values.
+Rules:
+- Use curly braces for directives. Everything outside braces is literal and included as-is.
+- Smart collapse: when a directive is empty, adjacent separators (`.`, `-`, `_`, space) and single-letter affixes touching it are removed (e.g., `S{Season:00}E{Episode:00}` disappears entirely for movies).
 
 FFmpeg options (appsettings.json):
 
