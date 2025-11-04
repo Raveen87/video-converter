@@ -82,6 +82,7 @@ public static class Program
         _ = builder.Services.AddSingleton<IFilenameTemplateEngine, FilenameTemplateEngine>();
         _ = builder.Services.AddSingleton<EffectiveConversionRequestBuilder>();
         _ = builder.Services.AddScoped<IConversionService, ConversionService>();
+        _ = builder.Services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
         _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfilePatchDto>, ProfilePatchValidator>();

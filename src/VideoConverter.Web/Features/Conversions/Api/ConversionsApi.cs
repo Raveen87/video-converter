@@ -19,6 +19,7 @@ public static class ConversionsApi
         _ = app.MapPost("/api/conversions/{id:int}/start", StartConversionByIdAsync);
         _ = app.MapPost("/api/conversions/start-next", StartNextConversionAsync);
         _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
+        _ = app.MapPost("/api/conversions/queue-directory", QueueDirectoryAsync);
     }
 
     private static async Task<IResult> CreateConversionAsync(
@@ -197,6 +198,27 @@ public static class ConversionsApi
             progress?.PercentageComplete);
 
         return Results.Ok(progress);
+    }
+
+    private static async Task<IResult> QueueDirectoryAsync(
+        DirectoryQueueRequestDto request,
+        IDirectoryQueueService queueService,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogInformation(
+            "Queueing directory request for {DirectoryPath} -> {OutputDirectory}",
+            request.DirectoryPath,
+            request.OutputDirectory);
+
+        var result = await queueService.QueueDirectoryAsync(request, CancellationToken.None).ConfigureAwait(false);
+        logger.LogInformation(
+            "Queue completed. Found={Total}, Queued={Queued}, Skipped={Skipped}, Invalid={Invalid}",
+            result.TotalFilesFound,
+            result.Queued,
+            result.SkippedDuplicates,
+            result.Invalid);
+        return Results.Ok(result);
     }
 
     private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
