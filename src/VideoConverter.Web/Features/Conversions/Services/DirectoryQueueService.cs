@@ -75,7 +75,7 @@ public sealed class DirectoryQueueService(
         return !string.IsNullOrWhiteSpace(profileOutputDirectory) ? profileOutputDirectory! : requestOutputDirectory;
     }
 
-    private static string BuildValidationReason(Shared.Validation.DomainValidationResult validation)
+    private static string BuildValidationReason(DomainValidationResult validation)
     {
         return string.Join(
             "; ",
@@ -156,7 +156,7 @@ public sealed class DirectoryQueueService(
             .Select(c => c.InputPath)
             .ToListAsync(cancellationToken: ct)
             .ConfigureAwait(false);
-        return new HashSet<string>(inputs.Where(path => path != null), StringComparer.OrdinalIgnoreCase);
+        return new HashSet<string>(inputs.Where(path => path is not null), StringComparer.OrdinalIgnoreCase);
     }
 
     private ConversionCreateDto BuildEffectiveRequest(DirectoryQueueRequestDto request, string inputPath, Shared.Domain.Entities.Profile? profile)

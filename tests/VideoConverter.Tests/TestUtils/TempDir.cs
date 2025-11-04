@@ -1,9 +1,15 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace VideoConverter.Tests.TestUtils;
 
 internal sealed class TempDir : IDisposable
 {
-    public TempDir()
+    private readonly ILogger _logger;
+
+    public TempDir(ILogger? logger = null)
     {
+        _logger = logger ?? NullLogger.Instance;
         Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "vc_tests_" + Guid.NewGuid());
         Directory.CreateDirectory(Path);
     }
@@ -23,9 +29,13 @@ internal sealed class TempDir : IDisposable
         {
             Directory.Delete(Path, recursive: true);
         }
-        catch
+        catch (IOException ex)
         {
-            // ignore
+            _logger.LogWarning(ex, "Failed to delete temp directory '{Path}'", Path);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete temp directory '{Path}'", Path);
         }
     }
 }

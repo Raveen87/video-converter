@@ -31,7 +31,7 @@ dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
 
 
-dotnet_diagnostic.IDE0005.severity = error  # Remove unnecessary import
+dotnet_diagnostic.IDE0005.severity = none  # Remove unnecessary import (disabled due to known Roslyn issue #41640 preventing build enforcement without GenerateDocumentationFile)
 
 # Enforce formatting and key style rules
 dotnet_diagnostic.IDE0055.severity = error
