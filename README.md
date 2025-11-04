@@ -75,6 +75,44 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
     ```
   - Response 404 if queue is empty
 
+- POST `/api/conversions/queue-directory`
+  - Recursively scans a directory, queues all matching files.
+  - Default extensions: `.mkv`, `.mp4`. You can override via `extensions`.
+  - Body:
+    ```json
+    {
+      "directoryPath": "C:/media/in",
+      "outputDirectory": "C:/media/out",
+      "crf": 23,
+      "audioBitrateKbps": 128,
+      "audioChannels": 2,
+      "resolution": 1080,
+      "audioLanguages": ["English"],
+      "subtitleLanguages": ["English"],
+      "profileId": 1,
+      "outputFilenameTemplate": "{Title}",
+      "extensions": [".mkv", ".mp4"]
+    }
+    ```
+  - Behavior:
+    - Recursive enumeration (includes all subfolders)
+    - Skips duplicates by `(inputPath + effective outputDirectory)`
+    - When `profileId` is set, profile values override request values; null profile fields fall back to request
+  - Response 200:
+    ```json
+    {
+      "totalFilesFound": 12,
+      "queued": 10,
+      "skippedDuplicates": 1,
+      "invalid": 1,
+      "outcomes": [
+        { "inputPath": "C:/media/in/a.mkv", "status": "queued", "reason": null, "conversionId": 101 },
+        { "inputPath": "C:/media/in/b.mp4", "status": "skipped", "reason": "duplicate", "conversionId": null },
+        { "inputPath": "C:/media/in/c.mp4", "status": "invalid", "reason": "OutputDirectory: must exist", "conversionId": null }
+      ]
+    }
+    ```
+
 - GET `/api/conversions/{id}/progress`
   - Returns the current progress of a conversion by parsing ffmpeg output
   - Response 200:
