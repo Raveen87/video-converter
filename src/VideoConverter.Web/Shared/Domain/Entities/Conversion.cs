@@ -12,6 +12,10 @@ public class Conversion
 
     public DateTime CreatedAtUtc { get; set; }
 
+    public string? Rank { get; set; }
+
+    public ConversionStatus Status { get; set; }
+
     public int? Crf { get; set; }
 
     public int? AudioBitrateKbps { get; set; }

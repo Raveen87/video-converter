@@ -108,6 +108,35 @@ public static class Program
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
         logger.LogInformation("Database migrated successfully");
+
+        // Backfill Rank for existing rows without a Rank
+        BackfillRanksIfMissing(db, logger);
+    }
+
+    private static void BackfillRanksIfMissing(AppDbContext db, ILogger logger)
+    {
+        var needBackfill = db.Conversions.Any(c => c.Rank == null);
+        if (!needBackfill)
+        {
+            return;
+        }
+
+        logger.LogInformation("Backfilling Rank for existing conversions");
+        var items = db.Conversions
+            .OrderBy(c => c.CreatedAtUtc)
+            .ThenBy(c => c.Id)
+            .ToList();
+
+        var index = 1;
+        foreach (var item in items)
+        {
+            item.Rank ??= (index * 1000).ToString("D8");
+
+            index += 1;
+        }
+
+        _ = db.SaveChanges();
+        logger.LogInformation("Backfill completed");
     }
 
     private static void MapEndpoints(WebApplication app)

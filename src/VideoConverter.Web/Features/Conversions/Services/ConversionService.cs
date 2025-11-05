@@ -54,6 +54,7 @@ public sealed class ConversionService(
             InputPath = request.InputPath,
             OutputDirectory = request.OutputDirectory,
             CreatedAtUtc = DateTime.UtcNow,
+            Status = Shared.Domain.ValueObjects.ConversionStatus.Pending,
             Crf = request.Crf,
             AudioBitrateKbps = audioBitrate,
             AudioChannels = request.AudioChannels ?? AudioChannels.Stereo20, // Default to 2.0

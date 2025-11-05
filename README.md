@@ -39,7 +39,7 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
     - 400 Bad Request if validation fails (see Validation section)
 
 - GET `/api/conversions`
-  - Returns all queued conversions, newest first
+  - Returns conversions ordered by Status, then Rank, then CreatedAt
   - Example:
     ```json
     [
@@ -66,12 +66,24 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
   - Response 404 if id not found; 400 if already running or failed to start
 
 - POST `/api/conversions/start-next`
-  - Starts the next conversion in the queue (oldest by `createdAtUtc`)
+  - Starts the next conversion in the queue (lowest by `Rank`)
   - Response 200:
     ```json
     { "message": "Started", "processId": 1234, "command": "ffmpeg ...", "conversionId": 1 }
     ```
   - Response 404 if queue is empty
+
+- PATCH `/api/conversions/{id:int}/reorder`
+  - Body:
+    ```json
+    { "beforeId": 12, "afterId": 8 }
+    ```
+  - Behavior:
+    - Repositions the item by assigning a `Rank` between neighbors. Only the target item is updated.
+    - At least one of `beforeId` or `afterId` must be provided.
+  - Responses:
+    - 200 OK with updated item
+    - 400 if validation fails; 404 if item not found; 400 if not in `Pending` state
 
 - POST `/api/conversions/queue-directory` (no profiles)
   - Recursively scans a directory, queues all matching files.
@@ -102,7 +114,7 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "skippedDuplicates": 1,
       "invalid": 1,
       "outcomes": [
-        { "inputPath": "C:/media/in/a.mkv", "status": "queued", "reason": null, "conversionId": 101 },
+        { "inputPath": "C:/media/in/a.mkv", "status": "pending", "reason": null, "conversionId": 101 },
         { "inputPath": "C:/media/in/b.mp4", "status": "skipped", "reason": "duplicate", "conversionId": null },
         { "inputPath": "C:/media/in/c.mp4", "status": "invalid", "reason": "OutputDirectory: must exist", "conversionId": null }
       ]
@@ -167,6 +179,11 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
 - On startup, the app applies pending EF Core migrations automatically (`Database.Migrate()`), so new columns (e.g., `AudioChannels`) are added seamlessly.
 - If you previously ran an older build that created the database without migrations and you hit a schema error, restart the app to let it apply migrations. As a last resort for local dev, you can delete the `conversions.db` file to recreate from scratch.
+
+#### Queue ordering
+- Each queued item has a string `Rank` used for ordering. Drag-and-drop reorder and server-initiated reprioritization update only the item's `Rank`.
+- Completing an item removes it from the queued set; the next item (lowest `Rank`) automatically becomes first.
+- Existing rows are backfilled on startup with spaced ranks (`00001000`, `00002000`, …).
 - Override via environment variables, user secrets, or appsettings.
 - Profiles store `audioLanguages` and `subtitleLanguages` as JSON text columns.
 
