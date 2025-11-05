@@ -19,6 +19,7 @@ public static class ConversionsApi
         _ = app.MapPost("/api/conversions/start-next", StartNextConversionAsync);
         _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
         _ = app.MapPost("/api/conversions/queue-directory", QueueDirectoryAsync);
+        _ = app.MapPatch("/api/conversions/{id:int}/reorder", ReorderAsync);
     }
 
     private static async Task<IResult> CreateConversionAsync(
@@ -68,7 +69,10 @@ public static class ConversionsApi
 
         var items = await db.Conversions
             .AsNoTracking()
-            .OrderByDescending(c => c.CreatedAtUtc)
+            .OrderBy(c => c.Status)
+            .ThenBy(c => c.Rank)
+            .ThenBy(c => c.CreatedAtUtc)
+            .ThenBy(c => c.Id)
             .Select(c => ToDto(c))
             .ToListAsync().ConfigureAwait(false);
 
@@ -121,7 +125,10 @@ public static class ConversionsApi
 
         var conversion = await db.Conversions
             .AsNoTracking()
-            .OrderBy(c => c.CreatedAtUtc)
+            .Where(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending)
+            .OrderBy(c => c.Rank)
+            .ThenBy(c => c.CreatedAtUtc)
+            .ThenBy(c => c.Id)
             .FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (conversion is null)
@@ -203,7 +210,7 @@ public static class ConversionsApi
 
         var result = await queueService.QueueDirectoryAsync(request, CancellationToken.None).ConfigureAwait(false);
         logger.LogInformation(
-            "Queue completed. Found={Total}, Queued={Queued}, Skipped={Skipped}, Invalid={Invalid}",
+            "Queue completed. Found={Total}, Pending={Pending}, Skipped={Skipped}, Invalid={Invalid}",
             result.TotalFilesFound,
             result.Queued,
             result.SkippedDuplicates,
@@ -223,5 +230,65 @@ public static class ConversionsApi
             c.AudioChannels,
             c.Resolution,
             c.MetadataBasedFilename);
+    }
+
+    private static async Task<IResult> ReorderAsync(
+        int id,
+        ReorderRequestDto request,
+        AppDbContext db,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+
+        if (request.BeforeId is null && request.AfterId is null)
+        {
+            throw ApiErrorException.ValidationError(
+                "Either beforeId or afterId must be provided.",
+                "You must specify the target position using beforeId and/or afterId.");
+        }
+
+        var target = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false)
+            ?? throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
+
+        // Only queued items are ordered; others may be displayed separately
+        if (target.Status is not Shared.Domain.ValueObjects.ConversionStatus.Pending)
+        {
+            throw ApiErrorException.BusinessError(
+                ErrorCode.InvalidConversionState,
+                "Only queued items can be reordered.",
+                "Reordering applies only to items in the queue.");
+        }
+
+        Shared.Domain.Entities.Conversion? before = null;
+        Shared.Domain.Entities.Conversion? after = null;
+
+        if (request.BeforeId is { } beforeId)
+        {
+            before = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == beforeId).ConfigureAwait(false);
+        }
+
+        if (request.AfterId is { } afterId)
+        {
+            after = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == afterId).ConfigureAwait(false);
+        }
+
+        var left = after?.Rank ?? Shared.Domain.ValueObjects.RankKey.Min();
+        var right = before?.Rank ?? Shared.Domain.ValueObjects.RankKey.Max();
+
+        if (string.CompareOrdinal(left, right) >= 0)
+        {
+            throw ApiErrorException.ValidationError(
+                "Invalid neighbor order (afterId must come before beforeId in the current order).",
+                "The specified neighbors do not define a valid range.");
+        }
+
+        target.Rank = Shared.Domain.ValueObjects.RankKey.Between(left, right);
+        _ = await db.SaveChangesAsync().ConfigureAwait(false);
+
+        logger.LogInformation("Reordered conversion {ConversionId} with new rank {Rank}", id, target.Rank);
+        return Results.Ok(ToDto(target));
     }
 }

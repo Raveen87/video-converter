@@ -30,7 +30,6 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - Code coverage: Aim for ≥ 85% overall and enforce ≥ 85% on new/changed code.
 
 Tools available in Local environent:
-- pwsh
 - dotnet
 - git
 - gh
