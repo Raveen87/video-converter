@@ -21,5 +21,15 @@ public static class ProfilesApi
             "/api/profiles/{id:int}",
             (ProfilesEndpoints h, int id, JsonPatchDocument<ProfilePatchDto>? patchDocument, CancellationToken ct) =>
                 h.UpdateProfileAsync(id, patchDocument, ct));
+
+        _ = app.MapPost(
+            "/api/profiles/{id:int}/conversions",
+            (ProfileConversionsEndpoints h, int id, Dtos.ProfileConversionCreateDto request, CancellationToken ct) =>
+                h.QueueConversionAsync(id, request, ct));
+
+        _ = app.MapPost(
+            "/api/profiles/{id:int}/conversions/queue-directory",
+            (ProfileConversionsEndpoints h, int id, Dtos.ProfileDirectoryQueueRequestDto request, CancellationToken ct) =>
+                h.QueueDirectoryAsync(id, request, ct));
     }
 }

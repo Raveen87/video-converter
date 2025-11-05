@@ -15,7 +15,7 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
 ```
 
 ### API
-- POST `/api/conversions`
+- POST `/api/conversions` (no profiles)
   - Body:
     ```json
     {
@@ -27,15 +27,13 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
-      "profileId": 1,
       "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}"
     }
     ```
-  - When `profileId` is provided, the profile's non-null fields override the corresponding request fields (`outputDirectory`, `crf`, `audioBitrateKbps`, `audioChannels`, `resolution`, `audioLanguages`, `subtitleLanguages`). For each property, if the profile value is present (non-null/non-empty for lists), it is used; otherwise, the request value is used. Values are never merged per-property.
+  - Profiles cannot be used with this endpoint anymore.
   - Filename template precedence:
-    1) If a profile is specified and includes `OutputFilenameTemplate`, that template is used
-    2) If no profile is specified, `outputFilenameTemplate` from the request is used (if provided)
-    3) Otherwise, the service default template is used (see Config)
+    1) If `outputFilenameTemplate` is provided, it is used
+    2) Otherwise, the service default template is used (see Config)
   - Responses:
     - 201 Created with created item
     - 400 Bad Request if validation fails (see Validation section)
@@ -75,7 +73,7 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
     ```
   - Response 404 if queue is empty
 
-- POST `/api/conversions/queue-directory`
+- POST `/api/conversions/queue-directory` (no profiles)
   - Recursively scans a directory, queues all matching files.
   - Default extensions: `.mkv`, `.mp4`. You can override via `extensions`.
   - Body:
@@ -89,7 +87,6 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "resolution": 1080,
       "audioLanguages": ["English"],
       "subtitleLanguages": ["English"],
-      "profileId": 1,
       "outputFilenameTemplate": "{Title}",
       "extensions": [".mkv", ".mp4"]
     }
@@ -97,7 +94,6 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
   - Behavior:
     - Recursive enumeration (includes all subfolders)
     - Skips duplicates by `(inputPath + effective outputDirectory)`
-    - When `profileId` is set, profile values override request values; null profile fields fall back to request
   - Response 200:
     ```json
     {
@@ -125,6 +121,36 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "estimatedTimeRemaining": "00:01:15"
     }
     ```
+
+- POST `/api/profiles/{id:int}/conversions`
+  - Body:
+    ```json
+    {
+      "inputPath": "C:/videos/input.mp4",
+      "outputDirectory": "C:/videos/out"
+    }
+    ```
+  - Behavior:
+    - The specified profile supplies all optional conversion settings. Any setting not present on the profile falls back to application defaults.
+    - The request `outputDirectory` takes precedence over the profile's.
+  - Responses:
+    - 201 Created with created item
+    - 400 Bad Request if validation fails
+
+- POST `/api/profiles/{id:int}/conversions/queue-directory`
+  - Body:
+    ```json
+    {
+      "directoryPath": "C:/media/in",
+      "outputDirectory": "C:/media/out",
+      "extensions": [".mkv", ".mp4"]
+    }
+    ```
+  - Behavior:
+    - Uses the profile's optional settings for all queued items; unspecified settings fall back to application defaults
+    - Request `outputDirectory` takes precedence over the profile's
+    - Default extensions: `.mkv`, `.mp4`
+  - Response 200 with queue summary
   - Response 200 (conversion not running):
     ```json
     {

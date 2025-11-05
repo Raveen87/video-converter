@@ -28,7 +28,6 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
             Resolution = resolution,
             AudioLanguages = audioLanguages,
             SubtitleLanguages = subtitleLanguages,
-            ProfileId = request.ProfileId,
             OutputFilenameTemplate = effectiveTemplate,
         };
 

@@ -91,6 +91,7 @@ public static class Program
         _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
         _ = builder.Services.AddControllers().AddNewtonsoftJson();
         _ = builder.Services.AddScoped<ProfilesEndpoints>();
+        _ = builder.Services.AddScoped<VideoConverter.Web.Features.Profiles.Api.ProfileConversionsEndpoints>();
     }
 
     private static void ConfigureMiddleware(WebApplication app)

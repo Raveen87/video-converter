@@ -27,7 +27,6 @@ public class EffectiveConversionRequestBuilderTemplateTests
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null,
-            ProfileId: 1,
             OutputFilenameTemplate: "{Title}-{Year}");
 
         var profile = new Profile { OutputFilenameTemplate = "{Title}.{Year}.P" };
@@ -49,7 +48,6 @@ public class EffectiveConversionRequestBuilderTemplateTests
             Resolution: null,
             AudioLanguages: null,
             SubtitleLanguages: null,
-            ProfileId: null,
             OutputFilenameTemplate: "{Title}-{Year}");
 
         var effective = Builder.Build(request, null);

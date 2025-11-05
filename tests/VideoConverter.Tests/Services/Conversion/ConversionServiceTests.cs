@@ -61,8 +61,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -109,8 +108,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English", "Swedish"],
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         var streams = new List<MediaStream>
         {
@@ -154,8 +152,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["English", "Swedish"],
-            ProfileId: null);
+            SubtitleLanguages: ["English", "Swedish"]);
 
         var streams = new List<MediaStream>
         {
@@ -199,8 +196,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: 2160, // Requesting 4K
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 }); // Source is only 1080p
@@ -227,8 +223,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.5 });
@@ -258,8 +253,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -287,8 +281,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["French"],
-            ProfileId: null);
+            SubtitleLanguages: ["French"]);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -318,8 +311,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: ["Swedish"],
-            ProfileId: null);
+            SubtitleLanguages: ["Swedish"]);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -370,8 +362,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: 1080,
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"],
-            ProfileId: null);
+            SubtitleLanguages: ["English"]);
 
         var streams = new List<MediaStream>
         {
@@ -420,8 +411,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -462,8 +452,7 @@ public class ConversionServiceTests
             AudioChannels: null,
             Resolution: null,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: null);
+            SubtitleLanguages: null);
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });

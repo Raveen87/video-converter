@@ -4,7 +4,6 @@ using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using VideoConverter.Web.Features.Profiles.Validation;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 using VideoConverter.Web.Shared.Validation;
 
@@ -27,20 +26,11 @@ public static class ConversionsApi
         AppDbContext db,
         IRequestValidator<ConversionCreateDto> validator,
         IConversionService conversionService,
-        ProfileExistsValidator profileExistsValidator,
-        EffectiveConversionRequestBuilder effectiveRequestBuilder,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
 
-        var profile = request.ProfileId is not null
-            ? await profileExistsValidator.GetProfileForReadAsync(request.ProfileId.Value, db, CancellationToken.None)
-                .ConfigureAwait(false)
-            : null;
-
-        var effectiveRequest = effectiveRequestBuilder.Build(request, profile);
-
-        var validation = await validator.ValidateAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
+        var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
         {
             logger.LogWarning(
@@ -53,7 +43,7 @@ public static class ConversionsApi
 
         try
         {
-            var conversion = await conversionService.CreateConversionAsync(effectiveRequest, CancellationToken.None).ConfigureAwait(false);
+            var conversion = await conversionService.CreateConversionAsync(request, CancellationToken.None).ConfigureAwait(false);
 
             _ = db.Conversions.Add(conversion);
             _ = await db.SaveChangesAsync().ConfigureAwait(false);
