@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Features.Profiles.Validation;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 using VideoConverter.Web.Shared.Validation;
 
@@ -11,8 +10,6 @@ public sealed class DirectoryQueueService(
     AppDbContext db,
     IConversionService conversionService,
     IRequestValidator<ConversionCreateDto> conversionValidator,
-    ProfileExistsValidator profileExistsValidator,
-    EffectiveConversionRequestBuilder effectiveRequestBuilder,
     IFileSystemValidator fileSystemValidator,
     ILogger<DirectoryQueueService> logger) : IDirectoryQueueService
 {
@@ -38,11 +35,10 @@ public sealed class DirectoryQueueService(
             return new DirectoryQueueResultDto(0, 0, 0, 0, Array.Empty<FileQueueOutcome>());
         }
 
-        var profile = await LoadProfileAsync(request.ProfileId, ct).ConfigureAwait(false);
-        var effectiveOutputDirectory = ComputeEffectiveOutputDirectory(profile?.OutputDirectory, request.OutputDirectory);
-        var existingSet = await GetExistingInputSetAsync(effectiveOutputDirectory, ct).ConfigureAwait(false);
+        var effectiveOutputDirectory = ComputeEffectiveOutputDirectory(profileOutputDirectory: null, requestOutputDirectory: request.OutputDirectory);
+        var existingSet = await GetExistingInputSetAsync(outputDirectory: effectiveOutputDirectory, ct: ct).ConfigureAwait(false);
 
-        return await ProcessAndQueueAsync(allFiles, profile, request, existingSet, ct).ConfigureAwait(false);
+        return await ProcessAndQueueAsync(files: allFiles, request: request, existingSet: existingSet, ct: ct).ConfigureAwait(false);
     }
 
     private static string[] NormalizeExtensions(IEnumerable<string>? rawExtensions)
@@ -75,16 +71,31 @@ public sealed class DirectoryQueueService(
         return !string.IsNullOrWhiteSpace(profileOutputDirectory) ? profileOutputDirectory! : requestOutputDirectory;
     }
 
-    private static string BuildValidationReason(Shared.Validation.DomainValidationResult validation)
+    private static string BuildValidationReason(DomainValidationResult validation)
     {
         return string.Join(
             "; ",
             validation.ToDictionary().SelectMany(static kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}")));
     }
 
+    private static ConversionCreateDto BuildEffectiveRequest(DirectoryQueueRequestDto request, string inputPath)
+    {
+        var perFileRequest = new ConversionCreateDto(
+            inputPath,
+            request.OutputDirectory,
+            request.Crf,
+            request.AudioBitrateKbps,
+            request.AudioChannels,
+            request.Resolution,
+            request.AudioLanguages,
+            request.SubtitleLanguages,
+            request.OutputFilenameTemplate);
+
+        return perFileRequest;
+    }
+
     private async Task<DirectoryQueueResultDto> ProcessAndQueueAsync(
         IReadOnlyList<string> files,
-        Shared.Domain.Entities.Profile? profile,
         DirectoryQueueRequestDto request,
         HashSet<string> existingSet,
         CancellationToken ct)
@@ -109,7 +120,7 @@ public sealed class DirectoryQueueService(
                 continue;
             }
 
-            var effectiveRequest = BuildEffectiveRequest(request, inputPath, profile);
+            var effectiveRequest = BuildEffectiveRequest(request, inputPath);
             var validation = await conversionValidator.ValidateAsync(effectiveRequest, cancellationToken: ct).ConfigureAwait(false);
             if (!validation.IsValid)
             {
@@ -141,13 +152,6 @@ public sealed class DirectoryQueueService(
         return new DirectoryQueueResultDto(total, queued, skipped, invalid, orderedOutcomes);
     }
 
-    private async Task<Shared.Domain.Entities.Profile?> LoadProfileAsync(int? profileId, CancellationToken ct)
-    {
-        return profileId is null
-            ? null
-            : await profileExistsValidator.GetProfileForReadAsync(id: profileId.Value, db: db, cancellationToken: ct).ConfigureAwait(false);
-    }
-
     private async Task<HashSet<string>> GetExistingInputSetAsync(string outputDirectory, CancellationToken ct)
     {
         var inputs = await db.Conversions
@@ -156,23 +160,6 @@ public sealed class DirectoryQueueService(
             .Select(c => c.InputPath)
             .ToListAsync(cancellationToken: ct)
             .ConfigureAwait(false);
-        return new HashSet<string>(inputs.Where(path => path != null), StringComparer.OrdinalIgnoreCase);
-    }
-
-    private ConversionCreateDto BuildEffectiveRequest(DirectoryQueueRequestDto request, string inputPath, Shared.Domain.Entities.Profile? profile)
-    {
-        var perFileRequest = new ConversionCreateDto(
-            inputPath,
-            request.OutputDirectory,
-            request.Crf,
-            request.AudioBitrateKbps,
-            request.AudioChannels,
-            request.Resolution,
-            request.AudioLanguages,
-            request.SubtitleLanguages,
-            request.ProfileId,
-            request.OutputFilenameTemplate);
-
-        return effectiveRequestBuilder.Build(perFileRequest, profile);
+        return new HashSet<string>(inputs.Where(path => path is not null), StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -27,8 +27,7 @@ public class EffectiveConversionRequestBuilderTests()
             AudioChannels: AudioChannels.Stereo20,
             Resolution: 720,
             AudioLanguages: null,
-            SubtitleLanguages: null,
-            ProfileId: 1);
+            SubtitleLanguages: null);
 
         var profile = new Profile
         {
@@ -50,7 +49,6 @@ public class EffectiveConversionRequestBuilderTests()
         _ = effective.Resolution.Should().Be(1080);
         _ = effective.AudioLanguages.Should().BeEquivalentTo("en", "sv");
         _ = effective.SubtitleLanguages.Should().BeEquivalentTo("sv");
-        _ = effective.ProfileId.Should().Be(1);
         _ = effective.InputPath.Should().Be("in.mp4");
     }
 
@@ -65,8 +63,7 @@ public class EffectiveConversionRequestBuilderTests()
             AudioChannels: AudioChannels.Stereo20,
             Resolution: 720,
             AudioLanguages: ["English"],
-            SubtitleLanguages: ["Swedish"],
-            ProfileId: 2);
+            SubtitleLanguages: ["Swedish"]);
 
         var profile = new Profile();
 
@@ -79,6 +76,5 @@ public class EffectiveConversionRequestBuilderTests()
         _ = effective.Resolution.Should().Be(720);
         _ = effective.AudioLanguages.Should().BeEquivalentTo("English");
         _ = effective.SubtitleLanguages.Should().BeEquivalentTo("Swedish");
-        _ = effective.ProfileId.Should().Be(2);
     }
 }

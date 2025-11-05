@@ -12,7 +12,7 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionCreateDto_RoundTrips_WithTypicalValues()
     {
-        var dto = new ConversionCreateDto("test.mp4", "output", 23, 128, AudioChannels: null, 1080, ["English"], ["English"], ProfileId: null);
+        var dto = new ConversionCreateDto("test.mp4", "output", 23, 128, AudioChannels: null, 1080, ["English"], ["English"]);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionCreateDto>(json);
         _ = back.Should().BeEquivalentTo(dto);
@@ -21,7 +21,7 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionCreateDto_RoundTrips_WithEdgeValues()
     {
-        var dto = new ConversionCreateDto(new string('a', 256), "output", 0, 1, AudioChannels.Stereo20, 720, [], [], ProfileId: null);
+        var dto = new ConversionCreateDto(new string('a', 256), "output", 0, 1, AudioChannels.Stereo20, 720, [], []);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionCreateDto>(json);
         _ = back.Should().BeEquivalentTo(dto);
@@ -59,7 +59,6 @@ public class DtoSerializationTests
             Resolution: 1080,
             AudioLanguages: new[] { "English" },
             SubtitleLanguages: new[] { "English" },
-            ProfileId: 1,
             OutputFilenameTemplate: "{Title}",
             Extensions: new[] { ".mkv", ".mp4" });
 

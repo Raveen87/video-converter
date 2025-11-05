@@ -20,7 +20,7 @@ public class ConversionCreateValidatorTests
         var tempFile = Path.Combine(tempDir, "input.mp4");
         await File.WriteAllTextAsync(tempFile, "x");
 
-        var request = new ConversionCreateDto(tempFile, tempDir, 23, 128, AudioChannels: null, 1080, ["English"], ["English"], ProfileId: null);
+        var request = new ConversionCreateDto(tempFile, tempDir, 23, 128, AudioChannels: null, 1080, ["English"], ["English"]);
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
 
         try
@@ -47,8 +47,7 @@ public class ConversionCreateValidatorTests
             AudioChannels: (Web.Shared.Domain.ValueObjects.AudioChannels)99,
             Resolution: 1440,
             AudioLanguages: [string.Empty],
-            SubtitleLanguages: ["   "],
-            ProfileId: null);
+            SubtitleLanguages: ["   "]);
 
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();

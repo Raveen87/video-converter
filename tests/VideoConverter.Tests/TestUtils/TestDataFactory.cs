@@ -13,8 +13,7 @@ public static class TestDataFactory
         AudioChannels? audioChannels = null,
         int? resolution = null,
         IReadOnlyList<string>? audioLanguages = null,
-        IReadOnlyList<string>? subtitleLanguages = null,
-        int? profileId = null)
+        IReadOnlyList<string>? subtitleLanguages = null)
     {
         return new ConversionCreateDto(
             inputPath ?? "input.mp4",
@@ -24,8 +23,7 @@ public static class TestDataFactory
             audioChannels,
             resolution,
             audioLanguages,
-            subtitleLanguages,
-            profileId);
+            subtitleLanguages);
     }
 
     public static IReadOnlyList<MediaStream> MakeAudioStreams(params string[] threeLetterLanguageTags)

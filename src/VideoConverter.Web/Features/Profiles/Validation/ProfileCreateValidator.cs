@@ -10,8 +10,12 @@ public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logge
         logger.LogDebug("Starting validation for profile create request");
         var result = new DomainValidationResult();
 
-        // Validate output directory when provided
-        if (!string.IsNullOrWhiteSpace(request.OutputDirectory))
+        // Validate required output directory
+        if (string.IsNullOrWhiteSpace(request.OutputDirectory))
+        {
+            result.Add(nameof(request.OutputDirectory), "Output directory is required.");
+        }
+        else
         {
             result.AddIfInvalid(fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, logger, request.OutputDirectory);
         }
