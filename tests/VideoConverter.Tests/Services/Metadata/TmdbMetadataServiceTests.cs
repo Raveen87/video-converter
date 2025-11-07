@@ -364,7 +364,7 @@ public class TmdbMetadataServiceTests
         _ = handler.Calls.Should().Be(3);
         _ = delays.Count.Should().Be(2);
         _ = delays.All(d => d > TimeSpan.Zero).Should().BeTrue();
-        _ = delays.Aggregate(TimeSpan.Zero, (acc, d) => acc + d).Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
+        _ = TimeSpan.FromTicks(delays.Sum(d => d.Ticks)).Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
     }
 
     [Fact]
