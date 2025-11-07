@@ -11,6 +11,7 @@ using VideoConverter.Web.Features.Integrations.Ffmpeg;
 using VideoConverter.Web.Features.Metadata.Services;
 using VideoConverter.Web.Features.Profiles.Api;
 using VideoConverter.Web.Features.Profiles.Validation;
+using VideoConverter.Web.Services.Conversion;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 using VideoConverter.Web.Shared.Validation;
 
@@ -59,6 +60,7 @@ public static class Program
         _ = builder.Services.Configure<FfmpegOptions>(builder.Configuration.GetSection(FfmpegOptions.SectionName));
         _ = builder.Services.Configure<FilenameTemplateOptions>(builder.Configuration.GetSection(FilenameTemplateOptions.SectionName));
         _ = builder.Services.AddHttpClient();
+        _ = builder.Services.Configure<CleanupOptions>(builder.Configuration.GetSection(CleanupOptions.SectionName));
 
         RegisterAppServices(builder.Services);
     }
@@ -91,6 +93,7 @@ public static class Program
         _ = services.AddSingleton<EffectiveConversionRequestBuilder>();
         _ = services.AddScoped<IConversionService, ConversionService>();
         _ = services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
+        _ = services.AddScoped<IConversionExecutionService, ConversionExecutionService>();
         _ = services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
         _ = services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
         _ = services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfilePatchDto>, ProfilePatchValidator>();
@@ -100,6 +103,8 @@ public static class Program
         _ = services.AddControllers().AddNewtonsoftJson();
         _ = services.AddScoped<ProfilesEndpoints>();
         _ = services.AddScoped<ProfileConversionsEndpoints>();
+        _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
+        _ = services.AddHostedService<ConversionCleanupWorker>();
     }
 
     private static void ConfigureMiddleware(WebApplication app)

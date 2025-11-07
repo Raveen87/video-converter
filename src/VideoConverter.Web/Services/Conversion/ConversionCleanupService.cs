@@ -1,0 +1,27 @@
+using Microsoft.EntityFrameworkCore;
+
+using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Web.Shared.Infrastructure.Persistence;
+
+namespace VideoConverter.Web.Services.Conversion;
+
+public sealed class ConversionCleanupService(AppDbContext db, ILogger<ConversionCleanupService> logger)
+    : IConversionCleanupService
+{
+    public async Task<int> CleanupAsync(int? olderThanDays, CancellationToken ct)
+    {
+        var cutoff = olderThanDays is int d ? DateTime.UtcNow.AddDays(-d) : (DateTime?)null;
+
+        var query = db.Conversions
+            .Where(c => c.Status == ConversionStatus.Completed || c.Status == ConversionStatus.Failed);
+
+        if (cutoff is { })
+        {
+            query = query.Where(c => c.CreatedAtUtc <= cutoff);
+        }
+
+        var deleted = await query.ExecuteDeleteAsync(ct).ConfigureAwait(false);
+        logger.LogInformation("Deleted {DeletedCount} finished conversions (olderThanDays={OlderThanDays})", deleted, olderThanDays);
+        return deleted;
+    }
+}
