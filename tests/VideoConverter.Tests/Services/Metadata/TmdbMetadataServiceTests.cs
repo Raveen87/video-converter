@@ -480,7 +480,9 @@ public class TmdbMetadataServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests));
+            // The caller is responsible for disposing the returned HttpResponseMessage.
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            return Task.FromResult(response);
         }
     }
 
