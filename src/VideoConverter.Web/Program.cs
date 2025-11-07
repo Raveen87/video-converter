@@ -59,39 +59,47 @@ public static class Program
         _ = builder.Services.Configure<FfmpegOptions>(builder.Configuration.GetSection(FfmpegOptions.SectionName));
         _ = builder.Services.Configure<FilenameTemplateOptions>(builder.Configuration.GetSection(FilenameTemplateOptions.SectionName));
         _ = builder.Services.AddHttpClient();
-        _ = builder.Services.AddSingleton<IProcessManager, ProcessManager>();
-        _ = builder.Services.AddSingleton<IProgressTracker, ProgressTracker>();
-        _ = builder.Services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
-        _ = builder.Services.AddSingleton<IConversionRunCoordinator, ConversionRunCoordinator>();
-        _ = builder.Services.AddSingleton<IMediaProber, FfprobeMediaProber>();
-        _ = builder.Services.AddSingleton<IProgressOutputParser, FfmpegProgressOutputParser>();
-        _ = builder.Services.AddSingleton<IFfmpegPreflightChecker, FfmpegPreflightChecker>();
-        _ = builder.Services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
-        _ = builder.Services.AddSingleton<IConversionOutputPlanner, ConversionOutputPlanner>();
-        _ = builder.Services.AddSingleton<IMediaDurationProvider, MediaDurationProvider>();
-        _ = builder.Services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
-        _ = builder.Services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
-        _ = builder.Services.AddSingleton<ICropDetector, FfmpegCropDetector>();
-        _ = builder.Services.AddSingleton<IMetadataService, TmdbMetadataService>();
-        _ = builder.Services.AddSingleton<ISourceDetector, SourceDetector>();
-        _ = builder.Services.AddSingleton<ITitleSanitizer, TitleSanitizer>();
-        _ = builder.Services.AddSingleton<IMovieFilenameParser, MovieFilenameParser>();
-        _ = builder.Services.AddSingleton<ITvShowFilenameParser, TvShowFilenameParser>();
-        _ = builder.Services.AddSingleton<IFilenameParser, FilenameParser>();
-        _ = builder.Services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
-        _ = builder.Services.AddSingleton<IFilenameTemplateEngine, FilenameTemplateEngine>();
-        _ = builder.Services.AddSingleton<EffectiveConversionRequestBuilder>();
-        _ = builder.Services.AddScoped<IConversionService, ConversionService>();
-        _ = builder.Services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
-        _ = builder.Services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
-        _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
-        _ = builder.Services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfilePatchDto>, ProfilePatchValidator>();
-        _ = builder.Services.AddScoped<ProfileExistsValidator>();
-        _ = builder.Services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
-        _ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
-        _ = builder.Services.AddControllers().AddNewtonsoftJson();
-        _ = builder.Services.AddScoped<ProfilesEndpoints>();
-        _ = builder.Services.AddScoped<VideoConverter.Web.Features.Profiles.Api.ProfileConversionsEndpoints>();
+
+        RegisterAppServices(builder.Services);
+    }
+
+    private static void RegisterAppServices(IServiceCollection services)
+    {
+        _ = services.AddSingleton<IRunningProcessRegistry, RunningProcessRegistry>();
+        _ = services.AddSingleton<IProcessController, ProcessController>();
+        _ = services.AddSingleton<IProcessManager, ProcessManager>();
+        _ = services.AddSingleton<IProgressTracker, ProgressTracker>();
+        _ = services.AddSingleton<IConversionRunner, FfmpegConversionRunner>();
+        _ = services.AddSingleton<IConversionRunCoordinator, ConversionRunCoordinator>();
+        _ = services.AddSingleton<IMediaProber, FfprobeMediaProber>();
+        _ = services.AddSingleton<IProgressOutputParser, FfmpegProgressOutputParser>();
+        _ = services.AddSingleton<IFfmpegPreflightChecker, FfmpegPreflightChecker>();
+        _ = services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
+        _ = services.AddSingleton<IConversionOutputPlanner, ConversionOutputPlanner>();
+        _ = services.AddSingleton<IMediaDurationProvider, MediaDurationProvider>();
+        _ = services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
+        _ = services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
+        _ = services.AddSingleton<ICropDetector, FfmpegCropDetector>();
+        _ = services.AddSingleton<IMetadataService, TmdbMetadataService>();
+        _ = services.AddSingleton<ISourceDetector, SourceDetector>();
+        _ = services.AddSingleton<ITitleSanitizer, TitleSanitizer>();
+        _ = services.AddSingleton<IMovieFilenameParser, MovieFilenameParser>();
+        _ = services.AddSingleton<ITvShowFilenameParser, TvShowFilenameParser>();
+        _ = services.AddSingleton<IFilenameParser, FilenameParser>();
+        _ = services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
+        _ = services.AddSingleton<IFilenameTemplateEngine, FilenameTemplateEngine>();
+        _ = services.AddSingleton<EffectiveConversionRequestBuilder>();
+        _ = services.AddScoped<IConversionService, ConversionService>();
+        _ = services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
+        _ = services.AddScoped<IRequestValidator<Features.Conversions.Dtos.ConversionCreateDto>, ConversionCreateValidator>();
+        _ = services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfileCreateDto>, ProfileCreateValidator>();
+        _ = services.AddScoped<IRequestValidator<Features.Profiles.Dtos.ProfilePatchDto>, ProfilePatchValidator>();
+        _ = services.AddScoped<ProfileExistsValidator>();
+        _ = services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
+        _ = services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
+        _ = services.AddControllers().AddNewtonsoftJson();
+        _ = services.AddScoped<ProfilesEndpoints>();
+        _ = services.AddScoped<ProfileConversionsEndpoints>();
     }
 
     private static void ConfigureMiddleware(WebApplication app)

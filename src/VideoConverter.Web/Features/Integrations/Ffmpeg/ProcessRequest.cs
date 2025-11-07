@@ -17,4 +17,10 @@ public sealed record ProcessRequest
     public Action<string>? OnStderr { get; init; }
 
     public TimeSpan? Timeout { get; init; }
+
+    // Correlates a running process instance with a higher-level operation (e.g., conversion:123)
+    public string? CorrelationId { get; init; }
+
+    // When true, stdin will be redirected to allow graceful commands (e.g., sending 'q' to ffmpeg)
+    public bool EnableStandardInput { get; init; }
 }

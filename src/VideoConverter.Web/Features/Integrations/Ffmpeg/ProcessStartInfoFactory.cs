@@ -4,7 +4,7 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 internal static class ProcessStartInfoFactory
 {
-    public static ProcessStartInfo Build(string executablePath, IReadOnlyList<string> arguments, string? workingDirectory, IReadOnlyDictionary<string, string>? environment)
+    public static ProcessStartInfo Build(string executablePath, IReadOnlyList<string> arguments, string? workingDirectory, IReadOnlyDictionary<string, string>? environment, bool redirectStandardInput)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -12,6 +12,7 @@ internal static class ProcessStartInfoFactory
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = redirectStandardInput,
         };
 
         if (!string.IsNullOrWhiteSpace(workingDirectory))

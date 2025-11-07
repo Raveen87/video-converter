@@ -84,6 +84,8 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
             ExecutablePath = _ffmpegPath,
             Arguments = args,
             CaptureOutput = true,
+            EnableStandardInput = true,
+            CorrelationId = $"conversion:{conversionId}",
             OnStdout = data => logger.LogInformation("[ffmpeg] {Line}", data),
             OnStderr = data =>
             {

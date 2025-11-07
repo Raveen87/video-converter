@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-internal sealed class ProcessExecutionEngine(ILogger logger)
+internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegistry registry)
 {
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
     {
@@ -18,27 +18,48 @@ internal sealed class ProcessExecutionEngine(ILogger logger)
         var stderrLines = new List<string>();
         var (readStdoutTask, readStderrTask) = ProcessOutputCollector.ConfigureOutputCapture(process, request, stdoutLines, stderrLines, cancellationToken);
 
-        var completion = await ProcessWaitCoordinator.WaitForCompletionAsync(process, request.Timeout, logger, TimeProvider.System, cancellationToken).ConfigureAwait(false);
-        if (completion is ProcessWaitCoordinator.CompletionKind.TimedOut)
+        var correlationId = request.CorrelationId;
+        if (!string.IsNullOrWhiteSpace(correlationId))
         {
-            return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process timed out" };
+            registry.Register(correlationId!, process);
         }
 
-        if (completion is ProcessWaitCoordinator.CompletionKind.Canceled)
+        try
         {
-            return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process canceled" };
+            var completion = await ProcessWaitCoordinator.WaitForCompletionAsync(process, request.Timeout, logger, TimeProvider.System, cancellationToken).ConfigureAwait(false);
+            if (completion is ProcessWaitCoordinator.CompletionKind.TimedOut)
+            {
+                return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process timed out" };
+            }
+
+            if (completion is ProcessWaitCoordinator.CompletionKind.Canceled)
+            {
+                return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process canceled" };
+            }
+
+            var usingStdoutEvents = request.OnStdout is not null;
+            var usingStderrEvents = request.OnStderr is not null;
+            var (stdout, stderr) = ProcessOutputCollector.AggregateOutput(usingStdoutEvents, usingStderrEvents, request.CaptureOutput, readStdoutTask, readStderrTask, stdoutLines, stderrLines);
+
+            return BuildProcessResult(request, process, stdout, stderr);
         }
-
-        var usingStdoutEvents = request.OnStdout is not null;
-        var usingStderrEvents = request.OnStderr is not null;
-        var (stdout, stderr) = ProcessOutputCollector.AggregateOutput(usingStdoutEvents, usingStderrEvents, request.CaptureOutput, readStdoutTask, readStderrTask, stdoutLines, stderrLines);
-
-        return BuildProcessResult(request, process, stdout, stderr);
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(correlationId))
+            {
+                registry.Unregister(correlationId!);
+            }
+        }
     }
 
     private bool TryStartProcess(ProcessRequest request, out Process process, out ProcessResult? error)
     {
-        var startInfo = ProcessStartInfoFactory.Build(request.ExecutablePath, request.Arguments, request.WorkingDirectory, (IReadOnlyDictionary<string, string>?)request.EnvironmentVariables);
+        var startInfo = ProcessStartInfoFactory.Build(
+            request.ExecutablePath,
+            request.Arguments,
+            request.WorkingDirectory,
+            (IReadOnlyDictionary<string, string>?)request.EnvironmentVariables,
+            request.EnableStandardInput);
         process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         try
         {

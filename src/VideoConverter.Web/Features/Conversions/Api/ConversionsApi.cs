@@ -20,6 +20,8 @@ public static class ConversionsApi
         _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
         _ = app.MapPost("/api/conversions/queue-directory", QueueDirectoryAsync);
         _ = app.MapPatch("/api/conversions/{id:int}/reorder", ReorderAsync);
+        _ = app.MapPost("/api/conversions/{id:int}/pause", PauseConversionByIdAsync);
+        _ = app.MapPost("/api/conversions/{id:int}/stop", StopConversionByIdAsync);
     }
 
     private static async Task<IResult> CreateConversionAsync(
@@ -113,6 +115,81 @@ public static class ConversionsApi
             ErrorCode.ProcessStartFailed,
             result.ErrorMessage ?? "Unknown error occurred",
             "Failed to start the conversion process. Please try again later.");
+    }
+
+    private static async Task<IResult> PauseConversionByIdAsync(
+        int id,
+        AppDbContext db,
+        IRunningProcessRegistry registry,
+        IProcessController controller,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        if (!exists)
+        {
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
+        }
+
+        var key = $"conversion:{id}";
+        if (!registry.TryGet(key, out var handle))
+        {
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion {id} is not currently running.",
+                "The specified conversion is not running.");
+        }
+
+        var paused = controller.TryPause(handle.ProcessId);
+        if (!paused)
+        {
+            logger.LogWarning("Failed to pause conversion {Id} (PID {Pid})", id, handle.ProcessId);
+            return Results.Problem(title: "Failed to pause process", statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        logger.LogInformation("Paused conversion {Id} (PID {Pid})", id, handle.ProcessId);
+        return Results.Ok(new { message = "Paused", pid = handle.ProcessId });
+    }
+
+    private static async Task<IResult> StopConversionByIdAsync(
+        int id,
+        AppDbContext db,
+        IRunningProcessRegistry registry,
+        IProcessController controller,
+        ILoggerFactory loggerFactory)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        if (!exists)
+        {
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
+        }
+
+        var key = $"conversion:{id}";
+        if (!registry.TryGet(key, out var handle))
+        {
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion {id} is not currently running.",
+                "The specified conversion is not running.");
+        }
+
+        var (stopped, forced) = await controller.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
+
+        if (!stopped)
+        {
+            logger.LogWarning("Failed to stop conversion {Id} (PID {Pid})", id, handle.ProcessId);
+            return Results.Problem(title: "Failed to stop process", statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}", id, handle.ProcessId, forced);
+        return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced });
     }
 
     private static async Task<IResult> StartNextConversionAsync(
