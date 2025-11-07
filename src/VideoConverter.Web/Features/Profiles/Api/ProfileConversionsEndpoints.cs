@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-
 using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
@@ -85,9 +83,9 @@ public sealed class ProfileConversionsEndpoints(
         return Results.Ok(result);
     }
 
-    private static Conversions.Dtos.ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
+    private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
     {
-        return new Conversions.Dtos.ConversionDto(
+        return new ConversionDto(
             c.Id,
             c.InputPath,
             c.OutputDirectory,

@@ -24,12 +24,12 @@ public static class ProfilesApi
 
         _ = app.MapPost(
             "/api/profiles/{id:int}/conversions",
-            (ProfileConversionsEndpoints h, int id, Dtos.ProfileConversionCreateDto request, CancellationToken ct) =>
+            (ProfileConversionsEndpoints h, int id, ProfileConversionCreateDto request, CancellationToken ct) =>
                 h.QueueConversionAsync(id, request, ct));
 
         _ = app.MapPost(
             "/api/profiles/{id:int}/conversions/queue-directory",
-            (ProfileConversionsEndpoints h, int id, Dtos.ProfileDirectoryQueueRequestDto request, CancellationToken ct) =>
+            (ProfileConversionsEndpoints h, int id, ProfileDirectoryQueueRequestDto request, CancellationToken ct) =>
                 h.QueueDirectoryAsync(id, request, ct));
     }
 }

@@ -73,6 +73,17 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
     ```
   - Response 404 if queue is empty
 
+- POST `/api/conversions/{id}/pause`
+  - Pauses the ffmpeg process for the specified conversion.
+  - Windows: suspends the process. Linux/macOS: sends SIGSTOP.
+  - Response 200: `{ "message": "Paused", "pid": 1234 }`
+  - Response 404 if conversion not found or not running
+
+- POST `/api/conversions/{id}/stop`
+  - Attempts graceful stop by sending `q` to ffmpeg stdin; if still running after 5s, kills the process tree.
+  - Response 200: `{ "message": "Stopped" | "Stopped (forced)", "pid": 1234, "forced": true|false }`
+  - Response 404 if conversion not found or not running
+
 - PATCH `/api/conversions/{id:int}/reorder`
   - Body:
     ```json
