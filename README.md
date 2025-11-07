@@ -193,6 +193,17 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
 
 #### Queue ordering
 - Each queued item has a string `Rank` used for ordering. Drag-and-drop reorder and server-initiated reprioritization update only the item's `Rank`.
+
+### Cleanup
+- The service automatically cleans up finished conversions (Completed/Failed) daily.
+  - Config (`appsettings.json` or env via `CONFIG__`):
+    - `Cleanup:Enabled` (bool, default `true`)
+    - `Cleanup:RetentionDays` (int, default `30`)
+- Manual cleanup endpoint:
+  - DELETE `/api/conversions/finished?olderThanDays={int?}`
+    - Without `olderThanDays`: deletes all finished conversions.
+    - With `olderThanDays`: deletes only those older than N days.
+    - Response: `{ "deleted": <count> }`
 - Completing an item removes it from the queued set; the next item (lowest `Rank`) automatically becomes first.
 - Existing rows are backfilled on startup with spaced ranks (`00001000`, `00002000`, …).
 - Override via environment variables, user secrets, or appsettings.

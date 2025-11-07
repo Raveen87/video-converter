@@ -4,6 +4,7 @@ using VideoConverter.Web.Common.Exceptions;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Web.Services.Conversion;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 using VideoConverter.Web.Shared.Validation;
 
@@ -22,6 +23,19 @@ public static class ConversionsApi
         _ = app.MapPatch("/api/conversions/{id:int}/reorder", ReorderAsync);
         _ = app.MapPost("/api/conversions/{id:int}/pause", PauseConversionByIdAsync);
         _ = app.MapPost("/api/conversions/{id:int}/stop", StopConversionByIdAsync);
+        _ = app.MapDelete("/api/conversions/finished", ClearFinishedConversionsAsync);
+    }
+
+    public static async Task<IResult> ClearFinishedConversionsAsync(
+        int? olderThanDays,
+        IConversionCleanupService cleanupService,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
+        var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
+        return Results.Ok(new { deleted });
     }
 
     private static async Task<IResult> CreateConversionAsync(
@@ -85,14 +99,14 @@ public static class ConversionsApi
     private static async Task<IResult> StartConversionByIdAsync(
         int id,
         AppDbContext db,
-        IConversionRunner runner,
+        IConversionExecutionService executor,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
 
-        var conversion = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false);
-        if (conversion is null)
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        if (!exists)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
             throw ApiErrorException.NotFound(
@@ -101,9 +115,7 @@ public static class ConversionsApi
                 "The requested conversion could not be found.");
         }
 
-        logger.LogInformation("Found conversion {ConversionId} for input: {InputPath}", id, conversion.InputPath);
-
-        var result = await runner.StartAsync(conversion).ConfigureAwait(false);
+        var result = await executor.RunByIdAsync(id, CancellationToken.None).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}", id, result.ProcessId);
@@ -194,21 +206,14 @@ public static class ConversionsApi
 
     private static async Task<IResult> StartNextConversionAsync(
         AppDbContext db,
-        IConversionRunner runner,
+        IConversionExecutionService executor,
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Starting next conversion from queue");
 
-        var conversion = await db.Conversions
-            .AsNoTracking()
-            .Where(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending)
-            .OrderBy(c => c.Rank)
-            .ThenBy(c => c.CreatedAtUtc)
-            .ThenBy(c => c.Id)
-            .FirstOrDefaultAsync().ConfigureAwait(false);
-
-        if (conversion is null)
+        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending).ConfigureAwait(false);
+        if (!anyPending)
         {
             logger.LogInformation("No conversions found in queue");
             throw ApiErrorException.NotFound(
@@ -217,24 +222,19 @@ public static class ConversionsApi
                 "There are no conversions available to start.");
         }
 
-        logger.LogInformation(
-            "Starting next conversion {ConversionId} for input: {InputPath}",
-            conversion.Id,
-            conversion.InputPath);
-
-        var result = await runner.StartAsync(conversion).ConfigureAwait(false);
+        var (result, conversionId) = await executor.RunNextPendingAsync(CancellationToken.None).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation(
                 "Next conversion {ConversionId} started successfully with PID: {ProcessId}",
-                conversion.Id,
+                conversionId,
                 result.ProcessId);
-            return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId = conversion.Id });
+            return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId });
         }
 
         logger.LogError(
             "Failed to start next conversion {ConversionId}: {ErrorMessage}",
-            conversion.Id,
+            conversionId,
             result.ErrorMessage);
         throw ApiErrorException.BusinessError(
             ErrorCode.ProcessStartFailed,
