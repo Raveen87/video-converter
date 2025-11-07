@@ -158,7 +158,7 @@ public class TmdbMetadataService(
         // Exponential backoff with full jitter. Base 1s * 2^attempt, clamped by remaining budget.
         var baseDelaySeconds = Math.Pow(2, Math.Min(attempt, MaxRetries));
         var baseDelay = TimeSpan.FromSeconds(baseDelaySeconds);
-        var jitterMillis = (int)Math.Ceiling(baseDelay.TotalMilliseconds * Random.Shared.NextDouble());
+        var jitterMillis = (int)Math.Min(Math.Ceiling(baseDelay.TotalMilliseconds * Random.Shared.NextDouble()), int.MaxValue);
         var jittered = TimeSpan.FromMilliseconds(jitterMillis);
         return jittered <= remainingBudget ? jittered : remainingBudget;
     }
