@@ -498,6 +498,7 @@ public class TmdbMetadataServiceTests
             var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
             if (!hasAuth)
             {
+                // The caller is responsible for disposing the returned HttpResponseMessage.
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
             }
 
@@ -508,6 +509,7 @@ public class TmdbMetadataServiceTests
                 body = seasonDetailsJson;
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -524,6 +526,7 @@ public class TmdbMetadataServiceTests
             var hasAuth = request.Headers.Authorization is { Scheme: "Bearer" };
             if (!hasAuth)
             {
+                // The caller is responsible for disposing the returned HttpResponseMessage.
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
             }
 
@@ -534,6 +537,7 @@ public class TmdbMetadataServiceTests
                 body = showDetailsJson;
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -563,6 +567,7 @@ public class TmdbMetadataServiceTests
                 body = searchJson;
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
