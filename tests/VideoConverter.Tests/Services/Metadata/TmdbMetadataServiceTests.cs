@@ -309,6 +309,181 @@ public class TmdbMetadataServiceTests
         _ = result.PosterPath.Should().Be("/kLKP8zrArBtBboGz3qJOuMGC7rL.jpg");
     }
 
+    [Fact]
+    public async Task GetTvShowDetailsAsync_RetriesOn429_WithRetryAfterZero_ThenSucceeds()
+    {
+        // Arrange
+        var handler = new Retry429ThenSuccessHandler(TmdbShowDetailsJson, retryAfterSeconds: 0, retriesBeforeSuccess: 2);
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token",
+            })
+            .Build();
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration);
+
+        // Act
+        var result = await service.GetTvShowDetailsAsync(1940);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = handler.Calls.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetTvShowDetailsAsync_RetriesOn429_NoRetryAfter_UsesBackoffWithJitter()
+    {
+        // Arrange
+        var handler = new Retry429ThenSuccessHandler(TmdbShowDetailsJson, retryAfterSeconds: null, retriesBeforeSuccess: 2);
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token",
+            })
+            .Build();
+
+        var delays = new List<TimeSpan>();
+        Task DelayCapture(TimeSpan d, CancellationToken ct)
+        {
+            delays.Add(d);
+            return Task.CompletedTask;
+        }
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration, DelayCapture);
+
+        // Act
+        var result = await service.GetTvShowDetailsAsync(1940);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = handler.Calls.Should().Be(3);
+        _ = delays.Count.Should().Be(2);
+        _ = delays.All(d => d > TimeSpan.Zero).Should().BeTrue();
+        _ = delays.Aggregate(TimeSpan.Zero, (acc, d) => acc + d).Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
+    }
+
+    [Fact]
+    public async Task GetTvShowDetailsAsync_RetriesOn503_ThenSucceeds()
+    {
+        // Arrange
+        var handler = new Retry503ThenSuccessHandler(TmdbShowDetailsJson, retriesBeforeSuccess: 1);
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token",
+            })
+            .Build();
+
+        var delays = new List<TimeSpan>();
+        Task DelayCapture(TimeSpan d, CancellationToken ct)
+        {
+            delays.Add(d);
+            return Task.CompletedTask;
+        }
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration, DelayCapture);
+
+        // Act
+        var result = await service.GetTvShowDetailsAsync(1940);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = handler.Calls.Should().Be(2);
+        _ = delays.Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTvShowDetailsAsync_MaxRetriesExhausted_ReturnsNull()
+    {
+        // Arrange
+        var handler = new Always429Handler();
+        using var httpClient = new HttpClient(handler);
+        var logger = LoggerFactory.Create(builder => { }).CreateLogger<TmdbMetadataService>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Tmdb:ApiKey"] = "dummy-token",
+            })
+            .Build();
+
+        var service = new TmdbMetadataService(logger, httpClient, configuration, (_, _) => Task.CompletedTask);
+
+        // Act
+        var result = await service.GetTvShowDetailsAsync(1940);
+
+        // Assert
+        _ = result.Should().BeNull();
+        _ = handler.Calls.Should().Be(6); // 1 initial + 5 retries
+    }
+
+    private sealed class Retry429ThenSuccessHandler(string body, int? retryAfterSeconds, int retriesBeforeSuccess) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+
+            if (Calls <= retriesBeforeSuccess)
+            {
+                var r = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+                if (retryAfterSeconds is not null)
+                {
+                    r.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(retryAfterSeconds.Value));
+                }
+
+                return Task.FromResult(r);
+            }
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class Retry503ThenSuccessHandler(string body, int retriesBeforeSuccess) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+
+            if (Calls <= retriesBeforeSuccess)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class Always429Handler : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests));
+        }
+    }
+
     private sealed class SeasonDetailsStubHttpMessageHandler(string seasonDetailsJson) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

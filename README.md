@@ -410,6 +410,12 @@ When a conversion is queued, the service automatically looks up metadata for the
 - **Filename sanitization**: Special characters are replaced with underscores for filesystem compatibility
 - **Error handling**: Graceful fallback to original filename if metadata service is unavailable
 
+#### TMDb rate limiting and transient failures
+- The service transparently retries TMDb requests on HTTP 429 (Too Many Requests) and 503 (Service Unavailable).
+- If the `Retry-After` header is present, it is honored (date or delta-seconds).
+- Otherwise, exponential backoff with full jitter is used, up to 5 retries and a maximum cumulative wait of 60 seconds.
+- All retries respect request cancellation.
+
 ### Metadata preservation
 - **Video title**: Automatically set to the metadata-based filename (without extension) using `-metadata title=<filename>`
 - **Audio metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
