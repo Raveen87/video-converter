@@ -433,6 +433,7 @@ public class TmdbMetadataServiceTests
 
             if (Calls <= retriesBeforeSuccess)
             {
+                // The caller is responsible for disposing the returned HttpResponseMessage.
                 var r = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
                 if (retryAfterSeconds is not null)
                 {
@@ -442,6 +443,7 @@ public class TmdbMetadataServiceTests
                 return Task.FromResult(r);
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -461,9 +463,11 @@ public class TmdbMetadataServiceTests
 
             if (Calls <= retriesBeforeSuccess)
             {
+                // The caller is responsible for disposing the returned HttpResponseMessage.
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -480,6 +484,7 @@ public class TmdbMetadataServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
+
             // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
             return Task.FromResult(response);
