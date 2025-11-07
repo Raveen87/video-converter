@@ -36,6 +36,8 @@ dotnet_diagnostic.IDE0005.severity = error  # Remove unnecessary import
 # Enforce formatting and key style rules
 dotnet_diagnostic.IDE0055.severity = error
 
+dotnet_diagnostic.CS1591.severity = silent  # Missing XML comment for publicly visible type or member
+
 dotnet_diagnostic.CA2254.severity = none    # Logging message template should not vary
 dotnet_diagnostic.CA1823.severity = error   # Unused private members
 dotnet_diagnostic.CA1822.severity = none    # Mark members as static
