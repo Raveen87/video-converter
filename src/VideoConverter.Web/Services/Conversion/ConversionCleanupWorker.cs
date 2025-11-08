@@ -15,7 +15,7 @@ public sealed class ConversionCleanupWorker(
         }
 
         logger.LogInformation("Cleanup worker started. RetentionDays={RetentionDays}", options.Value.RetentionDays);
-        var timer = new PeriodicTimer(TimeSpan.FromDays(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromDays(1));
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -39,7 +39,6 @@ public sealed class ConversionCleanupWorker(
         }
         finally
         {
-            timer.Dispose();
             logger.LogInformation("Cleanup worker stopped");
         }
     }
