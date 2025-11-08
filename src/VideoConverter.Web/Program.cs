@@ -8,6 +8,7 @@ using VideoConverter.Web.Features.Conversions.Api;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Conversions.Validation;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Web.Features.Metadata.Api;
 using VideoConverter.Web.Features.Metadata.Services;
 using VideoConverter.Web.Features.Profiles.Api;
 using VideoConverter.Web.Features.Profiles.Validation;
@@ -83,6 +84,7 @@ public static class Program
         _ = services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
         _ = services.AddSingleton<ICropDetector, FfmpegCropDetector>();
         _ = services.AddSingleton<IMetadataService, TmdbMetadataService>();
+        _ = services.AddSingleton<ITmdbSearchService, TmdbSearchService>();
         _ = services.AddSingleton<ISourceDetector, SourceDetector>();
         _ = services.AddSingleton<ITitleSanitizer, TitleSanitizer>();
         _ = services.AddSingleton<IMovieFilenameParser, MovieFilenameParser>();
@@ -157,6 +159,7 @@ public static class Program
         _ = app.MapGet("/", () => "OK");
         ConversionsApi.MapEndpoints(app);
         ProfilesApi.MapEndpoints(app);
+        MetadataSearchApi.MapEndpoints(app);
         var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("API endpoints mapped successfully");
