@@ -252,6 +252,20 @@ Rules:
 - Use curly braces for directives. Everything outside braces is literal and included as-is.
 - Smart collapse: when a directive is empty, adjacent separators (`.`, `-`, `_`, space) and single-letter affixes touching it are removed (e.g., `S{Season:00}E{Episode:00}` disappears entirely for movies).
 
+Template filters (strings only):
+- `spaces=dot|underscore|hyphen|space`: Replaces spaces inside the token.
+- `lower` / `upper` / `trim`: Case/whitespace transformations.
+
+Notes:
+- ASCII is always enforced (diacritics removed, non-ASCII dropped). Illegal filesystem characters are replaced with `_`.
+- Numeric formatting (e.g., `{Season:00}`) is unchanged and cannot be combined with string filters for the same token.
+
+Example:
+```
+{Title:spaces=dot}.S{Season:00}E{Episode:00}.{EpisodeName:spaces=dot}.{Source:spaces=dot}
+```
+Outputs dot-separated names for titles, episode names, and sources.
+
 FFmpeg options (appsettings.json):
 
 ```json
