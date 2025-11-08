@@ -39,6 +39,7 @@ internal static class TmdbJson
     internal sealed record TmdbMovieSearchResult([property: JsonPropertyName("results")] List<TmdbMovie>? Results);
 
     internal sealed record TmdbMovie(
+        [property: JsonPropertyName("id")] int Id,
         [property: JsonPropertyName("title")] string Title,
         [property: JsonPropertyName("release_date")] string? ReleaseDate,
         [property: JsonPropertyName("overview")] string? Overview,
