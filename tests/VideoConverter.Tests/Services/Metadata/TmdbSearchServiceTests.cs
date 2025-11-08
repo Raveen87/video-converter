@@ -151,6 +151,7 @@ public class TmdbSearchServiceTests
                 body = tvJson;
             }
 
+            // The caller is responsible for disposing the returned HttpResponseMessage.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
