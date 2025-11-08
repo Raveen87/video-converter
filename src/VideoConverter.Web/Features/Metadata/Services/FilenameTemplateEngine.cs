@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using VideoConverter.Web.Features.Metadata.Models;
@@ -67,14 +68,22 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
             var name = m.Groups[1].Value;
             var format = m.Groups[2].Success ? m.Groups[2].Value : null;
 
-            return (values.TryGetValue(name, out var raw) && raw is not null) switch
+            if (!(values.TryGetValue(name, out var raw) && raw is not null))
             {
                 // Mark empty directives with a sentinel for smart collapse
-                false => EmptyDirectiveMarker.ToString(),
-                _ => raw is IFormattable formattable && !string.IsNullOrEmpty(format)
-                    ? formattable.ToString(format, CultureInfo.InvariantCulture)
-                    : Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty,
-            };
+                return EmptyDirectiveMarker.ToString();
+            }
+
+            // Apply string filters for string tokens (e.g., spaces=dot, lower, upper, trim)
+            if (raw is string str)
+            {
+                return ApplyStringFilters(str, format);
+            }
+
+            // Preserve numeric formatting for numeric tokens
+            return raw is IFormattable formattable && !string.IsNullOrEmpty(format)
+                ? formattable.ToString(format, CultureInfo.InvariantCulture)
+                : Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty;
         });
     }
 
@@ -85,7 +94,9 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
             return string.Empty;
         }
 
-        var sanitized = IllegalPathCharactersRegex().Replace(text, "_");
+        // Always enforce ASCII
+        var ascii = ToAscii(text);
+        var sanitized = IllegalPathCharactersRegex().Replace(ascii, "_");
         sanitized = RepeatingSpacesRegex().Replace(sanitized, " ");
         return sanitized.Trim(' ', '.');
     }
@@ -97,7 +108,9 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
             return "Unknown";
         }
 
-        var sanitized = IllegalPathCharactersRegex().Replace(filename, "_");
+        // Always enforce ASCII
+        var ascii = ToAscii(filename);
+        var sanitized = IllegalPathCharactersRegex().Replace(ascii, "_");
         sanitized = RepeatingSpacesRegex().Replace(sanitized, " ");
         return string.IsNullOrWhiteSpace(sanitized) ? "Unknown" : sanitized.Trim(' ', '.');
     }
@@ -122,7 +135,7 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
 
     private static string RemoveSingleLetterAffixes(string input)
     {
-        var sb = new System.Text.StringBuilder(input.Length);
+        var sb = new StringBuilder(input.Length);
         var i = 0;
         while (i < input.Length)
         {
@@ -149,7 +162,7 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
 
     private static string RemoveSeparatorsAroundMarkers(string input)
     {
-        var sb = new System.Text.StringBuilder(input.Length);
+        var sb = new StringBuilder(input.Length);
         var i = 0;
         while (i < input.Length)
         {
@@ -225,6 +238,114 @@ public sealed partial class FilenameTemplateEngine : IFilenameTemplateEngine
 
         var prev = input[idx - 1];
         return prev is '.' or '-' or '_' or ' ' ? input : input.Insert(idx, ".");
+    }
+
+    private static string ApplyStringFilters(string input, string? formatSpec)
+    {
+        var value = input;
+        if (string.IsNullOrEmpty(formatSpec))
+        {
+            return value;
+        }
+
+        var specItems = formatSpec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        char? spaceReplacement = null;
+
+        foreach (var spec in specItems)
+        {
+            if (spec.StartsWith("spaces=", StringComparison.OrdinalIgnoreCase))
+            {
+                var mode = spec["spaces=".Length..].Trim().ToLowerInvariant();
+                spaceReplacement = mode switch
+                {
+                    "dot" => '.',
+                    "underscore" => '_',
+                    "hyphen" => '-',
+                    "space" => ' ',
+                    _ => spaceReplacement,
+                };
+                continue;
+            }
+
+            switch (spec.ToLowerInvariant())
+            {
+                case "lower":
+                    value = value.ToLowerInvariant();
+                    break;
+                case "upper":
+                    value = value.ToUpperInvariant();
+                    break;
+                case "trim":
+                    value = value.Trim();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (spaceReplacement is char replacementChar)
+        {
+            value = value.Replace(' ', replacementChar);
+            value = CollapseRepeatedChar(value, replacementChar);
+            value = value.Trim(replacementChar);
+        }
+
+        return value;
+    }
+
+    private static string CollapseRepeatedChar(string input, char ch)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        var sb = new StringBuilder(input.Length);
+        var lastWas = false;
+        foreach (var c in input)
+        {
+            if (c == ch)
+            {
+                if (!lastWas)
+                {
+                    _ = sb.Append(c);
+                    lastWas = true;
+                }
+
+                continue;
+            }
+
+            lastWas = false;
+            _ = sb.Append(c);
+        }
+
+        return sb.ToString();
+    }
+
+    private static string ToAscii(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var normalized = text.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(normalized.Length);
+        foreach (var c in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(c);
+            if (category is UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (c is <= (char)0x7F)
+            {
+                _ = sb.Append(c);
+            }
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC);
     }
 
     [GeneratedRegex(@"\{([A-Za-z][A-Za-z0-9]*)(?::([^\}]+))?\}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]

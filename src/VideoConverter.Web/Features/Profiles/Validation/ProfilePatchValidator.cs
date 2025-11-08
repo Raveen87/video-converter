@@ -10,14 +10,17 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
         logger.LogDebug("Starting validation for profile patch request");
         var result = new DomainValidationResult();
 
-        // Output directory is mandatory and cannot be removed
-        if (string.IsNullOrWhiteSpace(request.OutputDirectory))
+        // For PATCH: Output directory is optional. If provided, it must be non-empty and valid.
+        if (request.OutputDirectory is not null)
         {
-            result.Add(nameof(request.OutputDirectory), "Output directory is required and cannot be empty.");
-        }
-        else
-        {
-            result.AddIfInvalid(fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, logger, request.OutputDirectory);
+            if (string.IsNullOrWhiteSpace(request.OutputDirectory))
+            {
+                result.Add(nameof(request.OutputDirectory), "Output directory cannot be empty.");
+            }
+            else
+            {
+                result.AddIfInvalid(fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, logger, request.OutputDirectory);
+            }
         }
 
         ProfileValidationHelper.ApplyCommon(

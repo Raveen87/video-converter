@@ -14,7 +14,19 @@ public sealed class RunningProcessRegistry : IRunningProcessRegistry
             return;
         }
 
-        var handle = new RunningProcessHandle(process.Id, process, process.StartInfo.RedirectStandardInput ? process.StandardInput : null);
+        int processId;
+        try
+        {
+            processId = process.Id;
+        }
+        catch (InvalidOperationException)
+        {
+            // Process was not started; allow registration with placeholder id
+            processId = 0;
+        }
+
+        var stdIn = process.StartInfo.RedirectStandardInput ? process.StandardInput : null;
+        var handle = new RunningProcessHandle(processId, process, stdIn);
         _ = _byCorrelationId.AddOrUpdate(correlationId, handle, (_, _) => handle);
     }
 
