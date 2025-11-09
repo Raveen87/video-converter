@@ -4,7 +4,7 @@ namespace VideoConverter.Tests.Fakes;
 
 public sealed class FakeConversionRunner : IConversionRunner
 {
-    public Task<ConversionStartResult> StartAsync(Web.Shared.Domain.Entities.Conversion conversion)
+    public Task<ConversionStartResult> StartAsync(Web.Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
     {
         // Simulate success without starting any external process
         var result = new ConversionStartResult

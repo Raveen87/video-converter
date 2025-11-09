@@ -11,36 +11,29 @@ internal static class ProcessWaitCoordinator
         Canceled,
     }
 
-    public static async Task<CompletionKind> WaitForCompletionAsync(Process process, TimeSpan? timeout, ILogger logger, TimeProvider timeProvider, CancellationToken cancellationToken)
+    public static async Task<CompletionKind> WaitForCompletionAsync(Process process, TimeSpan? timeout, ILogger logger, CancellationToken cancellationToken)
     {
-        var timeoutTask = Task.CompletedTask;
         using var timeoutCts = timeout is not null ? new CancellationTokenSource(timeout.Value) : null;
-        if (timeoutCts is not null)
-        {
-            timeoutTask = Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, timeoutCts.Token);
-        }
+        using var linked = timeoutCts is not null
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
+            : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        var waitTask = process.WaitForExitAsync(CancellationToken.None);
-        var tasksToWait = new List<Task> { waitTask, timeoutTask };
-        if (cancellationToken.CanBeCanceled)
+        try
         {
-            tasksToWait.Add(Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, cancellationToken));
+            await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+            return CompletionKind.Exited;
         }
-
-        var completed = await Task.WhenAny(tasksToWait).ConfigureAwait(false);
-        if (completed == timeoutTask)
+        catch (OperationCanceledException)
         {
-            TryKill(process, logger, "timed-out");
-            return CompletionKind.TimedOut;
-        }
+            if (timeoutCts is not null && timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                TryKill(process, logger, "timed-out");
+                return CompletionKind.TimedOut;
+            }
 
-        if (completed != waitTask && completed != timeoutTask)
-        {
             TryKill(process, logger, "canceled");
             return CompletionKind.Canceled;
         }
-
-        return CompletionKind.Exited;
     }
 
     private static void TryKill(Process process, ILogger logger, string reason)

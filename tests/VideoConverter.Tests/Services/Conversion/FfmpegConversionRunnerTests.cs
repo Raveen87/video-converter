@@ -48,7 +48,7 @@ public class FfmpegConversionRunnerTests
             Resolution = 720,
         };
 
-        var result = await runner.StartAsync(conversion);
+        var result = await runner.StartAsync(conversion, CancellationToken.None);
 
         _ = result.IsSuccess.Should().BeTrue();
         _ = result.Command.Should().NotBeNullOrWhiteSpace();
