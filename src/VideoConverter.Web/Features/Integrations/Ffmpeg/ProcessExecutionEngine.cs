@@ -26,7 +26,7 @@ internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegi
 
         try
         {
-            var completion = await ProcessWaitCoordinator.WaitForCompletionAsync(process, request.Timeout, logger, TimeProvider.System, cancellationToken).ConfigureAwait(false);
+            var completion = await ProcessWaitCoordinator.WaitForCompletionAsync(process, request.Timeout, logger, cancellationToken).ConfigureAwait(false);
             if (completion is ProcessWaitCoordinator.CompletionKind.TimedOut)
             {
                 return new ProcessResult { IsSuccess = false, ExitCode = -1, ErrorMessage = "Process timed out" };

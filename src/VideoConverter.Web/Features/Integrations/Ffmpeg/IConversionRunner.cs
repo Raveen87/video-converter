@@ -4,5 +4,5 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 public interface IConversionRunner
 {
-    Task<ConversionStartResult> StartAsync(Conversion conversion);
+    Task<ConversionStartResult> StartAsync(Conversion conversion, CancellationToken ct);
 }

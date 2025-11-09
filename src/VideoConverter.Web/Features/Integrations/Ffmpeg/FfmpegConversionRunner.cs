@@ -14,12 +14,12 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
     private readonly bool _dryRun = options.Value.DryRun
         || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<ConversionStartResult> StartAsync(Conversion conversion)
+    public async Task<ConversionStartResult> StartAsync(Conversion conversion, CancellationToken ct)
     {
         logger.LogInformation("Starting conversion for input: {InputPath}, output: {OutputDirectory}", conversion.InputPath, conversion.OutputDirectory);
         await Task.Yield();
 
-        var (preflightOk, preflightError) = _dryRun ? (true, null) : await preflightChecker.EnsurePreflightAsync(_ffmpegPath, CancellationToken.None).ConfigureAwait(false);
+        var (preflightOk, preflightError) = _dryRun ? (true, null) : await preflightChecker.EnsurePreflightAsync(_ffmpegPath, ct).ConfigureAwait(false);
         if (!preflightOk)
         {
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = preflightError ?? "ffmpeg preflight failed" };
@@ -33,7 +33,7 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
 
         try
         {
-            return await ExecuteConversionAsync(conversion, key, CancellationToken.None).ConfigureAwait(false);
+            return await ExecuteConversionAsync(conversion, key, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
