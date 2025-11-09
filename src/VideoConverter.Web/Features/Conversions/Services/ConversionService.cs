@@ -17,11 +17,16 @@ public sealed class ConversionService(
     IFilenameGenerator filenameGenerator,
     IFilenameTemplateEngine filenameTemplateEngine,
     Microsoft.Extensions.Options.IOptions<FilenameTemplateOptions> filenameTemplateOptions,
-    ILogger<ConversionService> logger) : IConversionService
+    ILogger<ConversionService> logger,
+    Microsoft.Extensions.Options.IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
+    Shared.Infrastructure.Persistence.AppDbContext? db = null) : IConversionService
 {
     private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
     private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
     private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
+
+    private readonly Microsoft.Extensions.Options.IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Microsoft.Extensions.Options.Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
+    private readonly Shared.Infrastructure.Persistence.AppDbContext? _db = db;
 
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
@@ -124,40 +129,9 @@ public sealed class ConversionService(
             // Parse the filename to extract media information
             var filename = Path.GetFileName(inputPath);
             var parsedFilename = filenameParser.ParseFilename(filename);
-            var extension = Path.GetExtension(inputPath);
+            var extension = Path.GetExtension(inputPath) ?? string.Empty;
 
-            MediaMetadata? metadata = null;
-
-            // Look up metadata based on parsed information
-            if (parsedFilename.DetectedType is MediaType.Movie)
-            {
-                logger.LogDebug(
-                    "Looking up movie metadata for: {Title} (Year: {Year})",
-                    parsedFilename.Title,
-                    parsedFilename.Year);
-
-                metadata = await metadataService.GetMovieMetadataAsync(
-                    parsedFilename.Title ?? "Unknown",
-                    parsedFilename.Year,
-                    parsedFilename.Source,
-                    cancellationToken).ConfigureAwait(false);
-            }
-            else if (parsedFilename.DetectedType is MediaType.TvShow)
-            {
-                logger.LogDebug(
-                    "Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
-                    parsedFilename.Title,
-                    parsedFilename.Season,
-                    parsedFilename.Episode);
-
-                metadata = await metadataService.GetTvShowMetadataAsync(
-                    parsedFilename.Title ?? "Unknown",
-                    parsedFilename.Season ?? 1,
-                    parsedFilename.Episode ?? 1,
-                    firstAiredYear: null, // We don't have first aired year from filename parsing
-                    parsedFilename.Source,
-                    cancellationToken).ConfigureAwait(false);
-            }
+            var metadata = await GetMetadataAsync(parsedFilename, cancellationToken).ConfigureAwait(false);
 
             if (metadata is not null)
             {
@@ -168,14 +142,128 @@ public sealed class ConversionService(
                 return generatedFilename;
             }
 
-            logger.LogWarning("No metadata found for: {InputPath}, using original filename", inputPath);
-            return filename;
+            return await HandleFetchFailureAsync(inputPath, filename, parsedFilename, extension, template, cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException)
+        {
+            // Propagate explicit skip/queue signals
+            throw;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", inputPath);
             return Path.GetFileName(inputPath);
         }
+    }
+
+    private async Task<MediaMetadata?> GetMetadataAsync(ParsedFilename parsedFilename, CancellationToken cancellationToken)
+    {
+        if (parsedFilename.DetectedType is MediaType.Movie)
+        {
+            logger.LogDebug(
+                "Looking up movie metadata for: {Title} (Year: {Year})",
+                parsedFilename.Title,
+                parsedFilename.Year);
+
+            return await metadataService.GetMovieMetadataAsync(
+                parsedFilename.Title ?? "Unknown",
+                parsedFilename.Year,
+                parsedFilename.Source,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (parsedFilename.DetectedType is MediaType.TvShow)
+        {
+            logger.LogDebug(
+                "Looking up TV show metadata for: {ShowName} S{Season}E{Episode}",
+                parsedFilename.Title,
+                parsedFilename.Season,
+                parsedFilename.Episode);
+
+            return await metadataService.GetTvShowMetadataAsync(
+                parsedFilename.Title ?? "Unknown",
+                parsedFilename.Season ?? 1,
+                parsedFilename.Episode ?? 1,
+                firstAiredYear: null,
+                parsedFilename.Source,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return null;
+    }
+
+    private async Task<string?> HandleFetchFailureAsync(string inputPath, string filename, ParsedFilename parsedFilename, string extension, string? template, CancellationToken cancellationToken)
+    {
+        switch (_metadataFetchOptions.Value.OnFailureBehavior)
+        {
+            case FetchFailureBehavior.DefaultToInputName:
+                return RenderDefaultToInputNameFilename(filename, parsedFilename, extension, template);
+
+            case FetchFailureBehavior.QueueForManualResolution:
+                await QueueForManualResolutionAsync(inputPath, filename, parsedFilename, cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException("Metadata fetch failed and item queued for manual resolution.");
+
+            case FetchFailureBehavior.SkipItem:
+                {
+                    logger.LogWarning("No metadata found for: {InputPath}, skipping item as per configuration", inputPath);
+                    throw new InvalidOperationException("Metadata fetch failed and item skipped by configuration.");
+                }
+
+            default:
+                logger.LogWarning("Unknown fetch-failure behavior. Using original filename for: {InputPath}", inputPath);
+                return filename;
+        }
+    }
+
+    private string RenderDefaultToInputNameFilename(string filename, ParsedFilename parsedFilename, string extension, string? template)
+    {
+        logger.LogWarning("No metadata found for: {InputPath}, defaulting to input name/template", filename);
+        if (parsedFilename.DetectedType is MediaType.Movie)
+        {
+            var movie = new MovieMetadata(parsedFilename.Title ?? Path.GetFileNameWithoutExtension(filename), parsedFilename.Year ?? 0, parsedFilename.Source);
+            return template is not null
+                ? filenameTemplateEngine.Render(movie, extension, template)
+                : filename;
+        }
+
+        var tv = new TvShowMetadata(
+            parsedFilename.Title ?? Path.GetFileNameWithoutExtension(filename),
+            FirstAiredYear: 0,
+            parsedFilename.Season ?? 1,
+            parsedFilename.Episode ?? 1,
+            parsedFilename.EpisodeTitle,
+            parsedFilename.Source);
+        return template is not null
+            ? filenameTemplateEngine.Render(tv, extension, template)
+            : filename;
+    }
+
+    private async Task QueueForManualResolutionAsync(string inputPath, string filename, ParsedFilename parsedFilename, CancellationToken cancellationToken)
+    {
+        logger.LogWarning("No metadata found for: {InputPath}, queuing for manual resolution and skipping item", inputPath);
+        if (_db is null)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var item = new MetadataResolutionQueueItem
+        {
+            SourcePath = inputPath,
+            SourceFileName = filename,
+            InputKind = parsedFilename.DetectedType.ToString(),
+            ParsedTitle = parsedFilename.Title,
+            ParsedYear = parsedFilename.Year,
+            ParsedSeason = parsedFilename.Season,
+            ParsedEpisode = parsedFilename.Episode,
+            FailureReason = "MetadataNotFound",
+            FailureDetails = "TMDb search failed or returned no results, or episode not found in series",
+            Status = "Pending",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        };
+        _ = _db.MetadataResolutionQueue.Add(item);
+        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)

@@ -52,6 +52,10 @@ namespace VideoConverter.Web.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Rank")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Resolution")
                         .HasColumnType("INTEGER");
 
@@ -67,9 +71,75 @@ namespace VideoConverter.Web.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("Status", "Rank");
+
                     b.ToTable("Conversions");
+                });
+
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.MetadataResolutionQueueItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureDetails")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureReason")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InputKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParsedEpisode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ParsedSeason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ParsedTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParsedYear")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceFileName")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourcePath", "Status")
+                        .IsUnique();
+
+                    b.ToTable("MetadataResolutionQueue");
                 });
 
             modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.Profile", b =>
