@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Web.Common.Exceptions;
@@ -10,27 +11,26 @@ using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Web.Features.Conversions.Api;
 
-public static class ConversionsApi
+[ApiController]
+[Route("api/conversions")]
+public sealed class ConversionsApi : ControllerBase
 {
-    public static void MapEndpoints(IEndpointRouteBuilder app)
-    {
-        _ = app.MapPost("/api/conversions", CreateConversionAsync);
-        _ = app.MapGet("/api/conversions", ListConversionsAsync);
-        _ = app.MapPost("/api/conversions/{id:int}/start", StartConversionByIdAsync);
-        _ = app.MapPost("/api/conversions/start-next", StartNextConversionAsync);
-        _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
-        _ = app.MapPost("/api/conversions/queue-directory", QueueDirectoryAsync);
-        _ = app.MapGet("/api/conversions/queue-directory/batches/{id:int}", GetDirectoryBatchStatusAsync);
-        _ = app.MapPatch("/api/conversions/{id:int}/reorder", ReorderAsync);
-        _ = app.MapPost("/api/conversions/{id:int}/pause", PauseConversionByIdAsync);
-        _ = app.MapPost("/api/conversions/{id:int}/stop", StopConversionByIdAsync);
-        _ = app.MapDelete("/api/conversions/finished", ClearFinishedConversionsAsync);
-    }
-
-    public static async Task<IResult> ClearFinishedConversionsAsync(
+    // Back-compat for tests that invoked the previous static endpoint method directly
+    public static Task<IResult> ClearFinishedConversionsAsync(
         int? olderThanDays,
         IConversionCleanupService cleanupService,
         ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var controller = new ConversionsApi();
+        return controller.ClearFinishedConversionsActionAsync(olderThanDays, cleanupService, loggerFactory, ct);
+    }
+
+    [HttpDelete("finished")]
+    public async Task<IResult> ClearFinishedConversionsActionAsync(
+        int? olderThanDays,
+        [FromServices] IConversionCleanupService cleanupService,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -39,12 +39,13 @@ public static class ConversionsApi
         return Results.Ok(new { deleted });
     }
 
-    private static async Task<IResult> CreateConversionAsync(
-        ConversionCreateDto request,
-        AppDbContext db,
-        IRequestValidator<ConversionCreateDto> validator,
-        IConversionService conversionService,
-        ILoggerFactory loggerFactory,
+    [HttpPost]
+    public async Task<IResult> CreateConversionAsync(
+        [FromBody] ConversionCreateDto request,
+        [FromServices] AppDbContext db,
+        [FromServices] IRequestValidator<ConversionCreateDto> validator,
+        [FromServices] IConversionService conversionService,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -80,7 +81,8 @@ public static class ConversionsApi
         }
     }
 
-    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILoggerFactory loggerFactory, CancellationToken ct)
+    [HttpGet]
+    public async Task<IResult> ListConversionsAsync([FromServices] AppDbContext db, [FromServices] ILoggerFactory loggerFactory, CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Listing all conversions");
@@ -98,11 +100,12 @@ public static class ConversionsApi
         return Results.Ok(items);
     }
 
-    private static async Task<IResult> StartConversionByIdAsync(
+    [HttpPost("{id:int}/start")]
+    public async Task<IResult> StartConversionByIdAsync(
         int id,
-        AppDbContext db,
-        IConversionExecutionService executor,
-        ILoggerFactory loggerFactory,
+        [FromServices] AppDbContext db,
+        [FromServices] IConversionExecutionService executor,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -132,12 +135,13 @@ public static class ConversionsApi
             "Failed to start the conversion process. Please try again later.");
     }
 
-    private static async Task<IResult> PauseConversionByIdAsync(
+    [HttpPost("{id:int}/pause")]
+    public async Task<IResult> PauseConversionByIdAsync(
         int id,
-        AppDbContext db,
-        IRunningProcessRegistry registry,
-        IProcessController controller,
-        ILoggerFactory loggerFactory,
+        [FromServices] AppDbContext db,
+        [FromServices] IRunningProcessRegistry registry,
+        [FromServices] IProcessController controller,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -170,12 +174,13 @@ public static class ConversionsApi
         return Results.Ok(new { message = "Paused", pid = handle.ProcessId });
     }
 
-    private static async Task<IResult> StopConversionByIdAsync(
+    [HttpPost("{id:int}/stop")]
+    public async Task<IResult> StopConversionByIdAsync(
         int id,
-        AppDbContext db,
-        IRunningProcessRegistry registry,
-        IProcessController controller,
-        ILoggerFactory loggerFactory,
+        [FromServices] AppDbContext db,
+        [FromServices] IRunningProcessRegistry registry,
+        [FromServices] IProcessController controller,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -209,10 +214,11 @@ public static class ConversionsApi
         return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced });
     }
 
-    private static async Task<IResult> StartNextConversionAsync(
-        AppDbContext db,
-        IConversionExecutionService executor,
-        ILoggerFactory loggerFactory,
+    [HttpPost("start-next")]
+    public async Task<IResult> StartNextConversionAsync(
+        [FromServices] AppDbContext db,
+        [FromServices] IConversionExecutionService executor,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -248,11 +254,12 @@ public static class ConversionsApi
             "Failed to start the conversion process. Please try again later.");
     }
 
-    private static async Task<IResult> GetConversionProgressAsync(
+    [HttpGet("{id:int}/progress")]
+    public async Task<IResult> GetConversionProgressAsync(
         int id,
-        AppDbContext db,
-        IProgressTracker progressTracker,
-        ILoggerFactory loggerFactory,
+        [FromServices] AppDbContext db,
+        [FromServices] IProgressTracker progressTracker,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -281,10 +288,11 @@ public static class ConversionsApi
         return Results.Ok(progress);
     }
 
-    private static async Task<IResult> QueueDirectoryAsync(
-        DirectoryQueueRequestDto request,
-        IDirectoryBatchService batchService,
-        ILoggerFactory loggerFactory,
+    [HttpPost("queue-directory")]
+    public async Task<IResult> QueueDirectoryAsync(
+        [FromBody] DirectoryQueueRequestDto request,
+        [FromServices] IDirectoryBatchService batchService,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -298,10 +306,11 @@ public static class ConversionsApi
         return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
     }
 
-    private static async Task<IResult> GetDirectoryBatchStatusAsync(
+    [HttpGet("queue-directory/batches/{id:int}")]
+    public async Task<IResult> GetDirectoryBatchStatusAsync(
         int id,
-        AppDbContext db,
-        ILoggerFactory loggerFactory,
+        [FromServices] AppDbContext db,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -323,25 +332,12 @@ public static class ConversionsApi
         return Results.Ok(dto);
     }
 
-    private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
-    {
-        return new ConversionDto(
-            c.Id,
-            c.InputPath,
-            c.OutputDirectory,
-            c.CreatedAtUtc,
-            c.Crf,
-            c.AudioBitrateKbps,
-            c.AudioChannels,
-            c.Resolution,
-            c.MetadataBasedFilename);
-    }
-
-    private static async Task<IResult> ReorderAsync(
+    [HttpPatch("{id:int}/reorder")]
+    public async Task<IResult> ReorderAsync(
         int id,
-        ReorderRequestDto request,
-        AppDbContext db,
-        ILoggerFactory loggerFactory,
+        [FromBody] ReorderRequestDto request,
+        [FromServices] AppDbContext db,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
@@ -396,5 +392,19 @@ public static class ConversionsApi
 
         logger.LogInformation("Reordered conversion {ConversionId} with new rank {Rank}", id, target.Rank);
         return Results.Ok(ToDto(target));
+    }
+
+    private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
+    {
+        return new ConversionDto(
+            c.Id,
+            c.InputPath,
+            c.OutputDirectory,
+            c.CreatedAtUtc,
+            c.Crf,
+            c.AudioBitrateKbps,
+            c.AudioChannels,
+            c.Resolution,
+            c.MetadataBasedFilename);
     }
 }

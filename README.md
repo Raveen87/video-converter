@@ -559,6 +559,14 @@ The codebase has been refactored to improve maintainability and reduce complexit
 - **Process Management**: Unified process execution and output handling across FFmpeg operations
 - **Test Organization**: Tests split into focused unit test classes for better maintainability
 
+#### Architecture updates
+- **Controllers**: Minimal APIs migrated to attribute-routed controllers suffixed with `Api` (e.g., `ConversionsApi`, `ProfilesApi`, `MetadataSearchApi`). Routes are unchanged.
+- **Startup responsibilities**: Database migration and rank backfill moved to a hosted service (`DatabaseInitializerHostedService`) to keep `Program.cs` focused.
+- **Feature DI**: Service registrations are grouped by feature via extensions:
+  - `AddFfmpegIntegrations()`, `AddConversionsFeature()`, `AddProfilesFeature()`, `AddMetadataFeature()`.
+- **FFmpeg options binding**: Environment fallbacks handled in `ConfigureFfmpegOptions`:
+  - `FFMPEG_PATH` → `Ffmpeg:Path`, `FFMPEG_DRYRUN` → `Ffmpeg:DryRun`.
+
 ### CI/Quality
 - Warnings-as-errors enforced; code style and analyzers enabled.
 - Target code coverage ≥ 85% overall; new/changed code should meet ≥ 85%.

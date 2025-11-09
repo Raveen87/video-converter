@@ -3,16 +3,26 @@ using VideoConverter.Web.Shared.Domain.Entities;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegConversionRunner(IProcessManager processManager, IProgressTracker progressTracker, IProgressOutputParser progressParser, IFfmpegPreflightChecker preflightChecker, IConversionRunCoordinator runCoordinator, IConversionOutputPlanner outputPlanner, IMediaDurationProvider durationProvider, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfmpegConversionRunner> logger) : IConversionRunner
+public sealed class FfmpegConversionRunner(
+    IProcessManager processManager,
+    IProgressTracker progressTracker,
+    IProgressOutputParser progressParser,
+    IFfmpegPreflightChecker preflightChecker,
+    IConversionRunCoordinator runCoordinator,
+    IConversionOutputPlanner outputPlanner,
+    IMediaDurationProvider durationProvider,
+    Microsoft.Extensions.Options.IOptions<FfmpegOptions> options,
+    ILogger<FfmpegConversionRunner> logger,
+    IFfmpegArgumentsBuilder? argumentsBuilder = null,
+    ICommandDisplayFormatter? commandFormatter = null) : IConversionRunner
 {
     private readonly FfmpegOptions _options = options.Value;
+    private readonly IFfmpegArgumentsBuilder _argumentsBuilder = argumentsBuilder ?? new DefaultFfmpegArgumentsBuilder();
+    private readonly ICommandDisplayFormatter _commandFormatter = commandFormatter ?? new DefaultCommandDisplayFormatter();
 
-    private readonly string _ffmpegPath = options.Value.Path
-                                          ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
-                                          ?? "ffmpeg";
+    private readonly string _ffmpegPath = options.Value.Path ?? "ffmpeg";
 
-    private readonly bool _dryRun = options.Value.DryRun
-        || string.Equals(Environment.GetEnvironmentVariable("FFMPEG_DRYRUN"), "true", StringComparison.OrdinalIgnoreCase);
+    private readonly bool _dryRun = options.Value.DryRun;
 
     public async Task<ConversionStartResult> StartAsync(Conversion conversion, CancellationToken ct)
     {
@@ -55,8 +65,8 @@ public sealed class FfmpegConversionRunner(IProcessManager processManager, IProg
         var totalDurationSeconds = _dryRun ? 0 : await durationProvider.GetDurationSecondsAsync(conversion.InputPath, ct).ConfigureAwait(false);
         _ = Directory.CreateDirectory(conversion.OutputDirectory);
         var (outputFile, videoTitle) = outputPlanner.Plan(conversion);
-        var args = FfmpegArgumentsBuilder.Build(conversion, outputFile, videoTitle, logger, _options);
-        var cmdString = CommandDisplayFormatter.Build(_ffmpegPath, args);
+        var args = _argumentsBuilder.Build(conversion, outputFile, videoTitle, logger, _options);
+        var cmdString = _commandFormatter.Build(_ffmpegPath, args);
 
         if (_dryRun)
         {
