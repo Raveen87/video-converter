@@ -1,20 +1,19 @@
+using Microsoft.AspNetCore.Mvc;
+
 using VideoConverter.Web.Features.Metadata.Services;
 
 namespace VideoConverter.Web.Features.Metadata.Api;
 
-public static class MetadataSearchApi
+[ApiController]
+[Route("api/metadata/search")]
+public sealed class MetadataSearchApi : ControllerBase
 {
-    public static void MapEndpoints(IEndpointRouteBuilder app)
-    {
-        _ = app.MapGet("/api/metadata/search/movies", SearchMoviesAsync);
-        _ = app.MapGet("/api/metadata/search/tv", SearchTvAsync);
-    }
-
-    private static async Task<IResult> SearchMoviesAsync(
-        string? q,
-        int? year,
-        ITmdbSearchService search,
-        ILoggerFactory loggerFactory,
+    [HttpGet("movies")]
+    public async Task<IResult> SearchMoviesAsync(
+        [FromQuery] string? q,
+        [FromQuery] int? year,
+        [FromServices] ITmdbSearchService search,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("MetadataSearchApi");
@@ -32,11 +31,12 @@ public static class MetadataSearchApi
         return Results.Ok(items);
     }
 
-    private static async Task<IResult> SearchTvAsync(
-        string? q,
-        int? firstAirYear,
-        ITmdbSearchService search,
-        ILoggerFactory loggerFactory,
+    [HttpGet("tv")]
+    public async Task<IResult> SearchTvAsync(
+        [FromQuery] string? q,
+        [FromQuery] int? firstAirYear,
+        [FromServices] ITmdbSearchService search,
+        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("MetadataSearchApi");
