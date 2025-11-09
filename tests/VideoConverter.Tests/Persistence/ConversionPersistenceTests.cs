@@ -1,7 +1,6 @@
 using FluentAssertions;
-
 using Microsoft.EntityFrameworkCore;
-
+using VideoConverter.Tests.TestUtils;
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
@@ -12,8 +11,7 @@ public class ConversionPersistenceTests
     [Fact]
     public async Task AppDbContext_CanCreateAndRetrieveConversion()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var conversion = new Conversion
         {
             InputPath = "test.mp4",
@@ -44,8 +42,7 @@ public class ConversionPersistenceTests
     [Fact]
     public async Task AppDbContext_CanQueryConversionsByDateRange()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var baseDate = DateTime.UtcNow;
         var conversions = new[]
         {
@@ -67,8 +64,7 @@ public class ConversionPersistenceTests
     [Fact]
     public async Task AppDbContext_CanQueryConversionsByResolution()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var conversions = new[]
         {
             new Conversion { InputPath = "720p.mp4", OutputDirectory = "out", Resolution = 720 },
@@ -88,8 +84,7 @@ public class ConversionPersistenceTests
     [Fact]
     public async Task AppDbContext_CanHandleNullOptionalFields()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var conversion = new Conversion
         {
             InputPath = "test.mp4",

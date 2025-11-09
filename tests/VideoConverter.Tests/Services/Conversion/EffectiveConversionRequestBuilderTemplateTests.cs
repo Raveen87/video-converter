@@ -1,9 +1,7 @@
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging;
-
 using Moq;
-
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Shared.Domain.Entities;
@@ -18,16 +16,13 @@ public class EffectiveConversionRequestBuilderTemplateTests
     [Fact]
     public void Build_UsesProfileTemplate_WhenProfileProvided()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "in.mp4",
-            OutputDirectory: "out",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null,
-            OutputFilenameTemplate: "{Title}-{Year}");
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+
+        // set template via direct constructor since builder does not include it
+        request = request with { OutputFilenameTemplate = "{Title}-{Year}" };
 
         var profile = new Profile { OutputFilenameTemplate = "{Title}.{Year}.P" };
 
@@ -39,16 +34,11 @@ public class EffectiveConversionRequestBuilderTemplateTests
     [Fact]
     public void Build_UsesRequestTemplate_WhenNoProfileProvided()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "in.mp4",
-            OutputDirectory: "out",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null,
-            OutputFilenameTemplate: "{Title}-{Year}");
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+        request = request with { OutputFilenameTemplate = "{Title}-{Year}" };
 
         var effective = Builder.Build(request, null);
 

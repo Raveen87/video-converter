@@ -2,7 +2,7 @@ using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
-public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger) : IMediaProber
+public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger, ICommandDisplayFormatter commandFormatter) : IMediaProber
 {
     private readonly string _ffprobePath = options.Value.FfprobePath
         ?? Environment.GetEnvironmentVariable("FFPROBE_PATH")
@@ -25,7 +25,7 @@ public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft
 
         if (!procResult.IsSuccess)
         {
-            var cmd = CommandDisplayFormatter.Build(_ffprobePath, args);
+            var cmd = commandFormatter.Build(_ffprobePath, args);
             var errorDetails = ExtractErrorDetails(procResult.StandardError, procResult);
             logger.LogError(
                 "ffprobe failed for {InputPath} with exit code {ExitCode}. Command: {Command}. Error: {Error}",
