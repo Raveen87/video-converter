@@ -434,7 +434,7 @@ When a conversion is queued, the service automatically looks up metadata for the
 - **TMDb API Key**: Set `Tmdb:ApiKey` in configuration or environment variables. The service authenticates to TMDb using the HTTP Authorization header with a Bearer token. Do not append `api_key` as a query parameter.
 - **Filename sanitization**: Special characters are replaced with underscores for filesystem compatibility
 - **Error handling (configurable)**:
-  - `MetadataFetch:OnFailureBehavior` controls behavior when TMDb lookup fails (TMDb down, no results, or episode not found):
+  - `MetadataFetch:OnFailureBehavior` controls behavior when TMDb lookup fails (e.g., TMDb is down/unavailable, TMDb search returns no results, or episode not found in series):
     - `DefaultToInputName` (build minimal metadata from parsed filename to honor template; else keep original name)
     - `QueueForManualResolution` (adds a row to `MetadataResolutionQueue` and skips the item)
     - `SkipItem` (skips the item without queuing)
