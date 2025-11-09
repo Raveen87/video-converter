@@ -368,12 +368,7 @@ public sealed class ConversionService(
         var textSubtitleIndices = probeAll.Streams
             .Where(s =>
                 string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)
-                && (string.Equals(s.CodecName, "subrip", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.CodecName, "srt", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.CodecName, "ass", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.CodecName, "ssa", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.CodecName, "webvtt", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.CodecName, "mov_text", StringComparison.OrdinalIgnoreCase)))
+                && SubtitleCodecHelpers.IsTextSubtitle(s.CodecName))
             .Select(s => s.Index)
             .ToList();
 

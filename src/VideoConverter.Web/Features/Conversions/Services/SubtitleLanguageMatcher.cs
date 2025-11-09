@@ -11,26 +11,8 @@ public sealed class SubtitleLanguageMatcher(ILogger<SubtitleLanguageMatcher> log
         return LanguageMatchEngine.Match(
             streams,
             requestedLanguages,
-            s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase) && IsTextSubtitle(s.CodecName),
+            s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase) && SubtitleCodecHelpers.IsTextSubtitle(s.CodecName),
             _logger,
             "subtitle");
-    }
-
-    private static bool IsTextSubtitle(string? codecName)
-    {
-        if (string.IsNullOrWhiteSpace(codecName))
-        {
-            return false;
-        }
-
-        // ffprobe codec_name values for text subs commonly include:
-        // subrip (SRT), ass, ssa, webvtt, mov_text
-        // Include "srt" to be defensive if any probes surface that alias.
-        return codecName.Equals("subrip", StringComparison.OrdinalIgnoreCase)
-            || codecName.Equals("srt", StringComparison.OrdinalIgnoreCase)
-            || codecName.Equals("ass", StringComparison.OrdinalIgnoreCase)
-            || codecName.Equals("ssa", StringComparison.OrdinalIgnoreCase)
-            || codecName.Equals("webvtt", StringComparison.OrdinalIgnoreCase)
-            || codecName.Equals("mov_text", StringComparison.OrdinalIgnoreCase);
     }
 }
