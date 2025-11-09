@@ -124,8 +124,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(2048);
         _ = batch.Property(b => b.ErrorMessage)
             .HasMaxLength(2048);
+        _ = batch.Property(b => b.ClaimedAtUtc);
         _ = batch.Property(b => b.RequestJson)
             .HasMaxLength(8192);
+        _ = batch.HasIndex(b => new { b.Status, b.ClaimedAtUtc });
 
         var item = modelBuilder.Entity<DirectoryQueueBatchItem>();
         _ = item.HasKey(i => i.Id);

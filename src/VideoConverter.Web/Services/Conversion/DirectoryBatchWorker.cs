@@ -62,6 +62,7 @@ public sealed class DirectoryBatchWorker(
         {
             batch.Status = "Failed";
             batch.ErrorMessage = "Invalid batch request payload";
+            batch.ClaimedAtUtc = null; // Release the claim
             _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
             return true;
         }
@@ -80,14 +81,53 @@ public sealed class DirectoryBatchWorker(
     private async Task<Shared.Domain.Entities.DirectoryQueueBatch?> GetNextRunnableBatchAsync(AppDbContext db, CancellationToken ct)
     {
         logger.LogTrace("Looking for next runnable batch");
-        return await db.DirectoryQueueBatches
-            .Include(b => b.Items)
-            .OrderBy(b => b.Id)
-            .FirstOrDefaultAsync(
-                b => (string.Equals(b.Status, "Pending", StringComparison.Ordinal) || string.Equals(b.Status, "Running", StringComparison.Ordinal)) &&
-                     b.ProcessedItems < b.TotalItems,
-                ct)
-            .ConfigureAwait(false);
+
+        // Use a transaction with IMMEDIATE lock mode for SQLite to prevent concurrent claims
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct).ConfigureAwait(false);
+            await using (transaction.ConfigureAwait(false))
+            {
+                try
+                {
+                    var now = DateTime.UtcNow;
+                    var staleClaimThreshold = now.AddMinutes(-5); // Claims older than 5 minutes are considered stale
+
+                    // Find an unclaimed batch or one with a stale claim
+                    var batch = await db.DirectoryQueueBatches
+                        .OrderBy(b => b.Id)
+                        .FirstOrDefaultAsync(
+                            b => (string.Equals(b.Status, "Pending", StringComparison.Ordinal) || string.Equals(b.Status, "Running", StringComparison.Ordinal)) &&
+                                 b.ProcessedItems < b.TotalItems &&
+                                 (b.ClaimedAtUtc == null || b.ClaimedAtUtc < staleClaimThreshold),
+                            ct)
+                        .ConfigureAwait(false);
+
+                    if (batch is null)
+                    {
+                        await transaction.CommitAsync(ct).ConfigureAwait(false);
+                        return null;
+                    }
+
+                    // Atomically claim the batch
+                    batch.ClaimedAtUtc = now;
+                    _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+                    // Load items after claiming
+                    await db.Entry(batch).Collection(b => b.Items).LoadAsync(ct).ConfigureAwait(false);
+
+                    await transaction.CommitAsync(ct).ConfigureAwait(false);
+                    logger.LogTrace("Claimed batch {BatchId}", batch.Id);
+                    return batch;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                    throw;
+                }
+            }
+        }).ConfigureAwait(false);
     }
 
     private async Task EnsureBatchRunningAsync(AppDbContext db, Shared.Domain.Entities.DirectoryQueueBatch batch, CancellationToken ct)
@@ -113,6 +153,7 @@ public sealed class DirectoryBatchWorker(
         {
             batch.Status = "Completed";
             batch.CurrentItemPath = null;
+            batch.ClaimedAtUtc = null; // Release the claim
             _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
@@ -177,6 +218,7 @@ public sealed class DirectoryBatchWorker(
         {
             batch.Status = "Completed";
             batch.CurrentItemPath = null;
+            batch.ClaimedAtUtc = null; // Release the claim
         }
 
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);

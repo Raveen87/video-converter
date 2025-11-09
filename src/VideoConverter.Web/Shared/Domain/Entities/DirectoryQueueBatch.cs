@@ -16,6 +16,8 @@ public class DirectoryQueueBatch
 
     public string? ErrorMessage { get; set; }
 
+    public DateTime? ClaimedAtUtc { get; set; }
+
     public int? ProfileId { get; set; }
 
     public string? RequestJson { get; set; }
