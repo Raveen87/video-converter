@@ -11,36 +11,44 @@ internal static class ProcessWaitCoordinator
         Canceled,
     }
 
-    public static async Task<CompletionKind> WaitForCompletionAsync(Process process, TimeSpan? timeout, ILogger logger, TimeProvider timeProvider, CancellationToken cancellationToken)
+    public static async Task<CompletionKind> WaitForCompletionAsync(Process process, TimeSpan? timeout, ILogger logger, CancellationToken cancellationToken)
     {
-        var timeoutTask = Task.CompletedTask;
         using var timeoutCts = timeout is not null ? new CancellationTokenSource(timeout.Value) : null;
-        if (timeoutCts is not null)
+
+        if (timeoutCts is null)
         {
-            timeoutTask = Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, timeoutCts.Token);
+            // No timeout - use cancellationToken directly to avoid unnecessary overhead
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                return CompletionKind.Exited;
+            }
+            catch (OperationCanceledException)
+            {
+                TryKill(process, logger, "canceled");
+                return CompletionKind.Canceled;
+            }
         }
 
-        var waitTask = process.WaitForExitAsync(CancellationToken.None);
-        var tasksToWait = new List<Task> { waitTask, timeoutTask };
-        if (cancellationToken.CanBeCanceled)
-        {
-            tasksToWait.Add(Task.Delay(Timeout.InfiniteTimeSpan, timeProvider, cancellationToken));
-        }
+        // Timeout is set - create linked token source to handle both timeout and cancellation
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        var completed = await Task.WhenAny(tasksToWait).ConfigureAwait(false);
-        if (completed == timeoutTask)
+        try
         {
-            TryKill(process, logger, "timed-out");
-            return CompletionKind.TimedOut;
+            await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+            return CompletionKind.Exited;
         }
-
-        if (completed != waitTask && completed != timeoutTask)
+        catch (OperationCanceledException)
         {
+            if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                TryKill(process, logger, "timed-out");
+                return CompletionKind.TimedOut;
+            }
+
             TryKill(process, logger, "canceled");
             return CompletionKind.Canceled;
         }
-
-        return CompletionKind.Exited;
     }
 
     private static void TryKill(Process process, ILogger logger, string reason)

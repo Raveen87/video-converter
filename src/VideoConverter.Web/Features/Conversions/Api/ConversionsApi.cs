@@ -44,11 +44,12 @@ public static class ConversionsApi
         AppDbContext db,
         IRequestValidator<ConversionCreateDto> validator,
         IConversionService conversionService,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
 
-        var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
+        var validation = await validator.ValidateAsync(request, ct).ConfigureAwait(false);
         if (!validation.IsValid)
         {
             logger.LogWarning(
@@ -61,10 +62,10 @@ public static class ConversionsApi
 
         try
         {
-            var conversion = await conversionService.CreateConversionAsync(request, CancellationToken.None).ConfigureAwait(false);
+            var conversion = await conversionService.CreateConversionAsync(request, ct).ConfigureAwait(false);
 
             _ = db.Conversions.Add(conversion);
-            _ = await db.SaveChangesAsync().ConfigureAwait(false);
+            _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
             return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
@@ -79,7 +80,7 @@ public static class ConversionsApi
         }
     }
 
-    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILoggerFactory loggerFactory)
+    private static async Task<IResult> ListConversionsAsync(AppDbContext db, ILoggerFactory loggerFactory, CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Listing all conversions");
@@ -91,7 +92,7 @@ public static class ConversionsApi
             .ThenBy(c => c.CreatedAtUtc)
             .ThenBy(c => c.Id)
             .Select(c => ToDto(c))
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Retrieved {Count} conversions from database", items.Count);
         return Results.Ok(items);
@@ -101,12 +102,13 @@ public static class ConversionsApi
         int id,
         AppDbContext db,
         IConversionExecutionService executor,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
 
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (!exists)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
@@ -116,7 +118,7 @@ public static class ConversionsApi
                 "The requested conversion could not be found.");
         }
 
-        var result = await executor.RunByIdAsync(id, CancellationToken.None).ConfigureAwait(false);
+        var result = await executor.RunByIdAsync(id, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}", id, result.ProcessId);
@@ -135,10 +137,11 @@ public static class ConversionsApi
         AppDbContext db,
         IRunningProcessRegistry registry,
         IProcessController controller,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (!exists)
         {
             throw ApiErrorException.NotFound(
@@ -172,10 +175,11 @@ public static class ConversionsApi
         AppDbContext db,
         IRunningProcessRegistry registry,
         IProcessController controller,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (!exists)
         {
             throw ApiErrorException.NotFound(
@@ -193,7 +197,7 @@ public static class ConversionsApi
                 "The specified conversion is not running.");
         }
 
-        var (stopped, forced) = await controller.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
+        var (stopped, forced) = await controller.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
 
         if (!stopped)
         {
@@ -208,12 +212,13 @@ public static class ConversionsApi
     private static async Task<IResult> StartNextConversionAsync(
         AppDbContext db,
         IConversionExecutionService executor,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Starting next conversion from queue");
 
-        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending).ConfigureAwait(false);
+        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
             logger.LogInformation("No conversions found in queue");
@@ -223,7 +228,7 @@ public static class ConversionsApi
                 "There are no conversions available to start.");
         }
 
-        var (result, conversionId) = await executor.RunNextPendingAsync(CancellationToken.None).ConfigureAwait(false);
+        var (result, conversionId) = await executor.RunNextPendingAsync(ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             logger.LogInformation(
@@ -247,13 +252,14 @@ public static class ConversionsApi
         int id,
         AppDbContext db,
         IProgressTracker progressTracker,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
 
         // Check if conversion exists in database
-        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id).ConfigureAwait(false);
+        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (!conversionExists)
         {
             logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
@@ -335,7 +341,8 @@ public static class ConversionsApi
         int id,
         ReorderRequestDto request,
         AppDbContext db,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
 
@@ -346,7 +353,7 @@ public static class ConversionsApi
                 "You must specify the target position using beforeId and/or afterId.");
         }
 
-        var target = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id).ConfigureAwait(false)
+        var target = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false)
             ?? throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion with ID {id} was not found.",
@@ -366,12 +373,12 @@ public static class ConversionsApi
 
         if (request.BeforeId is { } beforeId)
         {
-            before = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == beforeId).ConfigureAwait(false);
+            before = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == beforeId, ct).ConfigureAwait(false);
         }
 
         if (request.AfterId is { } afterId)
         {
-            after = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == afterId).ConfigureAwait(false);
+            after = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == afterId, ct).ConfigureAwait(false);
         }
 
         var left = after?.Rank ?? Shared.Domain.ValueObjects.RankKey.Min();
@@ -385,7 +392,7 @@ public static class ConversionsApi
         }
 
         target.Rank = Shared.Domain.ValueObjects.RankKey.Between(left, right);
-        _ = await db.SaveChangesAsync().ConfigureAwait(false);
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Reordered conversion {ConversionId} with new rank {Rank}", id, target.Rank);
         return Results.Ok(ToDto(target));

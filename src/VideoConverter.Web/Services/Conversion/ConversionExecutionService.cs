@@ -23,7 +23,7 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         ConversionStartResult result;
         try
         {
-            result = await runner.StartAsync(conversion).ConfigureAwait(false);
+            result = await runner.StartAsync(conversion, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -56,7 +56,7 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         ConversionStartResult result;
         try
         {
-            result = await runner.StartAsync(conversion).ConfigureAwait(false);
+            result = await runner.StartAsync(conversion, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
