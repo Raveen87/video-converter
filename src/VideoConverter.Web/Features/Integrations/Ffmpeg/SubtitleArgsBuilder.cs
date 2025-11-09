@@ -49,11 +49,6 @@ internal static class SubtitleArgsBuilder
                 }
             }
         }
-        else
-        {
-            args.Insert(insertAt, "0:s?");
-            args.Insert(insertAt, "-map");
-        }
     }
 
     public static void MapExternalSubtitleStreams(List<string> args, List<string> externalSubtitlePaths, ref int insertAt)

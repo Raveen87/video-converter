@@ -9,4 +9,6 @@ public sealed class MediaStream
     public string? LanguageTag { get; init; } // e.g., "eng"
 
     public string? Title { get; init; } // stream title/name
+
+    public string? CodecName { get; init; } // e.g., "subrip", "ass", "webvtt", "mov_text", "hdmv_pgs_subtitle"
 }

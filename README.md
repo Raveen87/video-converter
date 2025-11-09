@@ -508,6 +508,8 @@ When a conversion is queued, the service automatically looks up metadata for the
 ### Metadata preservation
 - **Video title**: Automatically set to the metadata-based filename (without extension) using `-metadata title=<filename>`
 - **Audio metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
+- **Subtitles policy**: Only text-based subtitles are included (SubRip/SRT, ASS/SSA, WebVTT, mov_text). Image-based subtitles (e.g., PGS/VobSub) are ignored.
+- **Subtitle transcoding**: All included subtitle streams are transcoded to SubRip (SRT) using `-c:s srt`.
 - **Subtitle metadata**: Language tags and titles from input streams are preserved using `-map_metadata 0`
 - **External subtitle metadata**: Language tags are automatically extracted from external subtitle filenames and set using `-metadata:s:s:<index> language=<tag>`
   - External subtitle files should be named `<video-name>.<language-tag>.srt` (e.g., `movie.en.srt`, `movie.sv.srt`)
@@ -522,7 +524,7 @@ When a conversion is queued, the service automatically looks up metadata for the
 
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:s? -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -ac <channels> -c:s copy -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
+ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:<sub-index-1> -map 0:<sub-index-2> -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -ac <channels> -c:s srt -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
 ```
 
 ### Static Analysis

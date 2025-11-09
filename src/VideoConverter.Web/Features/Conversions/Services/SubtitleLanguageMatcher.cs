@@ -8,6 +8,11 @@ public sealed class SubtitleLanguageMatcher(ILogger<SubtitleLanguageMatcher> log
 
     public IReadOnlyList<int> MatchSubtitleStreams(IReadOnlyList<MediaStream> streams, IReadOnlyList<string> requestedLanguages)
     {
-        return LanguageMatchEngine.Match(streams, requestedLanguages, s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase), _logger, "subtitle");
+        return LanguageMatchEngine.Match(
+            streams,
+            requestedLanguages,
+            s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase) && SubtitleCodecHelpers.IsTextSubtitle(s.CodecName),
+            _logger,
+            "subtitle");
     }
 }
