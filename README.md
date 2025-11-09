@@ -5,6 +5,9 @@ Minimal scaffold for a cross-platform video conversion service in C#/.NET 10 RC.
 ### Prerequisites
 - .NET 10 RC SDK installed (install from the official preview channel)
 
+### GitHub Copilot Integration
+This repository includes instructions for GitHub Copilot in `.github/copilot-instructions.md`. For comprehensive AI assistant guidelines, see `AGENTS.md` at the root of the repository.
+
 ### Build and run
 ```bash
 dotnet build
