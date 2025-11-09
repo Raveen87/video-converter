@@ -1,9 +1,7 @@
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging;
-
 using Moq;
-
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Shared.Domain.Entities;
@@ -19,15 +17,14 @@ public class EffectiveConversionRequestBuilderTests()
     [Fact]
     public void Build_WithProfileOverrides_UsesProfileValues()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "in.mp4",
-            OutputDirectory: "req-out",
-            Crf: 30,
-            AudioBitrateKbps: 128,
-            AudioChannels: AudioChannels.Stereo20,
-            Resolution: 720,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("req-out")
+            .WithCrf(30)
+            .WithAudioBitrateKbps(128)
+            .WithAudioChannels(AudioChannels.Stereo20)
+            .WithResolution(720)
+            .Build();
 
         var profile = new Profile
         {
@@ -55,15 +52,16 @@ public class EffectiveConversionRequestBuilderTests()
     [Fact]
     public void Build_WithNullProfileFields_KeepsRequestValues()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "in.mp4",
-            OutputDirectory: "req-out",
-            Crf: 30,
-            AudioBitrateKbps: 128,
-            AudioChannels: AudioChannels.Stereo20,
-            Resolution: 720,
-            AudioLanguages: ["English"],
-            SubtitleLanguages: ["Swedish"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("req-out")
+            .WithCrf(30)
+            .WithAudioBitrateKbps(128)
+            .WithAudioChannels(AudioChannels.Stereo20)
+            .WithResolution(720)
+            .WithAudioLanguages("English")
+            .WithSubtitleLanguages("Swedish")
+            .Build();
 
         var profile = new Profile();
 

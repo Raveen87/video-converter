@@ -1,3 +1,4 @@
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
@@ -15,26 +16,30 @@ public static class TestDataFactory
         IReadOnlyList<string>? audioLanguages = null,
         IReadOnlyList<string>? subtitleLanguages = null)
     {
-        return new ConversionCreateDto(
-            inputPath ?? "input.mp4",
-            outputDirectory ?? Path.GetTempPath(),
-            crf,
-            audioBitrateKbps,
-            audioChannels,
-            resolution,
-            audioLanguages,
-            subtitleLanguages);
+        var builder = new ConversionCreateDtoBuilder()
+            .WithInputPath(inputPath ?? "input.mp4")
+            .WithOutputDirectory(outputDirectory ?? Path.GetTempPath())
+            .WithCrf(crf)
+            .WithAudioBitrateKbps(audioBitrateKbps)
+            .WithAudioChannels(audioChannels)
+            .WithResolution(resolution);
+
+        if (audioLanguages is not null)
+        {
+            builder = builder.WithAudioLanguages(audioLanguages.ToArray());
+        }
+
+        if (subtitleLanguages is not null)
+        {
+            builder = builder.WithSubtitleLanguages(subtitleLanguages.ToArray());
+        }
+
+        return builder.Build();
     }
 
     public static IReadOnlyList<MediaStream> MakeAudioStreams(params string[] threeLetterLanguageTags)
     {
-        var list = new List<MediaStream>();
-        for (var i = 0; i < threeLetterLanguageTags.Length; i++)
-        {
-            list.Add(new MediaStream { Index = i, CodecType = "audio", LanguageTag = threeLetterLanguageTags[i] });
-        }
-
-        return list;
+        return Builders.MediaStreamsBuilder.BuildAudio(threeLetterLanguageTags);
     }
 
     public static string CreateTempSubtitleFile(string languageSuffix = "en")

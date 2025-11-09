@@ -34,7 +34,8 @@ public class FfmpegOptionsUsageTests
             Resolution = 720,
         };
 
-        var args = FfmpegArgumentsBuilder.Build(c, "out.mkv", "Title", NullLogger.Instance, options);
+        var builder = new DefaultFfmpegArgumentsBuilder();
+        var args = builder.Build(c, "out.mkv", "Title", NullLogger.Instance, options);
 
         _ = args.Should().ContainInConsecutiveOrder("-c:v", "libx264");
         _ = args.Should().ContainInConsecutiveOrder("-pix_fmt", "yuv420p");

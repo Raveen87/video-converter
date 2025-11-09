@@ -1,7 +1,6 @@
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
-
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Validation;
 using VideoConverter.Web.Shared.Validation;
@@ -20,7 +19,15 @@ public class ConversionCreateValidatorTests
         var tempFile = Path.Combine(tempDir, "input.mp4");
         await File.WriteAllTextAsync(tempFile, "x");
 
-        var request = new ConversionCreateDto(tempFile, tempDir, 23, 128, AudioChannels: null, 1080, ["English"], ["English"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath(tempFile)
+            .WithOutputDirectory(tempDir)
+            .WithCrf(23)
+            .WithAudioBitrateKbps(128)
+            .WithResolution(1080)
+            .WithAudioLanguages("English")
+            .WithSubtitleLanguages("English")
+            .Build();
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
 
         try
@@ -39,15 +46,16 @@ public class ConversionCreateValidatorTests
     [Fact]
     public async Task ValidateAsync_WithInvalidValues_ReturnsErrors()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "C:/does/not/exist.mp4",
-            OutputDirectory: "C:/invalid<>dir",
-            Crf: 100,
-            AudioBitrateKbps: 500,
-            AudioChannels: (Web.Shared.Domain.ValueObjects.AudioChannels)99,
-            Resolution: 1440,
-            AudioLanguages: [string.Empty],
-            SubtitleLanguages: ["   "]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("C:/does/not/exist.mp4")
+            .WithOutputDirectory("C:/invalid<>dir")
+            .WithCrf(100)
+            .WithAudioBitrateKbps(500)
+            .WithResolution(1440)
+            .WithAudioLanguages(string.Empty)
+            .WithSubtitleLanguages("   ")
+            .WithAudioChannels((Web.Shared.Domain.ValueObjects.AudioChannels)99)
+            .Build();
 
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();

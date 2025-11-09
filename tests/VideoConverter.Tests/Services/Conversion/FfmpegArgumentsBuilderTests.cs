@@ -142,6 +142,7 @@ public class FfmpegArgumentsBuilderTests
     private static List<string> InvokeBuilder(ConversionEntity c, string outFile, string title)
     {
         var opts = new FfmpegOptions();
-        return FfmpegArgumentsBuilder.Build(c, outFile, title, NullLogger.Instance, opts);
+        var builder = new DefaultFfmpegArgumentsBuilder();
+        return builder.Build(c, outFile, title, NullLogger.Instance, opts).ToList();
     }
 }

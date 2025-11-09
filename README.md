@@ -229,6 +229,33 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
 - Integration tests use `WebApplicationFactory` and override the SQLite path per run.
 - Run: `dotnet test`
 
+#### Test utilities
+- `tests/VideoConverter.Tests/TestUtils/Builders`:
+  - `ConversionCreateDtoBuilder`, `ProfileBuilder`, `MediaStreamsBuilder`
+- `tests/VideoConverter.Tests/TestUtils/DbContextTestFactory`:
+  - `CreateInMemory()`, `CreateSqliteInMemory(out SqliteConnection connection)`
+- `tests/VideoConverter.Tests/TestUtils/TempDir`: disposable temp directory helper
+
+Examples:
+
+```csharp
+// Build a request DTO
+var dto = new ConversionCreateDtoBuilder()
+    .WithInputPath("in.mp4")
+    .WithOutputDirectory("out")
+    .WithCrf(23)
+    .WithAudioBitrateKbps(128)
+    .WithChannels(AudioChannels.Stereo20)
+    .WithResolution(1080)
+    .WithAudioLanguages("en")
+    .WithSubtitleLanguages("sv")
+    .Build();
+
+// Create EF Core contexts for tests
+await using var sqliteDb = DbContextTestFactory.CreateSqliteInMemory(out var _);
+using var inMemDb = DbContextTestFactory.CreateInMemory();
+```
+
 ### Project layout
 - `src/VideoConverter.Web`: Minimal ASP.NET Core web app
   - `Api/`: API endpoint definitions

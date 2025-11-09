@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
@@ -52,15 +53,10 @@ public class AudioChannelsBehaviorTests
     [Fact]
     public async Task CreateConversionAsync_WithNullAudioChannels_SetsDefaultToStereo20()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         SetupDefaults();
 
@@ -73,15 +69,11 @@ public class AudioChannelsBehaviorTests
     [Fact]
     public async Task CreateConversionAsync_WithStereo20AudioChannels_SetsCorrectly()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: AudioChannels.Stereo20,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithAudioChannels(AudioChannels.Stereo20)
+            .Build();
 
         SetupDefaults();
 
@@ -94,15 +86,11 @@ public class AudioChannelsBehaviorTests
     [Fact]
     public async Task CreateConversionAsync_WithSurround51AudioChannels_SetsCorrectly()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: AudioChannels.Surround51,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithAudioChannels(AudioChannels.Surround51)
+            .Build();
 
         SetupDefaults();
 
@@ -115,15 +103,12 @@ public class AudioChannelsBehaviorTests
     [Fact]
     public async Task CreateConversionAsync_WithExplicitBitrate_IgnoresDefaultBitrate()
     {
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: 256,
-            AudioChannels: AudioChannels.Surround51,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithAudioBitrateKbps(256)
+            .WithAudioChannels(AudioChannels.Surround51)
+            .Build();
 
         SetupDefaults();
 

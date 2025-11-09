@@ -85,8 +85,7 @@ public class DirectoryQueueServiceTests
 
     private static (AppDbContext Db, IDirectoryQueueService Svc) CreateSut()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        var db = new AppDbContext(options);
+        var db = DbContextTestFactory.CreateInMemory();
         var conversionService = new StubConversionService();
         var requestPropertyValidator = new RequestPropertyValidator();
         var fileSystemValidator = new FileSystemValidator();
