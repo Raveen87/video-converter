@@ -10,6 +10,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Profile> Profiles => Set<Profile>();
 
+    public DbSet<MetadataResolutionQueueItem> MetadataResolutionQueue => Set<MetadataResolutionQueueItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<Conversion>();
@@ -67,5 +69,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096)
             .Metadata;
         subtitleLangProp.SetValueComparer(listComparer);
+
+        ConfigureMetadataResolutionQueue(modelBuilder);
+    }
+
+    private static void ConfigureMetadataResolutionQueue(ModelBuilder modelBuilder)
+    {
+        var queue = modelBuilder.Entity<MetadataResolutionQueueItem>();
+        _ = queue.HasKey(q => q.Id);
+        _ = queue.Property(q => q.SourcePath)
+            .IsRequired()
+            .HasMaxLength(2048);
+        _ = queue.Property(q => q.SourceFileName)
+            .HasMaxLength(1024);
+        _ = queue.Property(q => q.InputKind)
+            .IsRequired()
+            .HasMaxLength(32);
+        _ = queue.Property(q => q.ParsedTitle)
+            .HasMaxLength(512);
+        _ = queue.Property(q => q.FailureReason)
+            .IsRequired()
+            .HasMaxLength(128);
+        _ = queue.Property(q => q.FailureDetails)
+            .HasMaxLength(2048);
+        _ = queue.Property(q => q.Status)
+            .IsRequired()
+            .HasMaxLength(32);
+        _ = queue.Property(q => q.CreatedAtUtc)
+            .IsRequired();
+        _ = queue.Property(q => q.UpdatedAtUtc)
+            .IsRequired();
+        _ = queue.HasIndex(q => new { q.SourcePath, q.Status }).IsUnique();
     }
 }
