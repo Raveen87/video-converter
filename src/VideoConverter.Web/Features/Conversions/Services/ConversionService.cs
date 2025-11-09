@@ -210,14 +210,14 @@ public sealed class ConversionService(
                 }
 
             default:
-                logger.LogWarning("Unknown fetch-failure behavior. Using original filename for: {InputPath}", inputPath);
-                return filename;
+                logger.LogError("Unknown fetch-failure behavior: {Behavior}. Failing for: {InputPath}", _metadataFetchOptions.Value.OnFailureBehavior, inputPath);
+                throw new ArgumentOutOfRangeException(nameof(_metadataFetchOptions.Value.OnFailureBehavior), _metadataFetchOptions.Value.OnFailureBehavior, "Unknown fetch-failure behavior encountered in HandleFetchFailureAsync.");
         }
     }
 
     private string RenderDefaultToInputNameFilename(string filename, ParsedFilename parsedFilename, string extension, string? template)
     {
-        logger.LogWarning("No metadata found for: {InputPath}, defaulting to input name/template", filename);
+        logger.LogWarning("No metadata found for: {Filename}, defaulting to input name/template", filename);
         if (parsedFilename.DetectedType is MediaType.Movie)
         {
             var movie = new MovieMetadata(parsedFilename.Title ?? Path.GetFileNameWithoutExtension(filename), parsedFilename.Year ?? 0, parsedFilename.Source);
@@ -243,7 +243,7 @@ public sealed class ConversionService(
         logger.LogWarning("No metadata found for: {InputPath}, queuing for manual resolution and skipping item", inputPath);
         if (_db is null)
         {
-            return;
+            throw new InvalidOperationException("Cannot queue for manual resolution because the database context (_db) is not available.");
         }
 
         var now = DateTime.UtcNow;
