@@ -14,9 +14,24 @@ internal static class ProcessWaitCoordinator
     public static async Task<CompletionKind> WaitForCompletionAsync(Process process, TimeSpan? timeout, ILogger logger, CancellationToken cancellationToken)
     {
         using var timeoutCts = timeout is not null ? new CancellationTokenSource(timeout.Value) : null;
-        using var linked = timeoutCts is not null
-            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
-            : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        if (timeoutCts is null)
+        {
+            // No timeout - use cancellationToken directly to avoid unnecessary overhead
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                return CompletionKind.Exited;
+            }
+            catch (OperationCanceledException)
+            {
+                TryKill(process, logger, "canceled");
+                return CompletionKind.Canceled;
+            }
+        }
+
+        // Timeout is set - create linked token source to handle both timeout and cancellation
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
         try
         {
@@ -25,7 +40,7 @@ internal static class ProcessWaitCoordinator
         }
         catch (OperationCanceledException)
         {
-            if (timeoutCts is not null && timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 TryKill(process, logger, "timed-out");
                 return CompletionKind.TimedOut;
