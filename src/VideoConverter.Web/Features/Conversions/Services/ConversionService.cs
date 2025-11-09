@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
 using VideoConverter.Web.Features.Metadata.Models;
@@ -263,7 +265,14 @@ public sealed class ConversionService(
             UpdatedAtUtc = now,
         };
         _ = _db.MetadataResolutionQueue.Add(item);
-        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
+        {
+            logger.LogDebug(ex, "Item already queued for manual resolution: {InputPath}", inputPath);
+        }
     }
 
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
