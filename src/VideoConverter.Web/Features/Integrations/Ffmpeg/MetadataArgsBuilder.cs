@@ -2,9 +2,9 @@ namespace VideoConverter.Web.Features.Integrations.Ffmpeg;
 
 internal static class MetadataArgsBuilder
 {
-    public static void AddSubtitleCodecCopy(List<string> args, ref int insertAt)
+    public static void AddSubtitleCodecSrt(List<string> args, ref int insertAt)
     {
-        args.Insert(insertAt, "copy");
+        args.Insert(insertAt, "srt");
         args.Insert(insertAt, "-c:s");
         insertAt += 2;
     }

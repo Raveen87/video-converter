@@ -36,6 +36,7 @@ internal static class FfprobeJsonParser
                 }
 
                 var index = s.TryGetProperty("index", out var idxEl) ? idxEl.GetInt32() : -1;
+                var codecName = s.TryGetProperty("codec_name", out var cnEl) ? cnEl.GetString() : null;
                 var (lang, title) = ParseTags(s);
 
                 if (string.Equals(codecType, "video", StringComparison.Ordinal))
@@ -51,7 +52,7 @@ internal static class FfprobeJsonParser
                     }
                 }
 
-                streams.Add(new MediaStream { Index = index, CodecType = codecType!, LanguageTag = lang, Title = title });
+                streams.Add(new MediaStream { Index = index, CodecType = codecType!, LanguageTag = lang, Title = title, CodecName = codecName });
             }
         }
 

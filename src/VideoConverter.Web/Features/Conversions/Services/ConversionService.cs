@@ -306,7 +306,7 @@ public sealed class ConversionService(
 
         if (requested is not { Count: > 0 })
         {
-            return new SubtitleProcessingResult();
+            return await ProcessDefaultTextSubtitlesAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
         logger.LogDebug(
@@ -358,6 +358,35 @@ public sealed class ConversionService(
         {
             SubtitleIndicesCsv = subtitleIndicesCsv,
             ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
+        };
+    }
+
+    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    {
+        // No specific languages requested: include all available text-based internal subtitles.
+        var probeAll = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var textSubtitleIndices = probeAll.Streams
+            .Where(s =>
+                string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)
+                && (string.Equals(s.CodecName, "subrip", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.CodecName, "srt", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.CodecName, "ass", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.CodecName, "ssa", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.CodecName, "webvtt", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.CodecName, "mov_text", StringComparison.OrdinalIgnoreCase)))
+            .Select(s => s.Index)
+            .ToList();
+
+        var indicesCsv = textSubtitleIndices.Count > 0 ? string.Join(',', textSubtitleIndices) : null;
+
+        logger.LogInformation(
+            "No subtitle languages specified; including text-based subtitle streams: {Indices}",
+            indicesCsv ?? "none");
+
+        return new SubtitleProcessingResult
+        {
+            SubtitleIndicesCsv = indicesCsv,
+            ExternalSubtitlePathsCsv = null,
         };
     }
 

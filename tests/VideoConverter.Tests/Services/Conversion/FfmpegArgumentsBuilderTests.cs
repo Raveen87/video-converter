@@ -33,32 +33,25 @@ public class FfmpegArgumentsBuilderTests
         _ = args.Should().ContainInConsecutiveOrder("-c:a", "libopus");
         _ = args.Should().ContainInConsecutiveOrder("-b:a", "160k");
         _ = args.Should().ContainInConsecutiveOrder("-ac", "stereo");
+        _ = args.Should().ContainInConsecutiveOrder("-c:s", "srt");
         _ = args[^1].Should().Be("out.mkv");
     }
 
     [Fact]
-    public void Build_InternalSubtitles_MapsAllSubs()
+    public void Build_InternalSubtitles_MapsExplicitSubs_AndSetsSrtCodec()
     {
         var c = new ConversionEntity
         {
             InputPath = "in.mp4",
             OutputDirectory = ".",
-            SelectedSubtitleStreamIndicesCsv = null, // triggers 0:s?
+            SelectedSubtitleStreamIndicesCsv = "2,7",
         };
 
         var args = InvokeBuilder(c, "out.mkv", "Title");
 
-        var hasInternalSubMap = false;
-        for (var i = 0; i < args.Count - 1; i++)
-        {
-            if (string.Equals(args[i], "-map", StringComparison.Ordinal) && string.Equals(args[i + 1], "0:s?", StringComparison.Ordinal))
-            {
-                hasInternalSubMap = true;
-                break;
-            }
-        }
-
-        _ = hasInternalSubMap.Should().BeTrue();
+        _ = args.Should().Contain("0:2");
+        _ = args.Should().Contain("0:7");
+        _ = args.Should().ContainInConsecutiveOrder("-c:s", "srt");
     }
 
     [Fact]
