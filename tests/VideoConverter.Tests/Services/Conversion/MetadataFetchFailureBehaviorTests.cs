@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
@@ -34,7 +35,11 @@ public class MetadataFetchFailureBehaviorTests
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
         var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior);
 
-        var dto = new ConversionCreateDto("Unknown.Movie.2020.mp4", "out", null, null, null, null, null, null, "{Title}.{Year}");
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath("Unknown.Movie.2020.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+        dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
         var result = await svc.CreateConversionAsync(dto, CancellationToken.None);
 
         Assert.Equal("Unknown Movie.2020", result.MetadataBasedFilename);
@@ -55,16 +60,16 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        await using var db = new AppDbContext(options);
-        _ = await db.Database.EnsureCreatedAsync();
+        await using var db = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory(out var _);
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.QueueForManualResolution });
         var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior, db);
 
-        var dto = new ConversionCreateDto("Unknown.Movie.2020.mp4", "out", null, null, null, null, null, null, "{Title}.{Year}");
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath("Unknown.Movie.2020.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+        dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
         Assert.Equal(1, await db.MetadataResolutionQueue.CountAsync());
@@ -84,16 +89,16 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        await using var db = new AppDbContext(options);
-        _ = await db.Database.EnsureCreatedAsync();
+        await using var db = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory(out var _);
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.SkipItem });
         var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior, db);
 
-        var dto = new ConversionCreateDto("Unknown.Movie.2020.mp4", "out", null, null, null, null, null, null, "{Title}.{Year}");
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath("Unknown.Movie.2020.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+        dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
         Assert.Equal(0, await db.MetadataResolutionQueue.CountAsync());

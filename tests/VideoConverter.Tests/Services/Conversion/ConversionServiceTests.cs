@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Features.Conversions.Services;
 using VideoConverter.Web.Features.Integrations.Ffmpeg;
@@ -53,15 +54,10 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithMinimalRequest_ReturnsConversion()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -100,15 +96,14 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithAudioLanguages_ProcessesAudioStreams()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: 23,
-            AudioBitrateKbps: 128,
-            AudioChannels: null,
-            Resolution: 1080,
-            AudioLanguages: ["English", "Swedish"],
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithCrf(23)
+            .WithAudioBitrateKbps(128)
+            .WithResolution(1080)
+            .WithAudioLanguages("English", "Swedish")
+            .Build();
 
         var streams = new List<MediaStream>
         {
@@ -144,15 +139,11 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithSubtitleLanguages_ProcessesSubtitleStreams()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: ["English", "Swedish"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithSubtitleLanguages("English", "Swedish")
+            .Build();
 
         var streams = new List<MediaStream>
         {
@@ -188,15 +179,11 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithResolutionValidation_ValidatesAgainstSource()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: 2160, // Requesting 4K
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithResolution(2160) // Requesting 4K
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 }); // Source is only 1080p
@@ -215,15 +202,10 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithCropDetection_DetectsCrop()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.5 });
@@ -245,15 +227,10 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithCropDetectionFailure_ContinuesWithoutCrop()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -273,15 +250,11 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithSubtitleLanguageNotFound_ThrowsException()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: ["French"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithSubtitleLanguages("French")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -303,15 +276,11 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithExternalSubtitle_HandlesExternalFiles()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: ["Swedish"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithSubtitleLanguages("Swedish")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [] });
@@ -354,15 +323,15 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithAllSettings_ReturnsCompleteConversion()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "test.mp4",
-            OutputDirectory: "output",
-            Crf: 20,
-            AudioBitrateKbps: 256,
-            AudioChannels: null,
-            Resolution: 1080,
-            AudioLanguages: ["English"],
-            SubtitleLanguages: ["English"]);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithCrf(20)
+            .WithAudioBitrateKbps(256)
+            .WithResolution(1080)
+            .WithAudioLanguages("English")
+            .WithSubtitleLanguages("English")
+            .Build();
 
         var streams = new List<MediaStream>
         {
@@ -403,15 +372,10 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithTvShowMetadata_GeneratesCorrectFilename()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "Yellowstone.S01E01.Daybreak.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("Yellowstone.S01E01.Daybreak.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
@@ -444,15 +408,10 @@ public class ConversionServiceTests
     public async Task ConversionService_CreateConversionAsync_WithMetadataLookupFailure_UsesOriginalFilename()
     {
         // Arrange
-        var request = new ConversionCreateDto(
-            InputPath: "Unknown.Movie.mp4",
-            OutputDirectory: "output",
-            Crf: null,
-            AudioBitrateKbps: null,
-            AudioChannels: null,
-            Resolution: null,
-            AudioLanguages: null,
-            SubtitleLanguages: null);
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("Unknown.Movie.mp4")
+            .WithOutputDirectory("output")
+            .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });

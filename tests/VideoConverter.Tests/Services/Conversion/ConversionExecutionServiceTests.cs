@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-
 using VideoConverter.Tests.Fakes;
+using VideoConverter.Tests.TestUtils;
 using VideoConverter.Web.Services.Conversion;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
@@ -65,9 +65,6 @@ public sealed class ConversionExecutionServiceTests
 
     private static AppDbContext CreateInMemoryDb()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        return new AppDbContext(options);
+        return DbContextTestFactory.CreateInMemory();
     }
 }

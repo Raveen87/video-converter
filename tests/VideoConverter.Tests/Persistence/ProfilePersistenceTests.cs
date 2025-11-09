@@ -1,7 +1,6 @@
 using FluentAssertions;
-
 using Microsoft.EntityFrameworkCore;
-
+using VideoConverter.Tests.TestUtils;
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
@@ -14,10 +13,7 @@ public class ProfilePersistenceTests
     public async Task AppDbContext_CanPersistProfileWithAllValues()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var profile = new Profile
         {
             OutputDirectory = "/videos/output",
@@ -50,10 +46,7 @@ public class ProfilePersistenceTests
     public async Task AppDbContext_CanPersistProfileWithNullValues()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        await using var context = new AppDbContext(options);
+        await using var context = DbContextTestFactory.CreateInMemory();
         var profile = new Profile
         {
             OutputDirectory = null,

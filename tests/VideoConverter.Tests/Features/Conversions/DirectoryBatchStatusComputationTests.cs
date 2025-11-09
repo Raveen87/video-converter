@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using VideoConverter.Tests.TestUtils;
 using VideoConverter.Web.Shared.Domain.Entities;
 using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
@@ -10,10 +11,7 @@ public class DirectoryBatchStatusComputationTests
     [Fact]
     public async Task UnprocessedItems_ComputedAs_TotalMinusProcessed_CurrentCountsAsUnprocessed()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        await using var db = new AppDbContext(options);
+        await using var db = DbContextTestFactory.CreateInMemory();
 
         var batch = new DirectoryQueueBatch
         {

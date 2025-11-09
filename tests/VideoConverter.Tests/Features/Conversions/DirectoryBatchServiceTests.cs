@@ -22,10 +22,7 @@ public class DirectoryBatchServiceTests
         await File.WriteAllTextAsync(mkv, "x");
         await File.WriteAllTextAsync(mp4, "x");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        await using var db = new AppDbContext(options);
+        await using var db = DbContextTestFactory.CreateInMemory();
         var fileValidator = new FileSystemValidator();
         var svc = new DirectoryBatchService(db, fileValidator, NullLogger<DirectoryBatchService>.Instance);
 

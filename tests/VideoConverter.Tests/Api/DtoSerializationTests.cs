@@ -1,7 +1,6 @@
 using System.Text.Json;
-
 using FluentAssertions;
-
+using VideoConverter.Tests.TestUtils.Builders;
 using VideoConverter.Web.Features.Conversions.Dtos;
 using VideoConverter.Web.Shared.Domain.ValueObjects;
 
@@ -12,7 +11,15 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionCreateDto_RoundTrips_WithTypicalValues()
     {
-        var dto = new ConversionCreateDto("test.mp4", "output", 23, 128, AudioChannels: null, 1080, ["English"], ["English"]);
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithCrf(23)
+            .WithAudioBitrateKbps(128)
+            .WithResolution(1080)
+            .WithAudioLanguages("English")
+            .WithSubtitleLanguages("English")
+            .Build();
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionCreateDto>(json);
         _ = back.Should().BeEquivalentTo(dto);
@@ -21,7 +28,16 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionCreateDto_RoundTrips_WithEdgeValues()
     {
-        var dto = new ConversionCreateDto(new string('a', 256), "output", 0, 1, AudioChannels.Stereo20, 720, [], []);
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath(new string('a', 256))
+            .WithOutputDirectory("output")
+            .WithCrf(0)
+            .WithAudioBitrateKbps(1)
+            .WithChannels(AudioChannels.Stereo20)
+            .WithResolution(720)
+            .WithAudioLanguages()
+            .WithSubtitleLanguages()
+            .Build();
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionCreateDto>(json);
         _ = back.Should().BeEquivalentTo(dto);
