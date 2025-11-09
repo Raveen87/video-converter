@@ -81,6 +81,84 @@ namespace VideoConverter.Web.Migrations
                     b.ToTable("Conversions");
                 });
 
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.DirectoryQueueBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClaimedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentItemPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProcessedItems")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequestJson")
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TotalItems")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "ClaimedAtUtc");
+
+                    b.ToTable("DirectoryQueueBatches");
+                });
+
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.DirectoryQueueBatchItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ConversionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InputPath")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId", "Status", "Id");
+
+                    b.ToTable("DirectoryQueueBatchItems");
+                });
+
             modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.MetadataResolutionQueueItem", b =>
                 {
                     b.Property<int>("Id")
@@ -183,6 +261,22 @@ namespace VideoConverter.Web.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Profiles");
+                });
+
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.DirectoryQueueBatchItem", b =>
+                {
+                    b.HasOne("VideoConverter.Web.Shared.Domain.Entities.DirectoryQueueBatch", "Batch")
+                        .WithMany("Items")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Batch");
+                });
+
+            modelBuilder.Entity("VideoConverter.Web.Shared.Domain.Entities.DirectoryQueueBatch", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

@@ -14,7 +14,7 @@ public sealed class ProfileConversionsEndpoints(
     EffectiveConversionRequestBuilder effectiveRequestBuilder,
     IRequestValidator<ConversionCreateDto> conversionValidator,
     IConversionService conversionService,
-    IDirectoryQueueService directoryQueueService,
+    IDirectoryBatchService directoryBatchService,
     ILogger<ProfileConversionsEndpoints> logger)
 {
     public async Task<IResult> QueueConversionAsync(int id, ProfileConversionCreateDto request, CancellationToken ct)
@@ -79,8 +79,8 @@ public sealed class ProfileConversionsEndpoints(
             OutputFilenameTemplate: profile.OutputFilenameTemplate,
             Extensions: request.Extensions);
 
-        var result = await directoryQueueService.QueueDirectoryAsync(dto, ct).ConfigureAwait(false);
-        return Results.Ok(result);
+        var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);
+        return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
     }
 
     private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)

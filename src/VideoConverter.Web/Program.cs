@@ -108,6 +108,13 @@ public static class Program
         _ = services.AddScoped<ProfileConversionsEndpoints>();
         _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
         _ = services.AddHostedService<ConversionCleanupWorker>();
+        RegisterBatching(services);
+    }
+
+    private static void RegisterBatching(IServiceCollection services)
+    {
+        _ = services.AddScoped<IDirectoryBatchService, DirectoryBatchService>();
+        _ = services.AddHostedService<DirectoryBatchWorker>();
     }
 
     private static void ConfigureMiddleware(WebApplication app)

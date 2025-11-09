@@ -213,7 +213,7 @@ public sealed class ConversionService(
 
             default:
                 logger.LogError("Unknown fetch-failure behavior: {Behavior}. Failing for: {InputPath}", _metadataFetchOptions.Value.OnFailureBehavior, inputPath);
-                throw new ArgumentOutOfRangeException(nameof(_metadataFetchOptions.Value.OnFailureBehavior), _metadataFetchOptions.Value.OnFailureBehavior, "Unknown fetch-failure behavior encountered in HandleFetchFailureAsync.");
+                throw new InvalidOperationException("Unknown fetch-failure behavior encountered in HandleFetchFailureAsync.");
         }
     }
 
