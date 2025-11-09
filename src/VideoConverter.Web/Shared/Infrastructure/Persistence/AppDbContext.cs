@@ -12,6 +12,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<MetadataResolutionQueueItem> MetadataResolutionQueue => Set<MetadataResolutionQueueItem>();
 
+    public DbSet<DirectoryQueueBatch> DirectoryQueueBatches => Set<DirectoryQueueBatch>();
+
+    public DbSet<DirectoryQueueBatchItem> DirectoryQueueBatchItems => Set<DirectoryQueueBatchItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<Conversion>();
@@ -71,6 +75,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         subtitleLangProp.SetValueComparer(listComparer);
 
         ConfigureMetadataResolutionQueue(modelBuilder);
+        ConfigureDirectoryQueueBatch(modelBuilder);
     }
 
     private static void ConfigureMetadataResolutionQueue(ModelBuilder modelBuilder)
@@ -100,5 +105,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = queue.Property(q => q.UpdatedAtUtc)
             .IsRequired();
         _ = queue.HasIndex(q => new { q.SourcePath, q.Status }).IsUnique();
+    }
+
+    private static void ConfigureDirectoryQueueBatch(ModelBuilder modelBuilder)
+    {
+        var batch = modelBuilder.Entity<DirectoryQueueBatch>();
+        _ = batch.HasKey(b => b.Id);
+        _ = batch.Property(b => b.CreatedAtUtc)
+            .IsRequired();
+        _ = batch.Property(b => b.Status)
+            .IsRequired()
+            .HasMaxLength(32);
+        _ = batch.Property(b => b.TotalItems)
+            .IsRequired();
+        _ = batch.Property(b => b.ProcessedItems)
+            .IsRequired();
+        _ = batch.Property(b => b.CurrentItemPath)
+            .HasMaxLength(2048);
+        _ = batch.Property(b => b.ErrorMessage)
+            .HasMaxLength(2048);
+        _ = batch.Property(b => b.ClaimedAtUtc);
+        _ = batch.Property(b => b.RequestJson)
+            .HasMaxLength(8192);
+        _ = batch.HasIndex(b => new { b.Status, b.ClaimedAtUtc });
+
+        var item = modelBuilder.Entity<DirectoryQueueBatchItem>();
+        _ = item.HasKey(i => i.Id);
+        _ = item.Property(i => i.InputPath)
+            .IsRequired()
+            .HasMaxLength(2048);
+        _ = item.Property(i => i.Status)
+            .IsRequired()
+            .HasMaxLength(32);
+        _ = item.Property(i => i.Reason)
+            .HasMaxLength(512);
+        _ = item.HasOne(i => i.Batch)
+            .WithMany(b => b.Items)
+            .HasForeignKey(i => i.BatchId)
+            .OnDelete(DeleteBehavior.Cascade);
+        _ = item.HasIndex(i => new { i.BatchId, i.Status, i.Id });
     }
 }

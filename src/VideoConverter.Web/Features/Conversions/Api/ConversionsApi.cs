@@ -20,6 +20,7 @@ public static class ConversionsApi
         _ = app.MapPost("/api/conversions/start-next", StartNextConversionAsync);
         _ = app.MapGet("/api/conversions/{id:int}/progress", GetConversionProgressAsync);
         _ = app.MapPost("/api/conversions/queue-directory", QueueDirectoryAsync);
+        _ = app.MapGet("/api/conversions/queue-directory/batches/{id:int}", GetDirectoryBatchStatusAsync);
         _ = app.MapPatch("/api/conversions/{id:int}/reorder", ReorderAsync);
         _ = app.MapPost("/api/conversions/{id:int}/pause", PauseConversionByIdAsync);
         _ = app.MapPost("/api/conversions/{id:int}/stop", StopConversionByIdAsync);
@@ -276,8 +277,9 @@ public static class ConversionsApi
 
     private static async Task<IResult> QueueDirectoryAsync(
         DirectoryQueueRequestDto request,
-        IDirectoryQueueService queueService,
-        ILoggerFactory loggerFactory)
+        IDirectoryBatchService batchService,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogInformation(
@@ -285,14 +287,34 @@ public static class ConversionsApi
             request.DirectoryPath,
             request.OutputDirectory);
 
-        var result = await queueService.QueueDirectoryAsync(request, CancellationToken.None).ConfigureAwait(false);
-        logger.LogInformation(
-            "Queue completed. Found={Total}, Pending={Pending}, Skipped={Skipped}, Invalid={Invalid}",
-            result.TotalFilesFound,
-            result.Queued,
-            result.SkippedDuplicates,
-            result.Invalid);
-        return Results.Ok(result);
+        var batchId = await batchService.CreateBatchAsync(request, profileId: null, ct).ConfigureAwait(false);
+        logger.LogInformation("Created directory batch {BatchId}", batchId);
+        return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
+    }
+
+    private static async Task<IResult> GetDirectoryBatchStatusAsync(
+        int id,
+        AppDbContext db,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        var batch = await db.DirectoryQueueBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct).ConfigureAwait(false)
+            ?? throw ApiErrorException.NotFound(
+                ErrorCode.InvalidInput,
+                $"Batch {id} not found",
+                "The requested batch could not be found.");
+
+        var unprocessed = Math.Max(0, batch.TotalItems - batch.ProcessedItems);
+        var dto = new DirectoryBatchStatusDto(
+            batch.Id,
+            batch.Status,
+            batch.TotalItems,
+            batch.ProcessedItems,
+            unprocessed,
+            batch.CurrentItemPath);
+        logger.LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
+        return Results.Ok(dto);
     }
 
     private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)

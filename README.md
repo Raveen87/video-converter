@@ -172,22 +172,35 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
       "extensions": [".mkv", ".mp4"]
     }
     ```
-  - Behavior:
-    - Uses the profile's optional settings for all queued items; unspecified settings fall back to application defaults
-    - Request `outputDirectory` takes precedence over the profile's
-    - Default extensions: `.mkv`, `.mp4`
-  - Response 200 with queue summary
-  - Response 200 (conversion not running):
+  - Behavior (breaking change):
+    - Immediately enqueues a batch for background processing and returns a batch id.
+    - Uses the profile's optional settings for all queued items; unspecified settings fall back to application defaults.
+    - Request `outputDirectory` takes precedence over the profile's.
+    - Default extensions: `.mkv`, `.mp4`.
+  - Response 202 Accepted:
+    ```json
+    { "batchId": 123 }
+    ```
+
+- POST `/api/conversions/queue-directory`
+  - Body: `DirectoryQueueRequestDto` (same fields as above without profile context)
+  - Response 202 Accepted:
+    ```json
+    { "batchId": 124 }
+    ```
+
+- GET `/api/conversions/queue-directory/batches/{id:int}`
+  - Response 200 OK:
     ```json
     {
-      "status": "Waiting",
-      "percentageComplete": null,
-      "currentTimeSeconds": null,
-      "totalDurationSeconds": null,
-      "estimatedTimeRemaining": null
+      "batchId": 123,
+      "status": "Running",
+      "totalItems": 25,
+      "processedItems": 7,
+      "unprocessedItems": 18,
+      "currentItemPath": "C:/media/in/movie.mkv"
     }
     ```
-  - Response 404 if conversion ID not found
 
 ### Persistence
 - Uses SQLite via EF Core. Default connection string: `ConnectionStrings:Default = Data Source=conversions.db`
