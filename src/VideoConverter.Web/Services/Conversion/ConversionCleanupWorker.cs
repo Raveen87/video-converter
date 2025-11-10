@@ -1,7 +1,8 @@
 namespace VideoConverter.Web.Services.Conversion;
 
 public sealed class ConversionCleanupWorker(
-    IConversionCleanupService cleanupService,
+    IConversionCleanupService conversionCleanupService,
+    IDirectoryBatchCleanupService directoryBatchCleanupService,
     Microsoft.Extensions.Options.IOptions<CleanupOptions> options,
     ILogger<ConversionCleanupWorker> logger)
     : BackgroundService
@@ -22,8 +23,9 @@ public sealed class ConversionCleanupWorker(
             {
                 try
                 {
-                    var deleted = await cleanupService.CleanupAsync(options.Value.RetentionDays, stoppingToken).ConfigureAwait(false);
-                    logger.LogInformation("Cleanup run completed. Deleted={Deleted}", deleted);
+                    var conversionsDeleted = await conversionCleanupService.CleanupAsync(options.Value.RetentionDays, stoppingToken).ConfigureAwait(false);
+                    var batchesDeleted = await directoryBatchCleanupService.CleanupAsync(options.Value.RetentionDays, stoppingToken).ConfigureAwait(false);
+                    logger.LogInformation("Cleanup run completed. ConversionsDeleted={ConversionsDeleted}, BatchesDeleted={BatchesDeleted}", conversionsDeleted, batchesDeleted);
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
                 {

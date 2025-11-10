@@ -22,4 +22,3 @@ public class SubtitleLanguageMatcherTests
         _ = result.Should().Equal(1);
     }
 }
-

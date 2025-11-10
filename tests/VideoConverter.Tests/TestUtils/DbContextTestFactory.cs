@@ -14,22 +14,6 @@ public static class DbContextTestFactory
         return new AppDbContext(options);
     }
 
-    public sealed class TestDbContextWithConnection : IDisposable
-    {
-        public AppDbContext Context { get; }
-        private readonly SqliteConnection _connection;
-        public TestDbContextWithConnection(AppDbContext context, SqliteConnection connection)
-        {
-            Context = context;
-            _connection = connection;
-        }
-        public void Dispose()
-        {
-            Context.Dispose();
-            _connection.Dispose();
-        }
-    }
-
     public static TestDbContextWithConnection CreateSqliteInMemory()
     {
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -40,5 +24,36 @@ public static class DbContextTestFactory
         var ctx = new AppDbContext(options);
         _ = ctx.Database.EnsureCreated();
         return new TestDbContextWithConnection(ctx, connection);
+    }
+
+    public static AppDbContext CreateSqliteInMemory(out SqliteConnection connection)
+    {
+        connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var ctx = new AppDbContext(options);
+        _ = ctx.Database.EnsureCreated();
+        return ctx;
+    }
+
+    public sealed class TestDbContextWithConnection : IDisposable
+    {
+        private readonly SqliteConnection _connection;
+
+        public TestDbContextWithConnection(AppDbContext context, SqliteConnection connection)
+        {
+            Context = context;
+            _connection = connection;
+        }
+
+        public AppDbContext Context { get; }
+
+        public void Dispose()
+        {
+            Context.Dispose();
+            _connection.Dispose();
+        }
     }
 }

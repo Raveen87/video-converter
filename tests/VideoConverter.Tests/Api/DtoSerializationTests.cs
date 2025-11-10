@@ -33,7 +33,7 @@ public class DtoSerializationTests
             .WithOutputDirectory("output")
             .WithCrf(0)
             .WithAudioBitrateKbps(1)
-            .WithChannels(AudioChannels.Stereo20)
+            .WithAudioChannels(AudioChannels.Stereo20)
             .WithResolution(720)
             .WithAudioLanguages()
             .WithSubtitleLanguages()

@@ -211,13 +211,17 @@ dotnet ef database update --project src/VideoConverter.Web --startup-project src
 - Each queued item has a string `Rank` used for ordering. Drag-and-drop reorder and server-initiated reprioritization update only the item's `Rank`.
 
 ### Cleanup
-- The service automatically cleans up finished conversions (Completed/Failed) daily.
+- The service automatically cleans up finished conversions and directory batches (Completed/Failed) daily.
   - Config (`appsettings.json` or env via `CONFIG__`):
     - `Cleanup:Enabled` (bool, default `true`)
     - `Cleanup:RetentionDays` (int, default `30`)
 - Manual cleanup endpoint:
   - DELETE `/api/conversions/finished?olderThanDays={int?}`
     - Without `olderThanDays`: deletes all finished conversions.
+    - With `olderThanDays`: deletes only those older than N days.
+    - Response: `{ "deleted": <count> }`
+  - DELETE `/api/directory-batches/finished?olderThanDays={int?}`
+    - Without `olderThanDays`: deletes all finished batches.
     - With `olderThanDays`: deletes only those older than N days.
     - Response: `{ "deleted": <count> }`
 - Completing an item removes it from the queued set; the next item (lowest `Rank`) automatically becomes first.
@@ -245,7 +249,7 @@ var dto = new ConversionCreateDtoBuilder()
     .WithOutputDirectory("out")
     .WithCrf(23)
     .WithAudioBitrateKbps(128)
-    .WithChannels(AudioChannels.Stereo20)
+    .WithAudioChannels(AudioChannels.Stereo20)
     .WithResolution(1080)
     .WithAudioLanguages("en")
     .WithSubtitleLanguages("sv")

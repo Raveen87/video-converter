@@ -26,6 +26,17 @@ public sealed class ConversionsApi : ControllerBase
         return controller.ClearFinishedConversionsActionAsync(olderThanDays, cleanupService, loggerFactory, ct);
     }
 
+    // Static wrapper for tests
+    public static Task<IResult> ClearFinishedDirectoryBatchesAsync(
+        int? olderThanDays,
+        IDirectoryBatchCleanupService cleanupService,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var controller = new ConversionsApi();
+        return controller.ClearFinishedDirectoryBatchesActionAsync(olderThanDays, cleanupService, loggerFactory, ct);
+    }
+
     [HttpDelete("finished")]
     public async Task<IResult> ClearFinishedConversionsActionAsync(
         int? olderThanDays,
@@ -35,6 +46,19 @@ public sealed class ConversionsApi : ControllerBase
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
+        var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
+        return Results.Ok(new { deleted });
+    }
+
+    [HttpDelete("/api/directory-batches/finished")]
+    public async Task<IResult> ClearFinishedDirectoryBatchesActionAsync(
+        int? olderThanDays,
+        [FromServices] IDirectoryBatchCleanupService cleanupService,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogInformation("Clearing finished directory batches olderThanDays={Older}", olderThanDays);
         var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
         return Results.Ok(new { deleted });
     }

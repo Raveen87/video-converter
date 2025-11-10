@@ -89,6 +89,7 @@ public static class Program
     private static void RegisterHosted(IServiceCollection services)
     {
         _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
+        _ = services.AddScoped<IDirectoryBatchCleanupService, DirectoryBatchCleanupService>();
         _ = services.AddHostedService<ConversionCleanupWorker>();
         _ = services.AddHostedService<Infrastructure.Startup.DatabaseInitializerHostedService>();
     }
