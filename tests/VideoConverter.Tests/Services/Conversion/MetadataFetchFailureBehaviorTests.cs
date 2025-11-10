@@ -60,7 +60,8 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var db = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory(out var _);
+        await using var dbWrapper = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory();
+        var db = dbWrapper.Context;
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.QueueForManualResolution });
         var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior, db);
@@ -89,7 +90,8 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var db = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory(out var _);
+        await using var dbWrapper = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory();
+        var db = dbWrapper.Context;
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.SkipItem });
         var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior, db);
