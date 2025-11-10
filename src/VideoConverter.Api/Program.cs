@@ -1,5 +1,7 @@
 using dotenv.net;
 
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Api.Common.Exceptions;
@@ -32,6 +34,16 @@ public static class Program
         var app = builder.Build();
         ConfigureMiddleware(app);
         MapEndpoints(app);
+
+        _ = app.Lifetime.ApplicationStarted.Register(() =>
+        {
+            var server = app.Services.GetRequiredService<IServer>();
+            var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses ?? [];
+            var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Startup");
+            logger.LogInformation("API listening on: {Addresses}", string.Join(", ", addresses));
+        });
+
         app.Run();
     }
 
@@ -46,6 +58,21 @@ public static class Program
 
     private static void ConfigureServices(WebApplicationBuilder builder)
     {
+        // CORS for local WASM dev server
+        const string corsPolicyName = "DevCors";
+        _ = builder.Services.AddCors(options =>
+        {
+            options.AddPolicy(corsPolicyName, p =>
+            {
+                _ = p.WithOrigins(
+                        "http://localhost:5173",
+                        "https://localhost:5173",
+                        "http://localhost:5263")
+                     .AllowAnyHeader()
+                     .AllowAnyMethod();
+            });
+        });
+
         _ = builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=conversions.db";
@@ -103,6 +130,7 @@ public static class Program
     private static void ConfigureMiddleware(WebApplication app)
     {
         _ = app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+        _ = app.UseCors("DevCors");
     }
 
     // Database initialization moved to DatabaseInitializerHostedService
