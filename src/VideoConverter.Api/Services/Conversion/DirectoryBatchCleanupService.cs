@@ -12,9 +12,7 @@ public sealed class DirectoryBatchCleanupService(AppDbContext db, ILogger<Direct
         var cutoff = olderThanDays is int d ? DateTime.UtcNow.AddDays(-d) : (DateTime?)null;
 
         var query = db.DirectoryQueueBatches
-            .Where(b =>
-                string.Equals(b.Status, "Completed", StringComparison.Ordinal) ||
-                string.Equals(b.Status, "Failed", StringComparison.Ordinal));
+            .Where(b => b.Status == "Completed" || b.Status == "Failed");
 
         if (cutoff is { })
         {

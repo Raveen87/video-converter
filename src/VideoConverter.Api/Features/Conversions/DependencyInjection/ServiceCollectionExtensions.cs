@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
         _ = services.AddSingleton<IConversionOutputPlanner, ConversionOutputPlanner>();
         _ = services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
         _ = services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
+        _ = services.AddSingleton<IMediaDurationProvider, MediaDurationProvider>();
         _ = services.AddSingleton<EffectiveConversionRequestBuilder>();
         _ = services.AddScoped<IConversionService, ConversionService>();
         _ = services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();

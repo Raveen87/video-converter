@@ -1,8 +1,7 @@
 namespace VideoConverter.Api.Services.Conversion;
 
 public sealed class ConversionCleanupWorker(
-    IConversionCleanupService conversionCleanupService,
-    IDirectoryBatchCleanupService directoryBatchCleanupService,
+    IServiceScopeFactory scopeFactory,
     Microsoft.Extensions.Options.IOptions<CleanupOptions> options,
     ILogger<ConversionCleanupWorker> logger)
     : BackgroundService
@@ -23,6 +22,10 @@ public sealed class ConversionCleanupWorker(
             {
                 try
                 {
+                    using var scope = scopeFactory.CreateScope();
+                    var conversionCleanupService = scope.ServiceProvider.GetRequiredService<IConversionCleanupService>();
+                    var directoryBatchCleanupService = scope.ServiceProvider.GetRequiredService<IDirectoryBatchCleanupService>();
+
                     var conversionsDeleted = await conversionCleanupService.CleanupAsync(options.Value.RetentionDays, stoppingToken).ConfigureAwait(false);
                     var batchesDeleted = await directoryBatchCleanupService.CleanupAsync(options.Value.RetentionDays, stoppingToken).ConfigureAwait(false);
                     logger.LogInformation("Cleanup run completed. ConversionsDeleted={ConversionsDeleted}, BatchesDeleted={BatchesDeleted}", conversionsDeleted, batchesDeleted);
