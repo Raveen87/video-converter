@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Moq;
 
-using VideoConverter.Web.Features.Conversions.Services;
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
-using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
+using ConversionEntity = VideoConverter.Api.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

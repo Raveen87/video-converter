@@ -1,0 +1,14 @@
+namespace VideoConverter.Api.Features.Conversions.Dtos;
+
+public sealed record ConversionProgress
+{
+    public ConversionStatus Status { get; init; }
+
+    public double? PercentageComplete { get; init; }
+
+    public double? CurrentTimeSeconds { get; init; }
+
+    public double? TotalDurationSeconds { get; init; }
+
+    public TimeSpan? EstimatedTimeRemaining { get; init; }
+}

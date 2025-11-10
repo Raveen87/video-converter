@@ -1,8 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
+using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Tests.TestUtils.Builders;
-using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Tests.Api;
 

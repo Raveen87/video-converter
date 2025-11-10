@@ -2,10 +2,10 @@ using FluentAssertions;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
 
-using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
+using ConversionEntity = VideoConverter.Api.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

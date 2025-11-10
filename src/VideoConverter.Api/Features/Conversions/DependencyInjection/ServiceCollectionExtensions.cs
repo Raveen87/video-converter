@@ -1,0 +1,22 @@
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Conversions.Validation;
+using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Shared.Validation;
+
+namespace VideoConverter.Api.Features.Conversions.DependencyInjection;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddConversionsFeature(this IServiceCollection services)
+    {
+        _ = services.AddSingleton<IConversionOutputPlanner, ConversionOutputPlanner>();
+        _ = services.AddSingleton<IAudioLanguageMatcher, AudioLanguageMatcher>();
+        _ = services.AddSingleton<ISubtitleLanguageMatcher, SubtitleLanguageMatcher>();
+        _ = services.AddSingleton<EffectiveConversionRequestBuilder>();
+        _ = services.AddScoped<IConversionService, ConversionService>();
+        _ = services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
+        _ = services.AddScoped<IConversionExecutionService, ConversionExecutionService>();
+        _ = services.AddScoped<IRequestValidator<Dtos.ConversionCreateDto>, ConversionCreateValidator>();
+        return services;
+    }
+}

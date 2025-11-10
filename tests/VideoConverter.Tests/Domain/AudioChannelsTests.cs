@@ -1,7 +1,7 @@
 using FluentAssertions;
 
-using VideoConverter.Web.Shared.Domain.ValueObjects;
-using VideoConverter.Web.Shared.Validation;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Tests.Domain;
 

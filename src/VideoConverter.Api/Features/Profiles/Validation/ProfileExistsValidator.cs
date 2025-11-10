@@ -1,0 +1,70 @@
+using Microsoft.EntityFrameworkCore;
+
+using VideoConverter.Api.Common.Exceptions;
+using VideoConverter.Api.Shared.Domain.Entities;
+using VideoConverter.Api.Shared.Infrastructure.Persistence;
+
+namespace VideoConverter.Api.Features.Profiles.Validation;
+
+/// <summary>
+/// Validator that ensures a profile exists and returns it, or throws a NotFound exception.
+/// </summary>
+public sealed class ProfileExistsValidator(ILogger<ProfileExistsValidator> logger)
+{
+    /// <summary>
+    /// Validates that a profile exists and returns it for read-only access.
+    /// </summary>
+    /// <param name="id">The profile ID to look up.</param>
+    /// <param name="db">The database context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The profile if found.</returns>
+    /// <exception cref="ApiErrorException">Thrown when the profile is not found.</exception>
+    public async Task<Profile> GetProfileForReadAsync(int id, AppDbContext db, CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Looking up profile with ID: {ProfileId} for read access", id);
+
+        var profile = await db.Profiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
+
+        if (profile is null)
+        {
+            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ProfileNotFound,
+                $"Profile with ID {id} was not found.",
+                "The requested profile could not be found.");
+        }
+
+        logger.LogDebug("Profile found with ID: {ProfileId}", id);
+        return profile;
+    }
+
+    /// <summary>
+    /// Validates that a profile exists and returns it for update access.
+    /// </summary>
+    /// <param name="id">The profile ID to look up.</param>
+    /// <param name="db">The database context.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The profile if found.</returns>
+    /// <exception cref="ApiErrorException">Thrown when the profile is not found.</exception>
+    public async Task<Profile> GetProfileForUpdateAsync(int id, AppDbContext db, CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Looking up profile with ID: {ProfileId} for update access", id);
+
+        var profile = await db.Profiles
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
+
+        if (profile is null)
+        {
+            logger.LogWarning("Profile not found with ID: {ProfileId}", id);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ProfileNotFound,
+                $"Profile with ID {id} was not found.",
+                "The requested profile could not be found.");
+        }
+
+        logger.LogDebug("Profile found with ID: {ProfileId}", id);
+        return profile;
+    }
+}

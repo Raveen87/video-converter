@@ -1,10 +1,10 @@
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Fakes;
 
 public sealed class FakeConversionRunner : IConversionRunner
 {
-    public Task<ConversionStartResult> StartAsync(Web.Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
+    public Task<ConversionStartResult> StartAsync(VideoConverter.Api.Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
     {
         // Simulate success without starting any external process
         var result = new ConversionStartResult

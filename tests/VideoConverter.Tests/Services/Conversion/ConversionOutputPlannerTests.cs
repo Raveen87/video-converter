@@ -1,5 +1,5 @@
 using FluentAssertions;
-using VideoConverter.Web.Features.Conversions.Services;
+using VideoConverter.Api.Features.Conversions.Services;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
@@ -10,7 +10,7 @@ public class ConversionOutputPlannerTests
     {
         var planner = new ConversionOutputPlanner();
         var temp = Path.GetTempPath();
-        var conversion = new VideoConverter.Web.Shared.Domain.Entities.Conversion
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
         {
             InputPath = Path.Combine(temp, "in.mp4"),
             OutputDirectory = temp,
@@ -27,7 +27,7 @@ public class ConversionOutputPlannerTests
     {
         var planner = new ConversionOutputPlanner();
         var temp = Path.GetTempPath();
-        var conversion = new VideoConverter.Web.Shared.Domain.Entities.Conversion
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
         {
             InputPath = Path.Combine(temp, "movie.mp4"),
             OutputDirectory = temp,

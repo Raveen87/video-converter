@@ -1,15 +1,13 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Metadata.Models;
+using VideoConverter.Api.Features.Metadata.Services;
+using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Tests.TestUtils.Builders;
-using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Features.Conversions.Services;
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
-using VideoConverter.Web.Features.Metadata.Models;
-using VideoConverter.Web.Features.Metadata.Services;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
@@ -60,7 +58,7 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var dbWrapper = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory();
+        using var dbWrapper = TestUtils.DbContextTestFactory.CreateSqliteInMemory();
         var db = dbWrapper.Context;
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.QueueForManualResolution });
@@ -90,7 +88,7 @@ public class MetadataFetchFailureBehaviorTests
         var mockTemplate = new Mock<IFilenameTemplateEngine>();
         var mockGenerator = new Mock<IFilenameGenerator>();
 
-        await using var dbWrapper = VideoConverter.Tests.TestUtils.DbContextTestFactory.CreateSqliteInMemory();
+        using var dbWrapper = TestUtils.DbContextTestFactory.CreateSqliteInMemory();
         var db = dbWrapper.Context;
 
         var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.SkipItem });

@@ -1,5 +1,5 @@
 using FluentAssertions;
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Integrations;
 

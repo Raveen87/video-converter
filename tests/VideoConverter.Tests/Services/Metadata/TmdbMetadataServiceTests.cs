@@ -4,7 +4,7 @@ using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using VideoConverter.Web.Features.Metadata.Services;
+using VideoConverter.Api.Features.Metadata.Services;
 
 namespace VideoConverter.Tests.Services.Metadata;
 

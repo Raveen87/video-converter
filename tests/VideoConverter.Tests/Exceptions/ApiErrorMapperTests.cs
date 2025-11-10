@@ -1,6 +1,6 @@
 using System.Net;
 using FluentAssertions;
-using VideoConverter.Web.Common.Exceptions;
+using VideoConverter.Api.Common.Exceptions;
 
 namespace VideoConverter.Tests.Exceptions;
 

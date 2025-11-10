@@ -2,7 +2,7 @@ using FluentAssertions;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
-using VideoConverter.Web.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Services.Conversion;
 
