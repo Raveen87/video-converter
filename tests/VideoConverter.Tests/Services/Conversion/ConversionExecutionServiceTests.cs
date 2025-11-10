@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Tests.Fakes;
 using VideoConverter.Tests.TestUtils;
-using VideoConverter.Web.Services.Conversion;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
-using ConversionEntity = VideoConverter.Web.Shared.Domain.Entities.Conversion;
+using ConversionEntity = VideoConverter.Api.Shared.Domain.Entities.Conversion;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

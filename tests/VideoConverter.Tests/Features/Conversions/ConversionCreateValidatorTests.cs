@@ -1,9 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Api.Features.Conversions.Validation;
+using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Tests.TestUtils.Builders;
-using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Features.Conversions.Validation;
-using VideoConverter.Web.Shared.Validation;
 
 namespace VideoConverter.Tests.Features.Conversions;
 
@@ -54,7 +54,7 @@ public class ConversionCreateValidatorTests
             .WithResolution(1440)
             .WithAudioLanguages(string.Empty)
             .WithSubtitleLanguages("   ")
-            .WithAudioChannels((Web.Shared.Domain.ValueObjects.AudioChannels)99)
+            .WithAudioChannels((VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels)99)
             .Build();
 
         var result = await _validator.ValidateAsync(request, CancellationToken.None);

@@ -1,0 +1,8 @@
+using System.Text.Json.Serialization;
+
+namespace VideoConverter.Api.Features.Metadata.Services;
+
+public sealed record TmdbGenre(
+    [property: JsonPropertyName("id")] int Id,
+    [property: JsonPropertyName("name")] string Name
+);

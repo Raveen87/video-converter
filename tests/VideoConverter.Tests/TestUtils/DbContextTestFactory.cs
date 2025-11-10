@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using VideoConverter.Web.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Tests.TestUtils;
 
@@ -26,7 +26,19 @@ public static class DbContextTestFactory
         return new TestDbContextWithConnection(ctx, connection);
     }
 
-    public sealed class TestDbContextWithConnection : IAsyncDisposable
+    public static AppDbContext CreateSqliteInMemory(out SqliteConnection connection)
+    {
+        connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var ctx = new AppDbContext(options);
+        _ = ctx.Database.EnsureCreated();
+        return ctx;
+    }
+
+    public sealed class TestDbContextWithConnection : IDisposable
     {
         private readonly SqliteConnection _connection;
 
@@ -38,10 +50,10 @@ public static class DbContextTestFactory
 
         public AppDbContext Context { get; }
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
-            await Context.DisposeAsync().ConfigureAwait(false);
-            await _connection.DisposeAsync().ConfigureAwait(false);
+            Context.Dispose();
+            _connection.Dispose();
         }
     }
 }

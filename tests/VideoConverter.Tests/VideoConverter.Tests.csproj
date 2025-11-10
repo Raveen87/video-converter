@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\VideoConverter.Web\VideoConverter.Web.csproj" />
+    <ProjectReference Include="..\..\src\VideoConverter.Api\VideoConverter.Api.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ WORKDIR /src
 # Copy project files
 COPY *.sln .
 COPY Directory.Build.props .
-COPY src/VideoConverter.Web/VideoConverter.Web.csproj src/VideoConverter.Web/
+COPY src/VideoConverter.Api/VideoConverter.Api.csproj src/VideoConverter.Api/
 COPY tests/VideoConverter.Tests/VideoConverter.Tests.csproj tests/VideoConverter.Tests/
 
 # Restore dependencies
@@ -21,7 +21,7 @@ RUN dotnet build -c Release --no-restore
 RUN dotnet test -c Release --no-build --verbosity normal
 
 # Publish the application
-RUN dotnet publish src/VideoConverter.Web/VideoConverter.Web.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/VideoConverter.Api/VideoConverter.Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-rc.1-jammy AS runtime
@@ -56,4 +56,4 @@ ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Start the application
-ENTRYPOINT ["dotnet", "VideoConverter.Web.dll"]
+ENTRYPOINT ["dotnet", "VideoConverter.Api.dll"]

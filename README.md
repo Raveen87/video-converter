@@ -11,10 +11,10 @@ This repository includes instructions for GitHub Copilot in `.github/copilot-ins
 ### Build and run
 ```bash
 dotnet build
-dotnet run --project src/VideoConverter.Web
+dotnet run --project src/VideoConverter.Api
 dotnet test
 
-dotnet ef database update --project src/VideoConverter.Web --startup-project src/VideoConverter.Web
+dotnet ef database update --project src/VideoConverter.Api --startup-project src/VideoConverter.Api
 ```
 
 ### API
@@ -261,7 +261,7 @@ await using var inMemDb = DbContextTestFactory.CreateInMemory();
 ```
 
 ### Project layout
-- `src/VideoConverter.Web`: Minimal ASP.NET Core web app
+- `src/VideoConverter.Api`: Minimal ASP.NET Core web app
   - `Api/`: API endpoint definitions
   - `Services/`: Business logic services (conversion, media probing, language matching, etc.)
   - `Data/`: Entity Framework models and database context

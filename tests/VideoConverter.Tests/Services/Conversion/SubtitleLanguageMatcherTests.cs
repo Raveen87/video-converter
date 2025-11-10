@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using VideoConverter.Web.Features.Conversions.Services;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

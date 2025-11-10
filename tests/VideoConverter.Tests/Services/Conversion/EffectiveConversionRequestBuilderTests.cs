@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Shared.Domain.Entities;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Tests.TestUtils.Builders;
-using VideoConverter.Web.Features.Conversions.Dtos;
-using VideoConverter.Web.Features.Conversions.Services;
-using VideoConverter.Web.Shared.Domain.Entities;
-using VideoConverter.Web.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

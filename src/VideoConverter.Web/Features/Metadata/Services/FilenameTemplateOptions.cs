@@ -1,8 +1,0 @@
-namespace VideoConverter.Web.Features.Metadata.Services;
-
-public sealed class FilenameTemplateOptions
-{
-    public const string SectionName = "FilenameTemplate";
-
-    public string? DefaultTemplate { get; set; }
-}
