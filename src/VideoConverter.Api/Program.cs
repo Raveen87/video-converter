@@ -90,8 +90,8 @@ public static class Program
     {
         _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
         _ = services.AddScoped<IDirectoryBatchCleanupService, DirectoryBatchCleanupService>();
-        _ = services.AddHostedService<ConversionCleanupWorker>();
         _ = services.AddHostedService<Infrastructure.Startup.DatabaseInitializerHostedService>();
+        _ = services.AddHostedService<ConversionCleanupWorker>();
     }
 
     private static void RegisterBatching(IServiceCollection services)

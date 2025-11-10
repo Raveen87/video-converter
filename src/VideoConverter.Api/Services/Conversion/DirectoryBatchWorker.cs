@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Api.Features.Conversions.Dtos;
@@ -13,6 +14,8 @@ public sealed class DirectoryBatchWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<DirectoryBatchWorker> logger) : BackgroundService
 {
+    private bool _directoryQueueTablesVerified;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("DirectoryBatchWorker started");
@@ -48,7 +51,23 @@ public sealed class DirectoryBatchWorker(
         var requestValidator = scope.ServiceProvider.GetRequiredService<IRequestValidator<ConversionCreateDto>>();
         var fileSystemValidator = scope.ServiceProvider.GetRequiredService<IFileSystemValidator>();
 
-        var batch = await GetNextRunnableBatchAsync(db, ct).ConfigureAwait(false);
+        if (!await EnsureDirectoryBatchTablesReadyAsync(db, ct).ConfigureAwait(false))
+        {
+            return false;
+        }
+
+        Shared.Domain.Entities.DirectoryQueueBatch? batch;
+        try
+        {
+            batch = await GetNextRunnableBatchAsync(db, ct).ConfigureAwait(false);
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode is 1 && ex.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase))
+        {
+            // Database likely not migrated yet; wait for DatabaseInitializerHostedService
+            logger.LogDebug(ex, "Database not ready yet (migrations pending). Will retry shortly.");
+
+            return false;
+        }
 
         if (batch is null)
         {
@@ -78,6 +97,23 @@ public sealed class DirectoryBatchWorker(
         return true;
     }
 
+    private async Task<bool> EnsureDirectoryBatchTablesReadyAsync(AppDbContext db, CancellationToken ct)
+    {
+        if (_directoryQueueTablesVerified)
+        {
+            return true;
+        }
+
+        var tablesReady = await Helpers.EnsureDirectoryQueueTablesAsync(db, ct).ConfigureAwait(false);
+        if (!tablesReady)
+        {
+            return false;
+        }
+
+        _directoryQueueTablesVerified = true;
+        return true;
+    }
+
     private async Task<Shared.Domain.Entities.DirectoryQueueBatch?> GetNextRunnableBatchAsync(AppDbContext db, CancellationToken ct)
     {
         logger.LogTrace("Looking for next runnable batch");
@@ -98,7 +134,7 @@ public sealed class DirectoryBatchWorker(
                     var batch = await db.DirectoryQueueBatches
                         .OrderBy(b => b.Id)
                         .FirstOrDefaultAsync(
-                            b => (string.Equals(b.Status, "Pending", StringComparison.Ordinal) || string.Equals(b.Status, "Running", StringComparison.Ordinal)) &&
+                            b => (b.Status == "Pending" || b.Status == "Running") &&
                                  b.ProcessedItems < b.TotalItems &&
                                  (b.ClaimedAtUtc == null || b.ClaimedAtUtc < staleClaimThreshold),
                             ct)
@@ -226,6 +262,35 @@ public sealed class DirectoryBatchWorker(
 
     private static class Helpers
     {
+        public static async Task<bool> EnsureDirectoryQueueTablesAsync(AppDbContext db, CancellationToken ct)
+        {
+            var connection = db.Database.GetDbConnection();
+            var needToClose = false;
+            if (connection.State is not System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync(ct).ConfigureAwait(false);
+                needToClose = true;
+            }
+
+            try
+            {
+                if (await TablesExistAsync(connection, ct).ConfigureAwait(false))
+                {
+                    return true;
+                }
+
+                // Do not apply migrations here; initializer handles it. Just report readiness.
+                return false;
+            }
+            finally
+            {
+                if (needToClose)
+                {
+                    await connection.CloseAsync().ConfigureAwait(false);
+                }
+            }
+        }
+
         public static ConversionCreateDto BuildPerFileRequest(DirectoryQueueRequestDto request, string inputPath)
         {
             return new ConversionCreateDto(
@@ -261,6 +326,24 @@ public sealed class DirectoryBatchWorker(
             catch
             {
                 return null;
+            }
+        }
+
+        private static async Task<bool> TablesExistAsync(System.Data.Common.DbConnection connection, CancellationToken ct)
+        {
+            var cmd = connection.CreateCommand();
+            try
+            {
+                cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name IN ('DirectoryQueueBatches','DirectoryQueueBatchItems') LIMIT 1";
+                var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
+                return result is not null;
+            }
+            finally
+            {
+                if (cmd is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                }
             }
         }
     }
