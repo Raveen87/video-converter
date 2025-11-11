@@ -12,18 +12,15 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure API base address
 // In development, API runs on a different port; in production, same origin
-var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:5124";
-if (builder.HostEnvironment.IsDevelopment())
-{
-    _ = builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
-}
-else
-{
-    // Production: same origin as the WASM app
-    _ = builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-}
+var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ??
+    (builder.HostEnvironment.IsDevelopment()
+        ? "http://localhost:5124"
+        : builder.HostEnvironment.BaseAddress);
 
-builder.Services.AddScoped<IVideoConverterApiClient, VideoConverterApiClient>();
+builder.Services.AddHttpClient<IVideoConverterApiClient, VideoConverterApiClient>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseAddress);
+});
 builder.Services.AddMudServices();
 
 await builder.Build().RunAsync().ConfigureAwait(false);
