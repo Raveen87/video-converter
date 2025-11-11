@@ -155,12 +155,12 @@ public static class Program
         var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "index.html");
         if (File.Exists(wwwrootPath))
         {
-            app.MapFallbackToFile("index.html");
+            _ = app.MapFallbackToFile("index.html");
         }
         else
         {
             // Fallback for development when wwwroot doesn't exist yet
-            app.MapGet("/", () => "OK");
+            _ = app.MapGet("/", () => "OK");
         }
 
         var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
