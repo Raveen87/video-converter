@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace VideoConverter.Web.Models;
 
 public class ProfilePatchDto
@@ -8,6 +10,7 @@ public class ProfilePatchDto
 
     public int? AudioBitrateKbps { get; set; }
 
+    [JsonConverter(typeof(AudioChannelsConverter))]
     public string? AudioChannels { get; set; }
 
     public int? Resolution { get; set; }

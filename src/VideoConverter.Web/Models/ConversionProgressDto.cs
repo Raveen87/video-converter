@@ -1,8 +1,8 @@
 namespace VideoConverter.Web.Models;
 
 public record ConversionProgressDto(
-    int ConversionId,
-    ConversionStatus Status,
+    string Status,
+    double? PercentageComplete,
     double? CurrentTimeSeconds,
     double? TotalDurationSeconds,
     TimeSpan? EstimatedTimeRemaining);

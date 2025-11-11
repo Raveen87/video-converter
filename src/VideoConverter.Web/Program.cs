@@ -17,7 +17,7 @@ var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ??
         ? "http://localhost:5124"
         : builder.HostEnvironment.BaseAddress);
 
-_ = builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
+_ = builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 _ = builder.Services.AddScoped<IVideoConverterApiClient, VideoConverterApiClient>();
 builder.Services.AddMudServices();
 
