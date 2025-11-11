@@ -78,17 +78,10 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 
     public async Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return await _httpClient.GetFromJsonAsync<ConversionProgressDto>(
-                $"api/conversions/{id}/progress",
-                _jsonOptions,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (HttpRequestException)
-        {
-            return null;
-        }
+        return await _httpClient.GetFromJsonAsync<ConversionProgressDto>(
+            $"api/conversions/{id}/progress",
+            _jsonOptions,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken cancellationToken = default)
