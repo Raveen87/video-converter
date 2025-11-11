@@ -131,13 +131,38 @@ public static class Program
     {
         _ = app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
         _ = app.UseCors("DevCors");
+
+        // Serve static files from wwwroot (Blazor WASM app)
+        // In production, the Web project's wwwroot will be copied here during build
+        var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+        if (Directory.Exists(wwwrootPath))
+        {
+            _ = app.UseStaticFiles();
+        }
     }
 
     // Database initialization moved to DatabaseInitializerHostedService
     private static void MapEndpoints(WebApplication app)
     {
-        _ = app.MapGet("/", () => "OK");
+        // API endpoints
         _ = app.MapControllers();
+
+        // Health check endpoint (before SPA fallback)
+        _ = app.MapGet("/api/health", () => Results.Ok(new { status = "OK" }));
+
+        // SPA fallback: serve index.html for non-API routes
+        // This allows the Blazor WASM app to handle client-side routing
+        var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "index.html");
+        if (File.Exists(wwwrootPath))
+        {
+            _ = app.MapFallbackToFile("index.html");
+        }
+        else
+        {
+            // Fallback for development when wwwroot doesn't exist yet
+            _ = app.MapGet("/", () => "OK");
+        }
+
         var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Startup");
         logger.LogInformation("API endpoints mapped successfully");
