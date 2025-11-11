@@ -1,11 +1,17 @@
 namespace VideoConverter.Web.Models;
 
+public enum ConversionStatus
+{
+    NotStarted,
+    InProgress,
+    Completed,
+    Failed,
+    Cancelled
+}
+
 public record ConversionProgressDto(
     int ConversionId,
-    string Status,
-    double? PercentageComplete,
-    string? CurrentFrame,
-    string? CurrentFps,
-    string? CurrentBitrate,
-    TimeSpan? Elapsed,
-    TimeSpan? Remaining);
+    ConversionStatus Status,
+    double? CurrentTimeSeconds,
+    double? TotalDurationSeconds,
+    TimeSpan? EstimatedTimeRemaining);
