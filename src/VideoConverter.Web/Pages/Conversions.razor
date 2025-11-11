@@ -1,0 +1,226 @@
+@page "/conversions"
+
+<PageTitle>Conversions</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Conversion Overview</MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudText>Loading conversions...</MudText>
+    }
+    else if (_conversions.Count == 0)
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.body1">No conversions found.</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@_conversions" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>Input Path</MudTh>
+                <MudTh>Output Directory</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Progress</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.Id</MudTd>
+                <MudTd DataLabel="Input Path">
+                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
+                        @context.InputPath
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Output Directory">
+                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
+                        @context.OutputDirectory
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToString("g")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Progress">
+                    @if (_progressData.TryGetValue(context.Id, out var progress) && progress != null)
+                    {
+                        <MudProgressLinear Color="@GetProgressColor(progress.Status)" Value="@(progress.PercentageComplete ?? 0)" Class="mb-2" />
+                        <MudText Typo="Typo.caption">
+                            @if (progress.PercentageComplete.HasValue)
+                            {
+                                <text>@($"{progress.PercentageComplete:F1}%")</text>
+                            }
+                            else
+                            {
+                                <text>@progress.Status</text>
+                            }
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default">Unknown</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                        <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="@(() => StartConversion(context.Id))" Size="Size.Small">
+                            Start
+                        </MudButton>
+                        <MudButton StartIcon="@Icons.Material.Filled.Pause" OnClick="@(() => PauseConversion(context.Id))" Size="Size.Small">
+                            Pause
+                        </MudButton>
+                        <MudButton StartIcon="@Icons.Material.Filled.Stop" OnClick="@(() => StopConversion(context.Id))" Size="Size.Small" Color="Color.Error">
+                            Stop
+                        </MudButton>
+                    </MudButtonGroup>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@implements IDisposable
+
+@code {
+    private readonly List<ConversionDto> _conversions = new();
+    private readonly Dictionary<int, ConversionProgressDto?> _progressData = new();
+    private bool _isLoading = true;
+    private CancellationTokenSource? _pollingCts;
+    private const int PollingIntervalMs = 2000; // Poll every 2 seconds
+
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConversionsAsync().ConfigureAwait(false);
+        StartPolling();
+    }
+
+    private async Task LoadConversionsAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            var conversions = await ApiClient.GetConversionsAsync().ConfigureAwait(false);
+            _conversions.Clear();
+            _conversions.AddRange(conversions);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading conversions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollingCts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            while (!_pollingCts.Token.IsCancellationRequested)
+            {
+                await PollProgressAsync(_pollingCts.Token).ConfigureAwait(false);
+                await Task.Delay(PollingIntervalMs, _pollingCts.Token).ConfigureAwait(false);
+            }
+        }, _pollingCts.Token);
+    }
+
+    private async Task PollProgressAsync(CancellationToken cancellationToken)
+    {
+        if (_conversions.Count == 0 || cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            // Poll progress for all conversions
+            var tasks = _conversions.Select(c => ApiClient.GetConversionProgressAsync(c.Id, cancellationToken));
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            await InvokeAsync(() =>
+            {
+                for (var i = 0; i < _conversions.Count; i++)
+                {
+                    var conversion = _conversions[i];
+                    var progress = results[i];
+                    _progressData[conversion.Id] = progress;
+                }
+                StateHasChanged();
+            }).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested
+        }
+        catch (Exception ex)
+        {
+            // Silently handle polling errors to avoid spam
+            Console.WriteLine($"Error polling progress: {ex.Message}");
+        }
+    }
+
+    private async Task StartConversion(int id)
+    {
+        try
+        {
+            await ApiClient.StartConversionAsync(id).ConfigureAwait(false);
+            await LoadConversionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error starting conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PauseConversion(int id)
+    {
+        try
+        {
+            await ApiClient.PauseConversionAsync(id).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error pausing conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StopConversion(int id)
+    {
+        try
+        {
+            await ApiClient.StopConversionAsync(id).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error stopping conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color GetProgressColor(string status)
+    {
+        return status.ToLowerInvariant() switch
+        {
+            "running" => Color.Success,
+            "completed" => Color.Success,
+            "failed" => Color.Error,
+            "waiting" => Color.Info,
+            _ => Color.Default,
+        };
+    }
+
+    public void Dispose()
+    {
+        _pollingCts?.Cancel();
+        _pollingCts?.Dispose();
+    }
+}
+

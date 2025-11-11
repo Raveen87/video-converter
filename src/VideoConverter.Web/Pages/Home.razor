@@ -2,13 +2,37 @@
 
 <PageTitle>Overview</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-2">Conversion Overview</MudText>
-<MudText Typo="Typo.body1" Class="mb-4">
-    This is a placeholder for the conversion overview. It will list queued/active conversions.
-</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Welcome to Video Converter</MudText>
 
-<MudPaper Class="pa-4">
-    <MudSkeleton Width="100%" Height="16px" Class="mb-2" />
-    <MudSkeleton Width="60%" Height="16px" Class="mb-2" />
-    <MudSkeleton Width="80%" Height="16px" Class="mb-2" />
-</MudPaper>
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.VideoSettings" Class="mr-2" />
+                    Conversions
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    View and manage your video conversions. Monitor progress, start, pause, or stop conversions.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/conversions">
+                    View Conversions
+                </MudButton>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+                    Profiles
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Create and manage conversion profiles with predefined settings for quick conversion setup.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="true">
+                    Coming Soon
+                </MudButton>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
