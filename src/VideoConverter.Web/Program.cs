@@ -13,7 +13,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Configure API base address
 // In development, API runs on a different port; in production, same origin
 var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:5124";
-if (builder.HostEnvironment.IsDevelopment() && !string.IsNullOrEmpty(apiBaseAddress))
+if (builder.HostEnvironment.IsDevelopment())
 {
     _ = builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 }
