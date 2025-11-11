@@ -125,10 +125,22 @@
         _pollingCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
-            while (!_pollingCts.Token.IsCancellationRequested)
+            try
             {
-                await PollProgressAsync(_pollingCts.Token).ConfigureAwait(false);
-                await Task.Delay(PollingIntervalMs, _pollingCts.Token).ConfigureAwait(false);
+                while (!_pollingCts.Token.IsCancellationRequested)
+                {
+                    await PollProgressAsync(_pollingCts.Token).ConfigureAwait(false);
+                    await Task.Delay(PollingIntervalMs, _pollingCts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log and notify about unexpected exceptions in the polling loop
+                Console.WriteLine($"Unhandled exception in polling loop: {ex}");
+                await InvokeAsync(() =>
+                {
+                    Snackbar.Add($"Polling stopped due to an unexpected error: {ex.Message}", Severity.Error);
+                });
             }
         }, _pollingCts.Token);
     }
