@@ -153,15 +153,9 @@ public static class Program
         // SPA fallback: serve index.html for non-API routes
         // This allows the Blazor WASM app to handle client-side routing
         var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "index.html");
-        if (File.Exists(wwwrootPath))
-        {
-            _ = app.MapFallbackToFile("index.html");
-        }
-        else
-        {
-            // Fallback for development when wwwroot doesn't exist yet
-            _ = app.MapGet("/", () => "OK");
-        }
+        _ = File.Exists(wwwrootPath)
+            ? app.MapFallbackToFile("index.html")
+            : app.MapGet("/", () => "OK"); // Fallback for development when wwwroot doesn't exist yet
 
         var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger("Startup");
