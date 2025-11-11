@@ -16,7 +16,7 @@ public class ProfilePatchDto
 
     public string? OutputFilenameTemplate { get; set; }
 
-    public IEnumerable<string>? AudioLanguages { get; init; }
+    public IReadOnlyList<string>? AudioLanguages { get; init; }
 
-    public IEnumerable<string>? SubtitleLanguages { get; init; }
+    public IReadOnlyList<string>? SubtitleLanguages { get; init; }
 }
