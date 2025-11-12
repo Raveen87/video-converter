@@ -3,7 +3,17 @@
 <PageTitle>Conversions</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Conversion Overview</MudText>
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">Conversion Overview</MudText>
+        <div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateConversionDialog" Class="mr-2">
+                Create Conversion
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog">
+                Queue Directory
+            </MudButton>
+        </div>
+    </div>
 
     @if (_isLoading)
     {
@@ -94,6 +104,9 @@
 
     [Inject]
     private ISnackbar Snackbar { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,6 +228,131 @@
         {
             Snackbar.Add($"Error stopping conversion: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task OpenCreateConversionDialog()
+    {
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<CreateConversionDialog>("Create Conversion", new DialogParameters<CreateConversionDialog>
+        {
+            { x => x.InitialModel, null },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ConversionCreateDto>(this, async (request) =>
+            {
+                await CreateConversionOptimisticAsync(request).ConfigureAwait(false);
+                dialogRef?.Close();
+            }) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+    }
+
+    private async Task OpenQueueDirectoryDialog()
+    {
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<QueueDirectoryDialog>("Queue Directory", new DialogParameters<QueueDirectoryDialog>
+        {
+            { x => x.InitialModel, null },
+            { x => x.OnSubmit, EventCallback.Factory.Create<DirectoryQueueRequestDto>(this, async (request) =>
+            {
+                await QueueDirectoryAsync(request).ConfigureAwait(false);
+                dialogRef?.Close();
+            }) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+    }
+
+    private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
+    {
+        // Create a temporary conversion for optimistic update
+        var tempId = GetNextTempId();
+        var tempConversion = new ConversionDto(
+            tempId,
+            request.InputPath,
+            request.OutputDirectory,
+            DateTime.UtcNow,
+            request.Crf,
+            request.AudioBitrateKbps,
+            request.AudioChannels switch { 20 => "Stereo20", 51 => "Surround51", _ => null },
+            request.Resolution,
+            request.OutputFilenameTemplate);
+
+        // Add optimistically to the list
+        await InvokeAsync(() =>
+        {
+            _conversions.Insert(0, tempConversion);
+            StateHasChanged();
+        }).ConfigureAwait(false);
+
+        try
+        {
+            // Make the actual API call
+            var created = await ApiClient.CreateConversionAsync(request).ConfigureAwait(false);
+
+            // Replace the temporary conversion with the real one
+            await InvokeAsync(() =>
+            {
+                var index = _conversions.FindIndex(c => c.Id == tempId);
+                if (index >= 0)
+                {
+                    _conversions[index] = created;
+                }
+                else
+                {
+                    // If not found, just add it (shouldn't happen, but be safe)
+                    _conversions.Insert(0, created);
+                }
+
+                StateHasChanged();
+            }).ConfigureAwait(false);
+
+            Snackbar.Add("Conversion created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            // Remove the temporary conversion on error
+            await InvokeAsync(() =>
+            {
+                _conversions.RemoveAll(c => c.Id == tempId);
+                StateHasChanged();
+            }).ConfigureAwait(false);
+
+            Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task QueueDirectoryAsync(DirectoryQueueRequestDto request)
+    {
+        try
+        {
+            var batchId = await ApiClient.QueueDirectoryAsync(request).ConfigureAwait(false);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
+
+            // Refresh conversions list in case any were created immediately
+            await LoadConversionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private int GetNextTempId()
+    {
+        // Use negative IDs for temporary conversions to avoid conflicts
+        var existingTempIds = _conversions.Where(c => c.Id < 0).Select(c => c.Id).ToList();
+        if (existingTempIds.Count == 0)
+        {
+            return -1;
+        }
+
+        return existingTempIds.Min() - 1;
     }
 
     private static Color GetProgressColor(string status)
