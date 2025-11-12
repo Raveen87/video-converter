@@ -1,0 +1,132 @@
+@using VideoConverter.Web.Models
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create New Conversion</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="_formModel.InputPath" Label="Input File Path" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect @bind-Value="_formModel.AudioChannelsString" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem Value="@((string?)null)">Default</MudSelectItem>
+                <MudSelectItem Value="@("Stereo20")">Stereo 2.0</MudSelectItem>
+                <MudSelectItem Value="@("Surround51")">Surround 5.1</MudSelectItem>
+            </MudSelect>
+            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <text>Creating...</text>
+                }
+                else
+                {
+                    <text>Create</text>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting">Cancel</MudButton>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public ConversionCreateDto? InitialModel { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversionCreateDto> OnSubmit { get; set; }
+
+
+    private readonly ConversionFormModel _formModel = new();
+    private bool _isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        if (InitialModel is not null)
+        {
+            _formModel.InputPath = InitialModel.InputPath;
+            _formModel.OutputDirectory = InitialModel.OutputDirectory;
+            _formModel.Crf = InitialModel.Crf;
+            _formModel.AudioBitrateKbps = InitialModel.AudioBitrateKbps;
+            _formModel.AudioChannelsString = InitialModel.AudioChannels switch
+            {
+                20 => "Stereo20",
+                51 => "Surround51",
+                _ => null,
+            };
+            _formModel.Resolution = InitialModel.Resolution;
+            _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
+            _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
+            _formModel.SubtitleLanguagesString = InitialModel.SubtitleLanguages is not null ? string.Join(", ", InitialModel.SubtitleLanguages) : null;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _isSubmitting = true;
+        try
+        {
+            // Convert string fields back to proper types
+            // AudioChannels in ConversionCreateDto is int? (20 for Stereo20, 51 for Surround51)
+            int? audioChannels = _formModel.AudioChannelsString switch
+            {
+                "Stereo20" => 20,
+                "Surround51" => 51,
+                _ => null,
+            };
+            var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
+                ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : null;
+            var subtitleLanguages = !string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString)
+                ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : null;
+
+            var request = new ConversionCreateDto(
+                _formModel.InputPath,
+                _formModel.OutputDirectory,
+                _formModel.Crf,
+                _formModel.AudioBitrateKbps,
+                audioChannels,
+                _formModel.Resolution,
+                audioLanguages,
+                subtitleLanguages,
+                _formModel.OutputFilenameTemplate);
+
+            await OnSubmit.InvokeAsync(request);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class ConversionFormModel
+    {
+        public string InputPath { get; set; } = string.Empty;
+
+        public string OutputDirectory { get; set; } = string.Empty;
+
+        public int? Crf { get; set; }
+
+        public int? AudioBitrateKbps { get; set; }
+
+        public string? AudioChannelsString { get; set; }
+
+        public int? Resolution { get; set; }
+
+        public string? OutputFilenameTemplate { get; set; }
+
+        public string? AudioLanguagesString { get; set; }
+
+        public string? SubtitleLanguagesString { get; set; }
+    }
+}
+

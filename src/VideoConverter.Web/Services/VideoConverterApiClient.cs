@@ -40,6 +40,18 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             ?? throw new InvalidOperationException("Failed to deserialize conversion response");
     }
 
+    public async Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "api/conversions/queue-directory",
+            request,
+            _jsonOptions,
+            cancellationToken).ConfigureAwait(false);
+        _ = response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<DirectoryQueueResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+        return result?.BatchId ?? throw new InvalidOperationException("Failed to deserialize directory queue response");
+    }
+
     public async Task StartConversionAsync(int id, CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.PostAsync(

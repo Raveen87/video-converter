@@ -8,6 +8,8 @@ public interface IVideoConverterApiClient
 
     Task<ConversionDto> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken = default);
 
+    Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default);
+
     Task StartConversionAsync(int id, CancellationToken cancellationToken = default);
 
     Task PauseConversionAsync(int id, CancellationToken cancellationToken = default);
