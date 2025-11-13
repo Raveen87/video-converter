@@ -91,7 +91,10 @@ public static class Program
     private static void RegisterAppServices(IServiceCollection services)
     {
         RegisterFeatureServices(services);
-        _ = services.AddControllers().AddNewtonsoftJson();
+        _ = services.AddControllers().AddNewtonsoftJson(options =>
+        {
+            options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+        });
         RegisterBatching(services);
     }
 

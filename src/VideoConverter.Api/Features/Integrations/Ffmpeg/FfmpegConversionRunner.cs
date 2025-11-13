@@ -114,10 +114,7 @@ public sealed class FfmpegConversionRunner(
             return new ConversionStartResult { IsSuccess = true, ProcessId = 0, Command = cmdString };
         }
 
-        if (totalDurationSeconds > 0)
-        {
-            progressTracker.StartTracking(conversion.Id, totalDurationSeconds);
-        }
+        StartProgressTrackingIfPossible(conversion.Id, totalDurationSeconds);
 
         var result = await processManager.RunAsync(CreateProcessRequest(args, conversion.Id), ct).ConfigureAwait(false);
         runCoordinator.Stop(key);
@@ -125,12 +122,14 @@ public sealed class FfmpegConversionRunner(
 
         if (result.IsSuccess)
         {
+            var finalProgress = progressTracker.GetProgress(conversion.Id);
             logger.LogInformation(
-                "Conversion ID {ConversionId} completed successfully. Input: {InputPath}, Output: {OutputFile}, PID: {ProcessId}",
+                "Conversion ID {ConversionId} completed successfully. Input: {InputPath}, Output: {OutputFile}, PID: {ProcessId}, FinalProgress: {Percentage:F1}%",
                 conversion.Id,
                 conversion.InputPath,
                 outputFile,
-                result.ProcessId);
+                result.ProcessId,
+                finalProgress?.PercentageComplete ?? 0);
             return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString };
         }
 
@@ -154,6 +153,26 @@ public sealed class FfmpegConversionRunner(
         };
     }
 
+    private void StartProgressTrackingIfPossible(int conversionId, double totalDurationSeconds)
+    {
+        if (totalDurationSeconds > 0)
+        {
+            logger.LogInformation(
+                "Starting progress tracking for conversion ID {ConversionId} with total duration {Duration}s ({DurationFormatted})",
+                conversionId,
+                totalDurationSeconds,
+                TimeSpan.FromSeconds(totalDurationSeconds).ToString(@"hh\:mm\:ss"));
+            progressTracker.StartTracking(conversionId, totalDurationSeconds);
+        }
+        else
+        {
+            logger.LogWarning(
+                "Cannot start progress tracking for conversion ID {ConversionId}: duration is {Duration}s. Progress updates will not be available.",
+                conversionId,
+                totalDurationSeconds);
+        }
+    }
+
     private ProcessRequest CreateProcessRequest(IReadOnlyList<string> args, int conversionId)
     {
         return new ProcessRequest
@@ -169,7 +188,18 @@ public sealed class FfmpegConversionRunner(
                 logger.LogInformation("[ffmpeg] {Line}", data);
                 if (progressParser.TryParseTimeSeconds(data, out var seconds))
                 {
+                    logger.LogDebug(
+                        "Parsed progress time from FFmpeg output for conversion {ConversionId}: {TimeSeconds}s",
+                        conversionId,
+                        seconds);
                     progressTracker.UpdateProgress(conversionId, seconds);
+                }
+                else if (data.Contains("time=", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogDebug(
+                        "FFmpeg output contains 'time=' but failed to parse for conversion {ConversionId}. Line: {Line}",
+                        conversionId,
+                        data);
                 }
             },
         };

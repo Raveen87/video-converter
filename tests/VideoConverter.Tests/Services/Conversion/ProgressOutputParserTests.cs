@@ -1,5 +1,7 @@
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Services.Conversion;
@@ -12,7 +14,7 @@ public class ProgressOutputParserTests
     [InlineData("time=00:00:00.00", 0.0)]
     public void TryParse_ValidLines_ReturnsSeconds(string line, double expected)
     {
-        var parser = new FfmpegProgressOutputParser();
+        var parser = new FfmpegProgressOutputParser(NullLogger<FfmpegProgressOutputParser>.Instance);
         var ok = parser.TryParseTimeSeconds(line, out var seconds);
         _ = ok.Should().BeTrue();
         _ = seconds.Should().BeApproximately(expected, 0.01);
@@ -23,7 +25,7 @@ public class ProgressOutputParserTests
     [InlineData("no time here")]
     public void TryParse_InvalidLines_ReturnsFalse(string line)
     {
-        var parser = new FfmpegProgressOutputParser();
+        var parser = new FfmpegProgressOutputParser(NullLogger<FfmpegProgressOutputParser>.Instance);
         var ok = parser.TryParseTimeSeconds(line, out _);
         _ = ok.Should().BeFalse();
     }

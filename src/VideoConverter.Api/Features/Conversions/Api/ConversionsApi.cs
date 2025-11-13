@@ -315,11 +315,23 @@ public sealed class ConversionsApi : ControllerBase
         // Get progress from tracker
         var progress = progressTracker.GetProgress(id);
 
+        var isTracked = progress?.Status is ConversionStatus.Running;
         logger.LogDebug(
-            "Retrieved progress for conversion {ConversionId}: Status={Status}, Percentage={Percentage}%",
+            "Retrieved progress for conversion {ConversionId}: Status={Status}, IsTracked={IsTracked}, Percentage={Percentage:F1}%, CurrentTime={CurrentTime}s/{TotalDuration}s, ETA={ETA}",
             id,
             progress?.Status,
-            progress?.PercentageComplete);
+            isTracked,
+            progress?.PercentageComplete ?? 0,
+            progress?.CurrentTimeSeconds ?? 0,
+            progress?.TotalDurationSeconds ?? 0,
+            progress?.EstimatedTimeRemaining?.ToString(@"hh\:mm\:ss") ?? "N/A");
+
+        if (!isTracked && progress?.Status is ConversionStatus.Waiting)
+        {
+            logger.LogDebug(
+                "Conversion {ConversionId} exists but is not being tracked (Waiting status). Progress tracking may not have started - duration probe may have failed or conversion hasn't started yet.",
+                id);
+        }
 
         return Results.Ok(progress);
     }

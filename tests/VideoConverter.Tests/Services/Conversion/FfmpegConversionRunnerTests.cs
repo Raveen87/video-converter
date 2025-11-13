@@ -27,7 +27,7 @@ public class FfmpegConversionRunnerTests
 
         var processManager = new ProcessManager(NullLogger<ProcessManager>.Instance);
         var progressTracker = new Mock<IProgressTracker>().Object;
-        var progressParser = new FfmpegProgressOutputParser();
+        var progressParser = new FfmpegProgressOutputParser(NullLogger<FfmpegProgressOutputParser>.Instance);
         var preflight = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, processManager);
         var options = Microsoft.Extensions.Options.Options.Create(new FfmpegOptions { Path = configuration["Ffmpeg:Path"], DryRun = true });
         var runCoordinator = new ConversionRunCoordinator();
