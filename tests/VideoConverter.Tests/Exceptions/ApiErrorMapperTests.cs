@@ -29,4 +29,23 @@ public class ApiErrorMapperTests
         var status = mapper.GetStatusCode(validation);
         _ = status.Should().Be((int)HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public void ToDictionary_ApiErrorException_IncludesAllStandardFields()
+    {
+        var exception = ApiErrorException.BusinessError(
+            ErrorCode.ProcessStartFailed,
+            "FFmpeg conversion failed",
+            "Failed to start the conversion process.");
+
+        var dict = exception.ToDictionary();
+
+        _ = dict.Should().ContainKey("statusCode");
+        _ = dict.Should().ContainKey("errorCode");
+        _ = dict.Should().ContainKey("errorMessage");
+        _ = dict.Should().ContainKey("userFriendlyMessage");
+        _ = dict.Should().ContainKey("timestamp");
+        _ = dict["statusCode"].Should().Be((int)HttpStatusCode.BadRequest);
+        _ = dict["errorCode"].Should().Be("ProcessStartFailed");
+    }
 }
