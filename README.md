@@ -594,7 +594,7 @@ The codebase has been refactored to improve maintainability and reduce complexit
 
 #### Architecture updates
 - **Controllers**: Minimal APIs migrated to attribute-routed controllers suffixed with `Api` (e.g., `ConversionsApi`, `ProfilesApi`, `MetadataSearchApi`). Routes are unchanged.
-- **Startup responsibilities**: Database migration and rank backfill moved to a hosted service (`DatabaseInitializerHostedService`) to keep `Program.cs` focused.
+- **Startup responsibilities**: Database migrations are applied synchronously in `Program.cs` before any hosted services start, ensuring all tables exist when services begin execution.
 - **Feature DI**: Service registrations are grouped by feature via extensions:
   - `AddFfmpegIntegrations()`, `AddConversionsFeature()`, `AddProfilesFeature()`, `AddMetadataFeature()`.
 - **FFmpeg options binding**: Environment fallbacks handled in `ConfigureFfmpegOptions`:

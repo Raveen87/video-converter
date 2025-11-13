@@ -18,7 +18,7 @@ namespace VideoConverter.Api;
 #pragma warning disable MA0109
 public static class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         DotEnv.Fluent()
             .WithProbeForEnv(probeLevelsToSearch: 6)
@@ -32,6 +32,10 @@ public static class Program
         ConfigureServices(builder);
 
         var app = builder.Build();
+
+        // Apply migrations synchronously before any services start
+        await ApplyMigrationsAsync(app).ConfigureAwait(false);
+
         ConfigureMiddleware(app);
         MapEndpoints(app);
 
@@ -44,7 +48,7 @@ public static class Program
             logger.LogInformation("API listening on: {Addresses}", string.Join(", ", addresses));
         });
 
-        app.Run();
+        await app.RunAsync().ConfigureAwait(false);
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
@@ -120,7 +124,6 @@ public static class Program
     {
         _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
         _ = services.AddScoped<IDirectoryBatchCleanupService, DirectoryBatchCleanupService>();
-        _ = services.AddHostedService<Infrastructure.Startup.DatabaseInitializerHostedService>();
         _ = services.AddHostedService<ConversionCleanupWorker>();
     }
 
@@ -144,7 +147,50 @@ public static class Program
         }
     }
 
-    // Database initialization moved to DatabaseInitializerHostedService
+    private static async Task ApplyMigrationsAsync(WebApplication app)
+    {
+        var scope = app.Services.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Startup");
+            var ct = app.Lifetime.ApplicationStopping;
+
+            logger.LogInformation("Applying database migrations...");
+            await db.Database.MigrateAsync(ct).ConfigureAwait(false);
+            logger.LogInformation("Database migrations applied successfully");
+
+            await BackfillRanksIfMissingAsync(db, logger, ct).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task BackfillRanksIfMissingAsync(AppDbContext db, ILogger logger, CancellationToken ct)
+    {
+        var needBackfill = await db.Conversions.AnyAsync(c => c.Rank == null, ct).ConfigureAwait(false);
+        if (!needBackfill)
+        {
+            return;
+        }
+
+        logger.LogInformation("Backfilling Rank for existing conversions");
+        var items = await db.Conversions
+            .OrderBy(c => c.CreatedAtUtc)
+            .ThenBy(c => c.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var index = 1;
+        foreach (var item in items)
+        {
+            item.Rank ??= (index * 1000).ToString("D8");
+            index += 1;
+        }
+
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        logger.LogInformation("Backfill completed");
+    }
+
     private static void MapEndpoints(WebApplication app)
     {
         // API endpoints
