@@ -10,6 +10,7 @@ public sealed class FailingConversionRunner : IConversionRunner
         {
             IsSuccess = false,
             ErrorMessage = "Simulated failure",
+            Command = "ffmpeg -i <simulated>",
         };
         return Task.FromResult(result);
     }
