@@ -47,7 +47,7 @@ public sealed class FfmpegConversionRunner(
 
         try
         {
-            return await ExecuteConversionAsync(conversion, key, ct).ConfigureAwait(false);
+            return await ExecuteConversionAsync(conversion, key).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -95,7 +95,7 @@ public sealed class FfmpegConversionRunner(
         return (errorMessage, errorDetails);
     }
 
-    private async Task<ConversionStartResult> ExecuteConversionAsync(Conversion conversion, string key, CancellationToken ct)
+    private async Task<ConversionStartResult> ExecuteConversionAsync(Conversion conversion, string key)
     {
         if (string.IsNullOrWhiteSpace(conversion.OutputDirectory) || string.IsNullOrWhiteSpace(conversion.InputPath))
         {
@@ -103,7 +103,7 @@ public sealed class FfmpegConversionRunner(
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = "InputPath and OutputDirectory are required." };
         }
 
-        var totalDurationSeconds = _dryRun ? 0 : await durationProvider.GetDurationSecondsAsync(conversion.InputPath, ct).ConfigureAwait(false);
+        var totalDurationSeconds = _dryRun ? 0 : await durationProvider.GetDurationSecondsAsync(conversion.InputPath, CancellationToken.None).ConfigureAwait(false);
         _ = Directory.CreateDirectory(conversion.OutputDirectory);
         var (outputFile, videoTitle) = outputPlanner.Plan(conversion);
         var args = _argumentsBuilder.Build(conversion, outputFile, videoTitle, logger, _options);
@@ -116,7 +116,7 @@ public sealed class FfmpegConversionRunner(
 
         StartProgressTrackingIfPossible(conversion.Id, totalDurationSeconds);
 
-        var result = await processManager.RunAsync(CreateProcessRequest(args, conversion.Id), ct).ConfigureAwait(false);
+        var result = await processManager.RunAsync(CreateProcessRequest(args, conversion.Id), CancellationToken.None).ConfigureAwait(false);
         runCoordinator.Stop(key);
         progressTracker.StopTracking(conversion.Id);
 

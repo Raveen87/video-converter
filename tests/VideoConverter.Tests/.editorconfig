@@ -1,7 +1,7 @@
 root = true
 
 [*]
-dotnet_diagnostic.CS1591.severity = none      # Missing XML comment for publicly visible type or member
+dotnet_diagnostic.CS1591.severity = none    # Missing XML comment for publicly visible type or member
 dotnet_diagnostic.MA0015.severity = none    # Specify the parameter name in ArgumentException
 
 dotnet_diagnostic.SA0001.severity = none    # XML comment analysis is disabled due to project configuration
