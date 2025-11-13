@@ -28,9 +28,9 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         conversion.Status = ConversionStatus.Running;
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        var result = await ExecuteConversionAsync(conversion, ct).ConfigureAwait(false);
+        var result = await ExecuteConversionAsync(conversion, CancellationToken.None).ConfigureAwait(false);
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
         return result;
     }
 
@@ -59,9 +59,9 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         conversion.Status = ConversionStatus.Running;
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        var result = await ExecuteConversionAsync(conversion, ct).ConfigureAwait(false);
+        var result = await ExecuteConversionAsync(conversion, CancellationToken.None).ConfigureAwait(false);
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
         return (result, conversion.Id);
     }
