@@ -35,6 +35,7 @@ dotnet_diagnostic.IDE0005.severity = error  # Remove unnecessary import
 
 # Enforce formatting and key style rules
 dotnet_diagnostic.IDE0055.severity = error
+dotnet_diagnostic.IDE0046.severity = none	# If statement can be simplified, conflicts with S3358 (Extract this nested ternary operation into an independent statement)
 
 dotnet_diagnostic.CS1591.severity = silent  # Missing XML comment for publicly visible type or member
 

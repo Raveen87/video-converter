@@ -26,7 +26,11 @@ public sealed class FfmpegConversionRunner(
 
     public async Task<ConversionStartResult> StartAsync(Conversion conversion, CancellationToken ct)
     {
-        logger.LogInformation("Starting conversion for input: {InputPath}, output: {OutputDirectory}", conversion.InputPath, conversion.OutputDirectory);
+        logger.LogInformation(
+            "Starting conversion ID {ConversionId} for input: {InputPath}, output: {OutputDirectory}",
+            conversion.Id,
+            conversion.InputPath,
+            conversion.OutputDirectory);
         await Task.Yield();
 
         var (preflightOk, preflightError) = _dryRun ? (true, null) : await preflightChecker.EnsurePreflightAsync(_ffmpegPath, ct).ConfigureAwait(false);
@@ -52,6 +56,43 @@ public sealed class FfmpegConversionRunner(
             progressTracker.StopTracking(conversion.Id);
             return new ConversionStartResult { IsSuccess = false, ErrorMessage = ex.Message };
         }
+    }
+
+    private static (string ErrorMessage, Dictionary<string, object> ErrorDetails) BuildErrorDetails(
+        ProcessResult result,
+        string command,
+        Conversion conversion,
+        string outputFile)
+    {
+        var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            { "exitCode", result.ExitCode },
+            { "command", command },
+            { "inputPath", conversion.InputPath ?? string.Empty },
+            { "outputFile", outputFile },
+            { "conversionId", conversion.Id },
+        };
+
+        if (!string.IsNullOrWhiteSpace(result.StandardError))
+        {
+            errorDetails["stderr"] = result.StandardError;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.StandardOutput))
+        {
+            errorDetails["stdout"] = result.StandardOutput;
+        }
+
+        var errorMessage = !string.IsNullOrWhiteSpace(result.ErrorMessage)
+            ? result.ErrorMessage
+            : $"FFmpeg conversion failed with exit code {result.ExitCode}";
+
+        if (!string.IsNullOrWhiteSpace(command))
+        {
+            errorMessage = $"{errorMessage}. Command: {command}";
+        }
+
+        return (errorMessage, errorDetails);
     }
 
     private async Task<ConversionStartResult> ExecuteConversionAsync(Conversion conversion, string key, CancellationToken ct)
@@ -82,9 +123,35 @@ public sealed class FfmpegConversionRunner(
         runCoordinator.Stop(key);
         progressTracker.StopTracking(conversion.Id);
 
-        return result.IsSuccess
-            ? new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString }
-            : new ConversionStartResult { IsSuccess = false, ErrorMessage = $"FFmpeg conversion failed with exit code {result.ExitCode}" };
+        if (result.IsSuccess)
+        {
+            logger.LogInformation(
+                "Conversion ID {ConversionId} completed successfully. Input: {InputPath}, Output: {OutputFile}, PID: {ProcessId}",
+                conversion.Id,
+                conversion.InputPath,
+                outputFile,
+                result.ProcessId);
+            return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString };
+        }
+
+        var (errorMessage, errorDetails) = BuildErrorDetails(result, cmdString, conversion, outputFile);
+        logger.LogError(
+            "FFmpeg conversion failed for conversion ID {ConversionId}. Input: {InputPath}, Output: {OutputFile}, ExitCode: {ExitCode}, Command: {Command}, Error: {Error}, Stderr: {Stderr}",
+            conversion.Id,
+            conversion.InputPath,
+            outputFile,
+            result.ExitCode,
+            cmdString,
+            result.ErrorMessage,
+            result.StandardError);
+
+        return new ConversionStartResult
+        {
+            IsSuccess = false,
+            ErrorMessage = errorMessage,
+            ErrorDetails = errorDetails,
+            Command = cmdString,
+        };
     }
 
     private ProcessRequest CreateProcessRequest(IReadOnlyList<string> args, int conversionId)

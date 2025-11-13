@@ -10,7 +10,8 @@ public class ApiErrorException(
     ErrorCode errorCode,
     string errorMessage,
     string userFriendlyMessage,
-    Exception? innerException = null) : Exception(errorMessage, innerException)
+    Exception? innerException = null,
+    IDictionary<string, object>? details = null) : Exception(errorMessage, innerException)
 {
     /// <summary>
     /// Gets the HTTP status code for this error.
@@ -33,15 +34,21 @@ public class ApiErrorException(
     public string UserFriendlyMessage { get; } = userFriendlyMessage;
 
     /// <summary>
+    /// Gets additional structured error details for debugging and diagnostics.
+    /// </summary>
+    public IDictionary<string, object>? Details { get; } = details;
+
+    /// <summary>
     /// Creates a validation error.
     /// </summary>
     /// <param name="errorMessage">The error message for developers.</param>
     /// <param name="userFriendlyMessage">The user-friendly message.</param>
     /// <param name="innerException">The inner exception.</param>
+    /// <param name="details">Additional structured error details.</param>
     /// <returns>A new ApiErrorException instance for validation errors.</returns>
-    public static ApiErrorException ValidationError(string errorMessage, string userFriendlyMessage, Exception? innerException = null)
+    public static ApiErrorException ValidationError(string errorMessage, string userFriendlyMessage, Exception? innerException = null, IDictionary<string, object>? details = null)
     {
-        return new ApiErrorException(HttpStatusCode.BadRequest, ErrorCode.ValidationFailed, errorMessage, userFriendlyMessage, innerException);
+        return new ApiErrorException(HttpStatusCode.BadRequest, ErrorCode.ValidationFailed, errorMessage, userFriendlyMessage, innerException, details);
     }
 
     /// <summary>
@@ -51,10 +58,11 @@ public class ApiErrorException(
     /// <param name="errorMessage">The error message for developers.</param>
     /// <param name="userFriendlyMessage">The user-friendly message.</param>
     /// <param name="innerException">The inner exception.</param>
+    /// <param name="details">Additional structured error details.</param>
     /// <returns>A new ApiErrorException instance for not found errors.</returns>
-    public static ApiErrorException NotFound(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null)
+    public static ApiErrorException NotFound(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null, IDictionary<string, object>? details = null)
     {
-        return new ApiErrorException(HttpStatusCode.NotFound, errorCode, errorMessage, userFriendlyMessage, innerException);
+        return new ApiErrorException(HttpStatusCode.NotFound, errorCode, errorMessage, userFriendlyMessage, innerException, details);
     }
 
     /// <summary>
@@ -64,10 +72,11 @@ public class ApiErrorException(
     /// <param name="errorMessage">The error message for developers.</param>
     /// <param name="userFriendlyMessage">The user-friendly message.</param>
     /// <param name="innerException">The inner exception.</param>
+    /// <param name="details">Additional structured error details.</param>
     /// <returns>A new ApiErrorException instance for business logic errors.</returns>
-    public static ApiErrorException BusinessError(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null)
+    public static ApiErrorException BusinessError(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null, IDictionary<string, object>? details = null)
     {
-        return new ApiErrorException(HttpStatusCode.BadRequest, errorCode, errorMessage, userFriendlyMessage, innerException);
+        return new ApiErrorException(HttpStatusCode.BadRequest, errorCode, errorMessage, userFriendlyMessage, innerException, details);
     }
 
     /// <summary>
@@ -77,10 +86,11 @@ public class ApiErrorException(
     /// <param name="errorMessage">The error message for developers.</param>
     /// <param name="userFriendlyMessage">The user-friendly message.</param>
     /// <param name="innerException">The inner exception.</param>
+    /// <param name="details">Additional structured error details.</param>
     /// <returns>A new ApiErrorException instance for server errors.</returns>
-    public static ApiErrorException ServerError(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null)
+    public static ApiErrorException ServerError(ErrorCode errorCode, string errorMessage, string userFriendlyMessage, Exception? innerException = null, IDictionary<string, object>? details = null)
     {
-        return new ApiErrorException(HttpStatusCode.InternalServerError, errorCode, errorMessage, userFriendlyMessage, innerException);
+        return new ApiErrorException(HttpStatusCode.InternalServerError, errorCode, errorMessage, userFriendlyMessage, innerException, details);
     }
 
     /// <summary>
@@ -89,7 +99,7 @@ public class ApiErrorException(
     /// <returns>A dictionary containing the error information.</returns>
     public IDictionary<string, object> ToDictionary()
     {
-        return new Dictionary<string, object>(StringComparer.Ordinal)
+        var dict = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             { "statusCode", (int)StatusCode },
             { "errorCode", ErrorCode.ToString() },
@@ -97,5 +107,12 @@ public class ApiErrorException(
             { "userFriendlyMessage", UserFriendlyMessage },
             { "timestamp", DateTime.UtcNow },
         };
+
+        if (Details is not null && Details.Count > 0)
+        {
+            dict["details"] = Details;
+        }
+
+        return dict;
     }
 }
