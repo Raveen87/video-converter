@@ -279,7 +279,7 @@
             DateTime.UtcNow,
             request.Crf,
             request.AudioBitrateKbps,
-            MapAudioChannels(request.AudioChannels),
+            request.AudioChannels switch { 20 => "Stereo20", 51 => "Surround51", _ => null },
             request.Resolution,
             request.OutputFilenameTemplate);
 

@@ -11,7 +11,7 @@ internal static class AudioArgsBuilder
         {
             "-c:a", options.AudioCodec,
             "-b:a", (conversion.AudioBitrateKbps?.ToString() ?? options.DefaultAudioBitrateKbps.ToString()) + "k",
-            "-ac", conversion.AudioChannels?.GetFfmpegChannelLayout() ?? "stereo",
+            "-ac", conversion.AudioChannels?.GetChannelCount().ToString() ?? "2",
         };
         return args;
     }
