@@ -17,7 +17,7 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+            LogException(context, ex);
             await HandleExceptionAsync(context, ex, mapper).ConfigureAwait(false);
         }
     }
@@ -38,5 +38,34 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         });
 
         await response.WriteAsync(jsonResponse, cancellationToken: context.RequestAborted).ConfigureAwait(false);
+    }
+
+    private void LogException(HttpContext context, Exception exception)
+    {
+        var requestPath = context.Request.Path;
+        var requestMethod = context.Request.Method;
+        var innerException = exception.InnerException;
+
+        logger.LogError(
+            exception,
+            "An unhandled exception occurred. Method: {Method}, Path: {Path}, Message: {Message}, Type: {ExceptionType}",
+            requestMethod,
+            requestPath,
+            exception.Message,
+            exception.GetType().Name);
+
+        if (innerException is not null)
+        {
+            logger.LogError(
+                innerException,
+                "Inner exception: {InnerExceptionType}, Message: {InnerExceptionMessage}",
+                innerException.GetType().Name,
+                innerException.Message);
+        }
+
+        if (exception is ApiErrorException apiError && apiError.Details is not null && apiError.Details.Count > 0)
+        {
+            logger.LogError("Error details: {ErrorDetails}", JsonSerializer.Serialize(apiError.Details));
+        }
     }
 }

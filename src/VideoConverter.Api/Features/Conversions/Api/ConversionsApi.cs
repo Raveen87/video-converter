@@ -148,15 +148,22 @@ public sealed class ConversionsApi : ControllerBase
         var result = await executor.RunByIdAsync(id, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}", id, result.ProcessId);
+            logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}", id, result.ProcessId, result.Command);
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command });
         }
 
-        logger.LogError("Failed to start conversion {ConversionId}: {ErrorMessage}", id, result.ErrorMessage);
+        logger.LogError(
+            "Failed to start conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
+            id,
+            result.ErrorMessage,
+            result.Command,
+            result.ErrorDetails);
         throw ApiErrorException.BusinessError(
             ErrorCode.ProcessStartFailed,
             result.ErrorMessage ?? "Unknown error occurred",
-            "Failed to start the conversion process. Please try again later.");
+            "Failed to start the conversion process. Please try again later.",
+            innerException: null,
+            result.ErrorDetails);
     }
 
     [HttpPost("{id:int}/pause")]
@@ -262,20 +269,25 @@ public sealed class ConversionsApi : ControllerBase
         if (result.IsSuccess)
         {
             logger.LogInformation(
-                "Next conversion {ConversionId} started successfully with PID: {ProcessId}",
+                "Next conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}",
                 conversionId,
-                result.ProcessId);
+                result.ProcessId,
+                result.Command);
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId });
         }
 
         logger.LogError(
-            "Failed to start next conversion {ConversionId}: {ErrorMessage}",
+            "Failed to start next conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
             conversionId,
-            result.ErrorMessage);
+            result.ErrorMessage,
+            result.Command,
+            result.ErrorDetails);
         throw ApiErrorException.BusinessError(
             ErrorCode.ProcessStartFailed,
             result.ErrorMessage ?? "Unknown error occurred",
-            "Failed to start the conversion process. Please try again later.");
+            "Failed to start the conversion process. Please try again later.",
+            innerException: null,
+            result.ErrorDetails);
     }
 
     [HttpGet("{id:int}/progress")]

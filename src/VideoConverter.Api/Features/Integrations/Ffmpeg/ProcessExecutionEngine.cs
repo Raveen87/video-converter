@@ -4,9 +4,12 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegistry registry)
 {
+    private static readonly ICommandDisplayFormatter CommandFormatter = new DefaultCommandDisplayFormatter();
+
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
     {
-        logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments", request.ExecutablePath, request.Arguments.Count);
+        var commandString = CommandFormatter.Build(request.ExecutablePath, request.Arguments);
+        logger.LogDebug("Starting process: {Executable} with {ArgumentCount} arguments. Command: {Command}", request.ExecutablePath, request.Arguments.Count, commandString);
 
         var started = TryStartProcess(request, out var process, out var earlyError);
         if (!started)
@@ -84,6 +87,12 @@ internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegi
 
     private ProcessResult BuildProcessResult(ProcessRequest request, Process process, string stdout, string stderr)
     {
+        var errorMessage = string.Empty;
+        if (process.ExitCode is not 0)
+        {
+            errorMessage = FfmpegErrorExtractor.ExtractErrorDetails(stderr, stdout, process.ExitCode);
+        }
+
         var result = new ProcessResult
         {
             IsSuccess = process.ExitCode is 0,
@@ -91,15 +100,24 @@ internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegi
             ProcessId = process.Id,
             StandardOutput = stdout,
             StandardError = stderr,
+            ErrorMessage = errorMessage,
         };
 
         if (result.IsSuccess)
         {
-            logger.LogDebug("Process completed successfully: {Executable}", request.ExecutablePath);
+            logger.LogDebug("Process completed successfully: {Executable} (PID: {ProcessId})", request.ExecutablePath, process.Id);
         }
         else
         {
-            logger.LogWarning("Process failed with exit code {ExitCode}. Stderr: {Stderr}", process.ExitCode, result.StandardError);
+            var commandString = CommandFormatter.Build(request.ExecutablePath, request.Arguments);
+            logger.LogError(
+                "Process failed with exit code {ExitCode} (PID: {ProcessId}). Executable: {Executable}. Command: {Command}. Stderr: {Stderr}. Stdout: {Stdout}",
+                process.ExitCode,
+                process.Id,
+                request.ExecutablePath,
+                commandString,
+                stderr,
+                stdout);
         }
 
         return result;
