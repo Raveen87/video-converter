@@ -65,7 +65,19 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
 
         if (exception is ApiErrorException apiError && apiError.Details is not null && apiError.Details.Count > 0)
         {
-            logger.LogError("Error details: {ErrorDetails}", JsonSerializer.Serialize(apiError.Details));
+            var errorDetails = JsonSerializer.Serialize(apiError.Details, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+            logger.LogError("Error details:\n{ErrorDetails}", errorDetails);
+        }
+        else if (exception.Data.Count > 0)
+        {
+            var errorDetails = JsonSerializer.Serialize(exception.Data, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+            logger.LogError("Error details:\n{ErrorDetails}", errorDetails);
         }
     }
 }

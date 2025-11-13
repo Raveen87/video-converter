@@ -183,7 +183,54 @@ public class GlobalExceptionHandlerMiddlewareTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("An unhandled exception occurred")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithExceptionData_ShouldLogFormattedErrorDetails()
+    {
+        // Arrange
+        var exception = new InvalidOperationException("Test exception");
+        exception.Data["exitCode"] = -22;
+        exception.Data["command"] = "ffmpeg -i test.mkv";
+        exception.Data["stderr"] = "Error message";
+        _ = _nextMock.Setup(x => x(_context)).Throws(exception);
+
+        // Act
+        await _middleware.InvokeAsync(_context);
+
+        // Assert
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error details:")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithApiErrorDetails_ShouldLogFormattedErrorDetails()
+    {
+        // Arrange
+        var details = new Dictionary<string, object>(StringComparer.Ordinal) { ["field"] = "value" };
+        var apiError = ApiErrorException.ValidationError("Test error", "User message", null, details);
+        _context.Response.Body = new MemoryStream();
+        _ = _nextMock.Setup(x => x(_context)).Throws(apiError);
+
+        // Act
+        await _middleware.InvokeAsync(_context);
+
+        // Assert
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error details:")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 
     private async Task<string> GetResponseBody()

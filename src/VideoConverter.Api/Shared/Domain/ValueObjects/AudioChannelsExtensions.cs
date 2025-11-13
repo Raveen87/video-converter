@@ -21,4 +21,14 @@ public static class AudioChannelsExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(channels), channels, "Unsupported audio channel configuration"),
         };
     }
+
+    public static int GetChannelCount(this AudioChannels channels)
+    {
+        return channels switch
+        {
+            AudioChannels.Stereo20 => 2,
+            AudioChannels.Surround51 => 6,
+            _ => throw new ArgumentOutOfRangeException(nameof(channels), channels, "Unsupported audio channel configuration"),
+        };
+    }
 }

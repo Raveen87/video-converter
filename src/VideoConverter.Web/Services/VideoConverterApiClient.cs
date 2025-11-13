@@ -49,8 +49,11 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             cancellationToken).ConfigureAwait(false);
         _ = response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<DirectoryQueueResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
-        if (result == null || result.BatchId == 0)
+        if (result is null || result.BatchId is 0)
+        {
             throw new InvalidOperationException("Failed to deserialize directory queue response or received invalid batch ID");
+        }
+
         return result.BatchId;
     }
 

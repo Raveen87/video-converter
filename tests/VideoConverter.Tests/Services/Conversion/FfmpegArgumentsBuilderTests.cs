@@ -32,7 +32,7 @@ public class FfmpegArgumentsBuilderTests
         _ = args.Should().ContainInConsecutiveOrder("-crf", "28");
         _ = args.Should().ContainInConsecutiveOrder("-c:a", "libopus");
         _ = args.Should().ContainInConsecutiveOrder("-b:a", "160k");
-        _ = args.Should().ContainInConsecutiveOrder("-ac", "stereo");
+        _ = args.Should().ContainInConsecutiveOrder("-ac", "2");
         _ = args.Should().ContainInConsecutiveOrder("-c:s", "srt");
         _ = args[^1].Should().Be("out.mkv");
     }
@@ -130,6 +130,46 @@ public class FfmpegArgumentsBuilderTests
         _ = args.Should().Contain("title=MyTitle");
         _ = args.Should().Contain("-map_metadata");
         _ = args.Should().Contain("0");
+    }
+
+    [Fact]
+    public void Build_TitleMetadata_HasCorrectArgumentOrder()
+    {
+        var c = new ConversionEntity
+        {
+            InputPath = "in.mp4",
+            OutputDirectory = ".",
+        };
+
+        var videoTitle = "TestVideo";
+        var titleValue = "title=TestVideo";
+        var args = InvokeBuilder(c, "out.mkv", videoTitle);
+
+        var titleIndex = args.IndexOf(titleValue);
+        _ = titleIndex.Should().BeGreaterThan(-1, "because title metadata should be present");
+
+        var metadataIndex = titleIndex - 1;
+        _ = metadataIndex.Should().BeGreaterThanOrEqualTo(0, "because -metadata should precede title");
+        _ = args[metadataIndex].Should().Be("-metadata", "because -metadata should immediately precede title=value");
+    }
+
+    [Fact]
+    public void Build_MapMetadata_HasCorrectArgumentOrder()
+    {
+        var c = new ConversionEntity
+        {
+            InputPath = "in.mp4",
+            OutputDirectory = ".",
+        };
+
+        var args = InvokeBuilder(c, "out.mkv", "TestTitle");
+
+        var mapMetadataIndex = args.IndexOf("-map_metadata");
+        _ = mapMetadataIndex.Should().BeGreaterThan(-1, "because -map_metadata should be present");
+
+        var zeroIndex = mapMetadataIndex + 1;
+        _ = zeroIndex.Should().BeLessThan(args.Count, "because 0 should follow -map_metadata");
+        _ = args[zeroIndex].Should().Be("0", "because 0 should immediately follow -map_metadata");
     }
 
     private static List<string> InvokeBuilder(ConversionEntity c, string outFile, string title)

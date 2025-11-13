@@ -33,14 +33,14 @@
                     <text>Queue Directory</text>
                 }
             </MudButton>
-            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="@(() => MudDialog.Cancel())">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="@(() => MudDialog.Close())">Cancel</MudButton>
         </EditForm>
     </DialogContent>
 </MudDialog>
 
 @code {
     [CascadingParameter]
-    public MudDialogInstance MudDialog { get; set; } = default!;
+    public MudBlazor.IDialogReference MudDialog { get; set; } = default!;
     [Parameter]
     public DirectoryQueueRequestDto? InitialModel { get; set; }
 
