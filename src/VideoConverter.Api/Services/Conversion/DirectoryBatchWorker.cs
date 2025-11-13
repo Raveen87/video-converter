@@ -63,8 +63,8 @@ public sealed class DirectoryBatchWorker(
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode is 1 && ex.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase))
         {
-            // Database likely not migrated yet; wait for DatabaseInitializerHostedService
-            logger.LogDebug(ex, "Database not ready yet (migrations pending). Will retry shortly.");
+            // This should not happen as migrations run before services start, but handle gracefully
+            logger.LogWarning(ex, "Database table not found. This may indicate a migration issue.");
 
             return false;
         }
