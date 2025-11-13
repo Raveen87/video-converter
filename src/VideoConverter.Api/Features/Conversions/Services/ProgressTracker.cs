@@ -19,17 +19,21 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
         };
 
         _ = _activeConversions.AddOrUpdate(conversionId, state, (_, _) => state);
-        logger.LogDebug(
-            "Started tracking conversion {ConversionId} with duration {Duration}s",
+        logger.LogInformation(
+            "Started tracking conversion {ConversionId} with duration {Duration}s ({DurationFormatted})",
             conversionId,
-            totalDurationSeconds);
+            totalDurationSeconds,
+            TimeSpan.FromSeconds(totalDurationSeconds).ToString(@"hh\:mm\:ss"));
     }
 
     public void UpdateProgress(int conversionId, double currentTimeSeconds)
     {
         if (!_activeConversions.TryGetValue(conversionId, out var state))
         {
-            logger.LogWarning("Attempted to update progress for untracked conversion {ConversionId}", conversionId);
+            logger.LogWarning(
+                "Attempted to update progress for untracked conversion {ConversionId}. Current time: {CurrentTimeSeconds}s. Progress tracking may not have started (duration probe may have failed).",
+                conversionId,
+                currentTimeSeconds);
             return;
         }
 
@@ -65,6 +69,15 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
     {
         if (_activeConversions.TryGetValue(conversionId, out var state))
         {
+            logger.LogDebug(
+                "Retrieved progress for tracked conversion {ConversionId}: Status={Status}, Percentage={Percentage:F1}%, CurrentTime={CurrentTime}s/{TotalDuration}s, ETA={ETA}",
+                conversionId,
+                state.Status,
+                state.PercentageComplete ?? 0,
+                state.CurrentTimeSeconds ?? 0,
+                state.TotalDurationSeconds,
+                state.EstimatedTimeRemaining?.ToString(@"hh\:mm\:ss") ?? "N/A");
+
             return new ConversionProgress
             {
                 Status = state.Status,
@@ -76,6 +89,10 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
         }
 
         // Return Waiting status for conversions that exist but aren't being tracked
+        logger.LogDebug(
+            "Conversion {ConversionId} is not being tracked (Waiting status). Progress tracking may not have started (duration probe may have failed).",
+            conversionId);
+
         return new ConversionProgress
         {
             Status = ConversionStatus.Waiting,
