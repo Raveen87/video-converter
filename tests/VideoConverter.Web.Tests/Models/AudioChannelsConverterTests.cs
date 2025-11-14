@@ -9,7 +9,7 @@ public sealed class AudioChannelsConverterTests
     [Fact]
     public void Deserialize_WithStringValue_ReturnsString()
     {
-        // Arrange - API returns string enum from Newtonsoft.Json
+        // Arrange - API returns string enum from System.Text.Json
         var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"}""";
         var options = new JsonSerializerOptions
         {

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using dotenv.net;
 
 using Microsoft.AspNetCore.Hosting.Server;
@@ -95,9 +97,9 @@ public static class Program
     private static void RegisterAppServices(IServiceCollection services)
     {
         RegisterFeatureServices(services);
-        _ = services.AddControllers().AddNewtonsoftJson(options =>
+        _ = services.AddControllers().AddJsonOptions(options =>
         {
-            options.SerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
         RegisterBatching(services);
     }
