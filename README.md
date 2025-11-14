@@ -354,21 +354,26 @@ Environment variable overrides follow ASP.NET Core’s standard mapping. For exa
 - `audioChannels` (optional): string enum value. Valid values: `"Stereo20"` (Stereo 2.0) or `"Surround51"` (Surround 5.1). If omitted, defaults to `"Stereo20"`.
 - `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
 - `profileId` (optional): ID of a saved profile. When set, profile values override same-named request fields; if a profile field is null, the request value is used.
-- `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
+- `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish", "Spanish", "Hindi").
   - When provided, the service probes the input with ffprobe and attempts to match each requested language using:
-    - language tag metadata (e.g., `eng`, `en`, `swe`, `sv`)
-    - stream title/name with common aliases/shortenings (e.g., `Deutsch`, `DE`, `Ger`)
+    - language tag metadata (e.g., `eng`, `en`, `swe`, `sv`, `spa`, `es`)
+    - stream title/name with common aliases/shortenings (e.g., `Deutsch`, `DE`, `Ger`, `Español`, `Castellano`)
+  - The service supports the top 50-100 most spoken languages worldwide, including major European, Asian, African, Middle Eastern, and other regional languages.
+  - Languages can be specified by their full English name (e.g., "English", "Mandarin", "Arabic") and will be matched using ISO 639-1 (2-letter), ISO 639-3 (3-letter) codes, native names, and common variations.
   - If any requested language cannot be matched, the API returns 400 with an error.
   - If not provided, all audio tracks are included in the output.
 - `subtitleLanguages` (optional): array of full language names.
   - When provided, the service probes the input and attempts to match each requested language across subtitle streams by language tag and title (with common aliases), similar to audio.
+  - Supports the same comprehensive language set as `audioLanguages`.
   - If any requested language cannot be matched, the API returns 400 with an error.
   - If not provided, all subtitle tracks are included and copied.
   - Additionally, for each requested subtitle language, if no matching subtitle stream is found inside the video file, the service searches the same directory as the input file for external `.srt` files named `<video-filename>.<language-tag>.srt`.
-    - Supported tags:
-      - Swedish: `sv`, `sve`, `swe`, `swedish`
+    - Language tags are dynamically generated from the language's ISO codes and common aliases. For example:
       - English: `en`, `eng`, `english`
-      - Vietnamese: `vi`, `vie`, `viet`, `vietnamese`
+      - Swedish: `sv`, `sve`, `swe`, `svenska`, `swedish`
+      - Spanish: `es`, `spa`, `esp`, `espanol`, `spanish`, `castellano`
+      - Arabic: `ar`, `ara`, `arabic`, `arab`
+      - And many more languages with their respective tags
     - When found, external subtitles are added as inputs and mapped to the output and copied (`-c:s copy`).
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
