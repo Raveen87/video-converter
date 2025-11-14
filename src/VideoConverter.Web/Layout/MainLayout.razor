@@ -1,15 +1,22 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @using MudBlazor
+@using VideoConverter.Web.Services
+@inject IThemeService ThemeService
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_currentTheme" IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<MudPopoverProvider />
 
 <MudLayout>
     <MudAppBar Elevation="1" Color="Color.Primary">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudText Typo="Typo.h6">Video Converter</MudText>
         <MudSpacer />
+        <MudTooltip Text="@(_isDarkMode ? "Switch to light mode" : "Switch to dark mode")">
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" Color="Color.Inherit" OnClick="ToggleTheme" />
+        </MudTooltip>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1" ClipMode="DrawerClipMode.Always" Variant="DrawerVariant.Responsive">
@@ -28,4 +35,63 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private MudTheme _currentTheme = new();
+    private bool _isInitialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isInitialized)
+        {
+            _isInitialized = true;
+            _isDarkMode = await ThemeService.IsDarkModeAsync().ConfigureAwait(false);
+            UpdateTheme();
+            ThemeService.ThemeChanged += OnThemeChanged;
+            StateHasChanged();
+        }
+
+        await base.OnAfterRenderAsync(firstRender).ConfigureAwait(false);
+    }
+
+    private void UpdateTheme()
+    {
+        _currentTheme = _isDarkMode ? new MudTheme()
+        {
+            PaletteDark = new PaletteDark()
+            {
+                Primary = "#7e57c2",
+                Secondary = "#26a69a",
+                AppbarBackground = "#1e1e1e",
+                Background = "#121212",
+                Surface = "#1e1e1e",
+                DrawerBackground = "#1e1e1e",
+                DrawerText = "rgba(255,255,255, 0.8)",
+                DrawerIcon = "rgba(255,255,255, 0.8)",
+                TextPrimary = "rgba(255,255,255, 0.87)",
+                TextSecondary = "rgba(255,255,255, 0.6)",
+                ActionDefault = "#adadad",
+                Divider = "rgba(255,255,255, 0.12)",
+                DividerLight = "rgba(255,255,255, 0.06)",
+                OverlayDark = "rgba(0,0,0, 0.5)",
+                OverlayLight = "rgba(0,0,0, 0.3)"
+            }
+        } : new MudTheme();
+    }
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync().ConfigureAwait(false);
+    }
+
+    private void OnThemeChanged(object? sender, ThemeChangedEventArgs e)
+    {
+        _isDarkMode = e.IsDark;
+        UpdateTheme();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
 }
