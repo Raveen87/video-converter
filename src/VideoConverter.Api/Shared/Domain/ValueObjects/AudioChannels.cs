@@ -1,9 +1,8 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using System.Text.Json.Serialization;
 
 namespace VideoConverter.Api.Shared.Domain.ValueObjects;
 
-[JsonConverter(typeof(StringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AudioChannels
 {
     Stereo20 = 20,
