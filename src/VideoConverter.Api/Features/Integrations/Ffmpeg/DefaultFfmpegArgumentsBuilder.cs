@@ -29,10 +29,20 @@ internal sealed class DefaultFfmpegArgumentsBuilder : IFfmpegArgumentsBuilder
         SubtitleArgsBuilder.MapExternalSubtitleStreams(args, externalSubtitlePaths, ref insertAt);
         SubtitleArgsBuilder.AddExternalSubtitleLanguages(args, externalSubtitlePaths, ref insertAt, logger);
 
-        MetadataArgsBuilder.AddSubtitleCodecSrt(args, ref insertAt);
-        MetadataArgsBuilder.AddTitleMetadata(args, videoTitle, ref insertAt);
+        var (metadataArgsBeforeAudio, metadataArgsAfterAudio) = MetadataArgsBuilder.BuildMetadataArgsSplit(videoTitle);
+        foreach (var arg in metadataArgsBeforeAudio)
+        {
+            args.Insert(insertAt, arg);
+            insertAt++;
+        }
+
         AudioArgsBuilder.MapAudioStreams(args, conversion.SelectedAudioStreamIndicesCsv, ref insertAt);
-        MetadataArgsBuilder.PreserveInputMetadata(args, ref insertAt);
+
+        foreach (var arg in metadataArgsAfterAudio)
+        {
+            args.Insert(insertAt, arg);
+            insertAt++;
+        }
 
         return args;
     }

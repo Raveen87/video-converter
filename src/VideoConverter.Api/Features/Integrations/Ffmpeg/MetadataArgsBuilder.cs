@@ -2,24 +2,38 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal static class MetadataArgsBuilder
 {
-    public static void AddSubtitleCodecSrt(List<string> args, ref int insertAt)
+    public static List<string> BuildSubtitleCodecSrtArgs()
     {
-        args.Insert(insertAt, "srt");
-        args.Insert(insertAt, "-c:s");
-        insertAt += 2;
+        return ["-c:s", "srt"];
     }
 
-    public static void AddTitleMetadata(List<string> args, string videoTitle, ref int insertAt)
+    public static List<string> BuildTitleMetadataArgs(string videoTitle)
     {
-        args.Insert(insertAt, "title=" + videoTitle);
-        args.Insert(insertAt, "-metadata");
-        insertAt += 2;
+        return ["-metadata", "title=" + videoTitle];
     }
 
-    public static void PreserveInputMetadata(List<string> args, ref int insertAt)
+    public static List<string> BuildPreserveInputMetadataArgs()
     {
-        args.Insert(insertAt, "-map_metadata");
-        args.Insert(insertAt + 1, "0");
-        insertAt += 2;
+        return ["-map_metadata", "0"];
+    }
+
+    public static List<string> BuildMetadataArgs(string videoTitle)
+    {
+        var args = new List<string>();
+        args.AddRange(BuildSubtitleCodecSrtArgs());
+        args.AddRange(BuildTitleMetadataArgs(videoTitle));
+        args.AddRange(BuildPreserveInputMetadataArgs());
+        return args;
+    }
+
+    public static (List<string> BeforeAudio, List<string> AfterAudio) BuildMetadataArgsSplit(string videoTitle)
+    {
+        var beforeAudio = new List<string>();
+        beforeAudio.AddRange(BuildSubtitleCodecSrtArgs());
+        beforeAudio.AddRange(BuildTitleMetadataArgs(videoTitle));
+
+        var afterAudio = BuildPreserveInputMetadataArgs();
+
+        return (beforeAudio, afterAudio);
     }
 }
