@@ -21,10 +21,6 @@ public sealed class ConversionService(
     IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
     Shared.Infrastructure.Persistence.AppDbContext? db = null) : IConversionService
 {
-    private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
-    private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
-    private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
-
     private readonly IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
     private readonly Shared.Infrastructure.Persistence.AppDbContext? _db = db;
 
@@ -109,15 +105,8 @@ public sealed class ConversionService(
 
     private static IEnumerable<string> GetSubtitleTags(string language)
     {
-        var key = language.Trim().ToLowerInvariant();
-
-        return key switch
-        {
-            _ when SubtitleTagsSwedish.Contains(key, StringComparer.Ordinal) => SubtitleTagsSwedish,
-            _ when SubtitleTagsEnglish.Contains(key, StringComparer.Ordinal) => SubtitleTagsEnglish,
-            _ when SubtitleTagsVietnamese.Contains(key, StringComparer.Ordinal) => SubtitleTagsVietnamese,
-            _ => [key], // Fallback: if a tag-like short code is provided, just try it
-        };
+        var aliases = LanguageMatchEngine.GetAliasesForLanguage(language);
+        return aliases;
     }
 
     private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, string? template, CancellationToken cancellationToken)
