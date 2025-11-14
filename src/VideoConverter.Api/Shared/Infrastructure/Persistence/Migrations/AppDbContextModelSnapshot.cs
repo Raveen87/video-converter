@@ -26,8 +26,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("AudioBitrateKbps")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("AudioChannels")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("AudioChannels")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
@@ -71,8 +72,10 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -229,8 +232,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("AudioBitrateKbps")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("AudioChannels")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("AudioChannels")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AudioLanguages")
                         .HasMaxLength(4096)

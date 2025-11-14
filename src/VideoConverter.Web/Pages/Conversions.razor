@@ -331,7 +331,7 @@
             DateTime.UtcNow,
             request.Crf,
             request.AudioBitrateKbps,
-            request.AudioChannels switch { 20 => "Stereo20", 51 => "Surround51", _ => null },
+            request.AudioChannels,
             request.Resolution,
             request.OutputFilenameTemplate);
 
@@ -415,14 +415,12 @@
         return existingTempIds.Min() - 1;
     }
 
-    private static Color GetProgressColor(string status)
+    private static Color GetProgressColor(ConversionStatus status)
     {
-        return status.ToLowerInvariant() switch
+        return status switch
         {
-            "running" => Color.Success,
-            "completed" => Color.Success,
-            "failed" => Color.Error,
-            "waiting" => Color.Info,
+            ConversionStatus.Running => Color.Success,
+            ConversionStatus.Waiting => Color.Info,
             _ => Color.Default,
         };
     }

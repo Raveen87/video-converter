@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace VideoConverter.Web.Models;
 
 public record ConversionDto(
@@ -9,7 +7,6 @@ public record ConversionDto(
     DateTime CreatedAtUtc,
     int? Crf,
     int? AudioBitrateKbps,
-    [property: JsonConverter(typeof(AudioChannelsConverter))]
-    string? AudioChannels,
+    AudioChannels? AudioChannels,
     int? Resolution,
     string? MetadataBasedFilename);

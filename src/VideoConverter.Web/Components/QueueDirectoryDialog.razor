@@ -13,10 +13,10 @@
             <MudTextField @bind-Value="_formModel.ExtensionsString" Label="File Extensions (comma-separated)" HelperText="e.g., .mkv,.mp4 (defaults to .mkv,.mp4 if empty)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
-            <MudSelect @bind-Value="_formModel.AudioChannelsString" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
-                <MudSelectItem Value="@((string?)null)">Default</MudSelectItem>
-                <MudSelectItem Value="@("Stereo20")">Stereo 2.0</MudSelectItem>
-                <MudSelectItem Value="@("Surround51")">Surround 5.1</MudSelectItem>
+            <MudSelect @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                <MudSelectItem Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
+                <MudSelectItem Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
@@ -63,7 +63,7 @@
             _formModel.OutputDirectory = InitialModel.OutputDirectory;
             _formModel.Crf = InitialModel.Crf;
             _formModel.AudioBitrateKbps = InitialModel.AudioBitrateKbps;
-            _formModel.AudioChannelsString = InitialModel.AudioChannels;
+            _formModel.AudioChannels = InitialModel.AudioChannels;
             _formModel.Resolution = InitialModel.Resolution;
             _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
@@ -104,7 +104,7 @@
                 _formModel.OutputDirectory,
                 _formModel.Crf,
                 _formModel.AudioBitrateKbps,
-                _formModel.AudioChannelsString,
+                _formModel.AudioChannels,
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
@@ -137,7 +137,7 @@
 
         public int? AudioBitrateKbps { get; set; }
 
-        public string? AudioChannelsString { get; set; }
+        public AudioChannels? AudioChannels { get; set; }
 
         public int? Resolution { get; set; }
 

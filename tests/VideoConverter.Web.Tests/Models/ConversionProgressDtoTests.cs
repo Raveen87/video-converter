@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using FluentAssertions;
 
@@ -25,6 +26,7 @@ public class ConversionProgressDtoTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -32,7 +34,7 @@ public class ConversionProgressDtoTests
 
         // Assert
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be("Running");
+        _ = result!.Status.Should().Be(ConversionStatus.Running);
         _ = result.PercentageComplete.Should().Be(45.5);
         _ = result.CurrentTimeSeconds.Should().Be(1234.56);
         _ = result.TotalDurationSeconds.Should().Be(2712.34);
@@ -40,64 +42,9 @@ public class ConversionProgressDtoTests
     }
 
     [Fact]
-    public void Deserialize_ApiResponse_WithNumericStatus_ConvertsCorrectly()
+    public void Deserialize_ApiResponse_WithWaitingStatus_HandlesCorrectly()
     {
-        // Arrange - API might return enum as number (0 = Waiting, 1 = Running) if StringEnumConverter isn't working
-        var json = """
-            {
-                "status": 1,
-                "percentageComplete": 45.5,
-                "currentTimeSeconds": 1234.56,
-                "totalDurationSeconds": 2712.34,
-                "estimatedTimeRemaining": "00:24:37"
-            }
-            """;
-
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
-        // Act
-        var result = JsonSerializer.Deserialize<ConversionProgressDto>(json, options);
-
-        // Assert
-        _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be("Running", "because numeric value 1 should convert to 'Running'");
-        _ = result.PercentageComplete.Should().Be(45.5);
-    }
-
-    [Fact]
-    public void Deserialize_ApiResponse_WithNumericStatusZero_ConvertsToWaiting()
-    {
-        // Arrange - API might return enum as number (0 = Waiting)
-        var json = """
-            {
-                "status": 0,
-                "percentageComplete": null,
-                "currentTimeSeconds": null,
-                "totalDurationSeconds": null,
-                "estimatedTimeRemaining": null
-            }
-            """;
-
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
-        // Act
-        var result = JsonSerializer.Deserialize<ConversionProgressDto>(json, options);
-
-        // Assert
-        _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be("Waiting", "because numeric value 0 should convert to 'Waiting'");
-    }
-
-    [Fact]
-    public void Deserialize_ApiResponse_WithNullFields_HandlesCorrectly()
-    {
-        // Arrange - API returns null for fields when conversion is Waiting
+        // Arrange - API returns Waiting status
         var json = """
             {
                 "status": "Waiting",
@@ -111,6 +58,7 @@ public class ConversionProgressDtoTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -118,7 +66,7 @@ public class ConversionProgressDtoTests
 
         // Assert
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be("Waiting");
+        _ = result!.Status.Should().Be(ConversionStatus.Waiting);
         _ = result.PercentageComplete.Should().BeNull();
         _ = result.CurrentTimeSeconds.Should().BeNull();
         _ = result.TotalDurationSeconds.Should().BeNull();
@@ -143,6 +91,7 @@ public class ConversionProgressDtoTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -150,7 +99,7 @@ public class ConversionProgressDtoTests
 
         // Assert - Verify all expected fields are present and mapped
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().NotBeNullOrEmpty("Status field must be present");
+        _ = result!.Status.Should().Be(ConversionStatus.Running, "Status field must be present and mapped");
         _ = result.PercentageComplete.Should().HaveValue("PercentageComplete should be set when provided");
         _ = result.CurrentTimeSeconds.Should().HaveValue("CurrentTimeSeconds should be set when provided");
         _ = result.TotalDurationSeconds.Should().HaveValue("TotalDurationSeconds should be set when provided");

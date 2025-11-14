@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using VideoConverter.Web.Models;
 
@@ -18,6 +19,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
     }
 
