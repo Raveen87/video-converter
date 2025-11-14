@@ -50,7 +50,7 @@
                     </MudText>
                 </MudTd>
                 <MudTd DataLabel="Created">
-                    <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToString("g")</MudText>
+                    <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</MudText>
                 </MudTd>
                 <MudTd DataLabel="Progress">
                     @if (_progressData.TryGetValue(context.Id, out var progress) && progress != null)
