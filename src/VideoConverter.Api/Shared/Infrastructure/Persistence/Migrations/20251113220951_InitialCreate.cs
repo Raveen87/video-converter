@@ -4,10 +4,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations;
 
-#pragma warning disable MA0048 // Migration files should start with date prefix
-#pragma warning disable MA0051 // Method is too long
-#pragma warning disable MA0003 // Name the parameter to improve code readability
-#pragma warning disable IDE0300 // Collection initialization can be simplified
 /// <inheritdoc />
 public partial class InitialCreate : Migration
 {

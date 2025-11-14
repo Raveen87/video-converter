@@ -1,12 +1,5 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 
-#nullable disable
-
-#pragma warning disable MA0048 // Migration files should start with date prefix
-#pragma warning disable MA0051 // Method is too long
-#pragma warning disable IDE0058 // Expression value is never used
-#pragma warning disable IDE0161 // Convert to file-scoped namespace
-
 namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
