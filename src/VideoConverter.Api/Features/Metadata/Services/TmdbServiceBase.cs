@@ -1,7 +1,3 @@
-using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
-
 namespace VideoConverter.Api.Features.Metadata.Services;
 
 public abstract class TmdbServiceBase(

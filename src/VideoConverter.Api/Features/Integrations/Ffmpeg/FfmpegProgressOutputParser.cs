@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 public sealed partial class FfmpegProgressOutputParser(ILogger<FfmpegProgressOutputParser> logger) : IProgressOutputParser

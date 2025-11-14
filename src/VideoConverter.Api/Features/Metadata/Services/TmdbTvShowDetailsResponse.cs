@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace VideoConverter.Api.Features.Metadata.Services;
 
 public sealed record TmdbTvShowDetailsResponse(

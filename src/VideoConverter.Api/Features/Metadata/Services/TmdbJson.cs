@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace VideoConverter.Api.Features.Metadata.Services;
 
 internal static class TmdbJson

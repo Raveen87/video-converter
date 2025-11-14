@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 public interface IRunningProcessRegistry

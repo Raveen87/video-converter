@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal sealed class ConfigureFfmpegOptions : IConfigureOptions<FfmpegOptions>

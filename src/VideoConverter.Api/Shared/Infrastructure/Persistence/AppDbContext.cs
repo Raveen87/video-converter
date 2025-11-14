@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-
 using VideoConverter.Api.Shared.Domain.Entities;
 
 namespace VideoConverter.Api.Shared.Infrastructure.Persistence;

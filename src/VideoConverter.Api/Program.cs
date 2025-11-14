@@ -1,10 +1,7 @@
-using System.Text.Json.Serialization;
-
 using dotenv.net;
 
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Common.Middleware;

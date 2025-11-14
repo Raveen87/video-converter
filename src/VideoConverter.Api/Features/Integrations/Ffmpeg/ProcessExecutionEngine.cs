@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal sealed class ProcessExecutionEngine(ILogger logger, IRunningProcessRegistry registry)

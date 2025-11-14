@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace VideoConverter.Api.Features.Metadata.Services;
 
 public sealed partial class TitleSanitizer : ITitleSanitizer

@@ -2,7 +2,7 @@ namespace VideoConverter.Api.Services.Conversion;
 
 public sealed class ConversionCleanupWorker(
     IServiceScopeFactory scopeFactory,
-    Microsoft.Extensions.Options.IOptions<CleanupOptions> options,
+    IOptions<CleanupOptions> options,
     ILogger<ConversionCleanupWorker> logger)
     : BackgroundService
 {

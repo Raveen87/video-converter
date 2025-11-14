@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace VideoConverter.Api.Shared.Domain.ValueObjects;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

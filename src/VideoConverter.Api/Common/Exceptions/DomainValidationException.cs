@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace VideoConverter.Api.Common.Exceptions;
 
 /// <summary>

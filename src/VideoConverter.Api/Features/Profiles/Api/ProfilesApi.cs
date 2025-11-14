@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.Mvc;
 
 using VideoConverter.Api.Features.Profiles.Dtos;
 
