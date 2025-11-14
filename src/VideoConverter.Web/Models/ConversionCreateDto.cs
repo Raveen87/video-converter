@@ -5,7 +5,7 @@ public record ConversionCreateDto(
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
-    int? AudioChannels,
+    AudioChannels? AudioChannels,
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,

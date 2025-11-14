@@ -5,7 +5,7 @@ public record DirectoryQueueRequestDto(
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
-    string? AudioChannels,
+    AudioChannels? AudioChannels,
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,

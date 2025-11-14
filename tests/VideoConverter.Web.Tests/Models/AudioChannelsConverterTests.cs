@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using VideoConverter.Web.Models;
 
@@ -7,13 +8,14 @@ namespace VideoConverter.Web.Tests.Models;
 public sealed class AudioChannelsConverterTests
 {
     [Fact]
-    public void Deserialize_WithStringValue_ReturnsString()
+    public void Deserialize_WithStringValue_ReturnsEnum()
     {
         // Arrange - API returns string enum from System.Text.Json
         var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -21,35 +23,18 @@ public sealed class AudioChannelsConverterTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Stereo20", result.AudioChannels);
+        Assert.Equal(AudioChannels.Stereo20, result.AudioChannels);
     }
 
     [Fact]
-    public void Deserialize_WithNumericValue_ConvertsToString()
-    {
-        // Arrange - API might return numeric enum value
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":20}""";
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
-        // Act
-        var result = JsonSerializer.Deserialize<ConversionDto>(json, options);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Stereo20", result.AudioChannels);
-    }
-
-    [Fact]
-    public void Deserialize_WithNumericValue51_ConvertsToSurround51()
+    public void Deserialize_WithSurround51Value_ReturnsEnum()
     {
         // Arrange
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":51}""";
+        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Surround51"}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -57,7 +42,7 @@ public sealed class AudioChannelsConverterTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Surround51", result.AudioChannels);
+        Assert.Equal(AudioChannels.Surround51, result.AudioChannels);
     }
 
     [Fact]
@@ -68,6 +53,7 @@ public sealed class AudioChannelsConverterTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -86,6 +72,7 @@ public sealed class AudioChannelsConverterTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -97,7 +84,7 @@ public sealed class AudioChannelsConverterTests
     }
 
     [Fact]
-    public void Serialize_WithStringValue_WritesString()
+    public void Serialize_WithEnumValue_WritesString()
     {
         // Arrange
         var dto = new ConversionDto(
@@ -107,12 +94,13 @@ public sealed class AudioChannelsConverterTests
             CreatedAtUtc: DateTime.UtcNow,
             Crf: null,
             AudioBitrateKbps: null,
-            AudioChannels: "Stereo20",
+            AudioChannels: AudioChannels.Stereo20,
             Resolution: null,
             MetadataBasedFilename: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -139,6 +127,7 @@ public sealed class AudioChannelsConverterTests
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -153,10 +142,11 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithArrayOfConversions_HandlesAllFormats()
     {
         // Arrange - Simulates the actual API response format
-        var json = """[{"id":1,"inputPath":"test1.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"},{"id":2,"inputPath":"test2.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":51},{"id":3,"inputPath":"test3.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":null}]""";
+        var json = """[{"id":1,"inputPath":"test1.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"},{"id":2,"inputPath":"test2.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Surround51"},{"id":3,"inputPath":"test3.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":null}]""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() },
         };
 
         // Act
@@ -165,8 +155,8 @@ public sealed class AudioChannelsConverterTests
         // Assert
         Assert.NotNull(results);
         Assert.Equal(3, results.Length);
-        Assert.Equal("Stereo20", results[0].AudioChannels);
-        Assert.Equal("Surround51", results[1].AudioChannels);
+        Assert.Equal(AudioChannels.Stereo20, results[0].AudioChannels);
+        Assert.Equal(AudioChannels.Surround51, results[1].AudioChannels);
         Assert.Null(results[2].AudioChannels);
     }
 }

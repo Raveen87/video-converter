@@ -4,7 +4,7 @@ public record ProfileCreateDto(
     string? OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
-    string? AudioChannels,
+    AudioChannels? AudioChannels,
     int? Resolution,
     string? MetadataBasedFilename,
     IReadOnlyList<string>? AudioLanguages,

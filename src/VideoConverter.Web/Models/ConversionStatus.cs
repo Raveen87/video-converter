@@ -1,10 +1,10 @@
 namespace VideoConverter.Web.Models;
 
+/// <summary>
+/// Status of a conversion progress update.
+/// </summary>
 public enum ConversionStatus
 {
-    NotStarted,
-    InProgress,
-    Completed,
-    Failed,
-    Cancelled,
+    Waiting,
+    Running,
 }

@@ -9,10 +9,10 @@
             <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
-            <MudSelect @bind-Value="_formModel.AudioChannelsString" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
-                <MudSelectItem Value="@((string?)null)">Default</MudSelectItem>
-                <MudSelectItem Value="@("Stereo20")">Stereo 2.0</MudSelectItem>
-                <MudSelectItem Value="@("Surround51")">Surround 5.1</MudSelectItem>
+            <MudSelect @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                <MudSelectItem Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
+                <MudSelectItem Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
@@ -33,6 +33,8 @@
         </EditForm>
     </DialogContent>
 </MudDialog>
+
+@using VideoConverter.Web.Models
 
 @code {
     [CascadingParameter]
@@ -59,12 +61,7 @@
             _formModel.OutputDirectory = InitialModel.OutputDirectory;
             _formModel.Crf = InitialModel.Crf;
             _formModel.AudioBitrateKbps = InitialModel.AudioBitrateKbps;
-            _formModel.AudioChannelsString = InitialModel.AudioChannels switch
-            {
-                20 => "Stereo20",
-                51 => "Surround51",
-                _ => null,
-            };
+            _formModel.AudioChannels = InitialModel.AudioChannels;
             _formModel.Resolution = InitialModel.Resolution;
             _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
@@ -84,13 +81,6 @@
         try
         {
             // Convert string fields back to proper types
-            // AudioChannels in ConversionCreateDto is int? (20 for Stereo20, 51 for Surround51)
-            int? audioChannels = _formModel.AudioChannelsString switch
-            {
-                "Stereo20" => 20,
-                "Surround51" => 51,
-                _ => null,
-            };
             var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
                 ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
@@ -99,7 +89,7 @@
                 : null;
 
             Logger.LogDebug("Form data converted. AudioChannels: {AudioChannels}, AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}", 
-                audioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
+                _formModel.AudioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
                 subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
 
             var request = new ConversionCreateDto(
@@ -107,7 +97,7 @@
                 _formModel.OutputDirectory,
                 _formModel.Crf,
                 _formModel.AudioBitrateKbps,
-                audioChannels,
+                _formModel.AudioChannels,
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
@@ -137,7 +127,7 @@
 
         public int? AudioBitrateKbps { get; set; }
 
-        public string? AudioChannelsString { get; set; }
+        public AudioChannels? AudioChannels { get; set; }
 
         public int? Resolution { get; set; }
 

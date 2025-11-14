@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+using VideoConverter.Api.Shared.Domain.ValueObjects;
+
 namespace VideoConverter.Api.Shared.Infrastructure.Persistence;
 
 public static class Converters
@@ -21,5 +23,19 @@ public static class Converters
             v => v == null ? null : v.ToList());
 
         return (listToJson, listComparer);
+    }
+
+    public static ValueConverter<ConversionStatus, string> CreateConversionStatusString()
+    {
+        return new ValueConverter<ConversionStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<ConversionStatus>(v));
+    }
+
+    public static ValueConverter<AudioChannels?, string?> CreateAudioChannelsString()
+    {
+        return new ValueConverter<AudioChannels?, string?>(
+            v => v == null ? null : v.ToString(),
+            v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<AudioChannels>(v));
     }
 }

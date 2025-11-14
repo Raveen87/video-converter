@@ -26,7 +26,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "outputDirectory": "C:/videos/out",
       "crf": 40,
       "audioBitrateKbps": 128,
-      "audioChannels": 2,
+      "audioChannels": "Stereo20",
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
@@ -53,7 +53,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "createdAtUtc": "2025-10-06T12:00:00Z",
         "crf": 40,
         "audioBitrateKbps": 128,
-        "audioChannels": 2,
+        "audioChannels": "Stereo20",
         "resolution": 720,
         "metadataBasedFilename": "Inception.2010.mp4"
       }
@@ -109,7 +109,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "outputDirectory": "C:/media/out",
       "crf": 23,
       "audioBitrateKbps": 128,
-      "audioChannels": 2,
+      "audioChannels": "Stereo20",
       "resolution": 1080,
       "audioLanguages": ["English"],
       "subtitleLanguages": ["English"],
@@ -351,7 +351,7 @@ Environment variable overrides follow ASP.NET Core’s standard mapping. For exa
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
 - `crf` (optional): integer 0–63. If omitted, defaults to 40.
 - `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128 for 2.0 audio or 192 for 5.1 audio.
-- `audioChannels` (optional): integer 2 (Stereo 2.0) or 6 (Surround 5.1). If omitted, defaults to 2 (Stereo 2.0).
+- `audioChannels` (optional): string enum value. Valid values: `"Stereo20"` (Stereo 2.0) or `"Surround51"` (Surround 5.1). If omitted, defaults to `"Stereo20"`.
 - `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
 - `profileId` (optional): ID of a saved profile. When set, profile values override same-named request fields; if a profile field is null, the request value is used.
 - `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish").
@@ -401,6 +401,8 @@ The API uses a structured error handling system that provides consistent error r
 
 #### Error Codes
 
+All error codes are returned as string enum values. The following values are available:
+
 **Validation Errors (400)**
 - `ValidationFailed`: General validation error
 - `InvalidInput`: Invalid input parameters
@@ -414,6 +416,7 @@ The API uses a structured error handling system that provides consistent error r
 - `ConversionNotFound`: Conversion with specified ID not found
 - `FileNotFound`: Input file not found
 - `QueueEmpty`: No conversions in queue
+- `ProfileNotFound`: Profile with specified ID not found
 
 **Business Logic Errors (400)**
 - `ConversionAlreadyStarted`: Conversion is already running
@@ -429,6 +432,43 @@ The API uses a structured error handling system that provides consistent error r
 - `FfmpegError`: FFmpeg execution failed
 - `MetadataServiceError`: Metadata service failed
 - `InternalServerError`: Unexpected server error
+
+### Enum Values
+
+All enums in the API are returned as string values (not integers). The following enums are used throughout the API:
+
+#### ConversionStatus (Domain)
+
+Used in conversion entities and responses. Valid values:
+- `Pending`: Conversion is queued and waiting to start
+- `Running`: Conversion is currently in progress
+- `Completed`: Conversion finished successfully
+- `Failed`: Conversion failed with an error
+
+#### ConversionStatus (Progress DTO)
+
+Used in progress tracking responses. Valid values:
+- `Waiting`: Conversion is waiting to start (not yet tracked)
+- `Running`: Conversion is currently running and being tracked
+
+#### AudioChannels
+
+Used for audio channel configuration in conversion requests and profiles. Valid values:
+- `Stereo20`: Stereo 2.0 audio (2 channels)
+- `Surround51`: Surround 5.1 audio (6 channels)
+
+#### MediaType
+
+Used for metadata classification. Valid values:
+- `Movie`: Content is a movie
+- `TvShow`: Content is a TV show
+
+#### FetchFailureBehavior
+
+Used for metadata fetch failure handling configuration. Valid values:
+- `DefaultToInputName`: Use the original input filename when metadata lookup fails
+- `QueueForManualResolution`: Add to metadata resolution queue for manual processing
+- `SkipItem`: Skip the item entirely when metadata lookup fails
 
 #### Exception Handling
 

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace VideoConverter.Web.Models;
 
 public record ProfileDto(
@@ -7,8 +5,7 @@ public record ProfileDto(
     string? OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
-    [property: JsonConverter(typeof(AudioChannelsConverter))]
-    string? AudioChannels,
+    AudioChannels? AudioChannels,
     int? Resolution,
     string? MetadataBasedFilename,
     string? OutputFilenameTemplate,

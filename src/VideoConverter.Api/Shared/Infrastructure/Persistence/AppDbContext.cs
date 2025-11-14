@@ -18,6 +18,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigureConversion(modelBuilder);
+        ConfigureProfile(modelBuilder);
+        ConfigureMetadataResolutionQueue(modelBuilder);
+        ConfigureDirectoryQueueBatch(modelBuilder);
+    }
+
+    private static void ConfigureConversion(ModelBuilder modelBuilder)
+    {
         var entity = modelBuilder.Entity<Conversion>();
         _ = entity.HasKey(c => c.Id);
         _ = entity.Property(c => c.InputPath)
@@ -34,10 +42,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(64);
 
         _ = entity.Property(c => c.Status)
-            .IsRequired();
+            .IsRequired()
+            .HasConversion(Converters.CreateConversionStatusString())
+            .HasMaxLength(32);
 
         _ = entity.Property(c => c.Crf);
         _ = entity.Property(c => c.AudioBitrateKbps);
+        _ = entity.Property(c => c.AudioChannels)
+            .HasConversion(Converters.CreateAudioChannelsString())
+            .HasMaxLength(32);
         _ = entity.Property(c => c.Resolution);
         _ = entity.Property(c => c.SelectedAudioStreamIndicesCsv)
             .HasMaxLength(512);
@@ -49,11 +62,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(64);
 
         _ = entity.HasIndex(c => new { c.Status, c.Rank });
+    }
 
+    private static void ConfigureProfile(ModelBuilder modelBuilder)
+    {
         var profileEntity = modelBuilder.Entity<Profile>();
         _ = profileEntity.HasKey(p => p.Id);
         _ = profileEntity.Property(p => p.OutputDirectory)
             .HasMaxLength(1024);
+        _ = profileEntity.Property(p => p.AudioChannels)
+            .HasConversion(Converters.CreateAudioChannelsString())
+            .HasMaxLength(32);
         _ = profileEntity.Property(p => p.MetadataBasedFilename)
             .HasMaxLength(1024);
         _ = profileEntity.Property(p => p.OutputFilenameTemplate)
@@ -73,9 +92,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096)
             .Metadata;
         subtitleLangProp.SetValueComparer(listComparer);
-
-        ConfigureMetadataResolutionQueue(modelBuilder);
-        ConfigureDirectoryQueueBatch(modelBuilder);
     }
 
     private static void ConfigureMetadataResolutionQueue(ModelBuilder modelBuilder)

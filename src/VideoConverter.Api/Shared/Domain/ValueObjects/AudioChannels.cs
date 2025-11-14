@@ -5,6 +5,6 @@ namespace VideoConverter.Api.Shared.Domain.ValueObjects;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AudioChannels
 {
-    Stereo20 = 20,
-    Surround51 = 51,
+    Stereo20,
+    Surround51,
 }
