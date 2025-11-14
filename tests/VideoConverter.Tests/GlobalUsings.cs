@@ -1,0 +1,12 @@
+global using System.Net;
+global using System.Net.Http.Headers;
+global using System.Text.Json;
+global using FluentAssertions;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.Data.Sqlite;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.Logging;
+global using Microsoft.Extensions.Logging.Abstractions;
+global using Microsoft.Extensions.Options;
+global using Moq;

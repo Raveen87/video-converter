@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-
 using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Models;
@@ -18,16 +16,16 @@ public sealed class ConversionService(
     IFilenameParser filenameParser,
     IFilenameGenerator filenameGenerator,
     IFilenameTemplateEngine filenameTemplateEngine,
-    Microsoft.Extensions.Options.IOptions<FilenameTemplateOptions> filenameTemplateOptions,
+    IOptions<FilenameTemplateOptions> filenameTemplateOptions,
     ILogger<ConversionService> logger,
-    Microsoft.Extensions.Options.IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
+    IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
     Shared.Infrastructure.Persistence.AppDbContext? db = null) : IConversionService
 {
     private static readonly string[] SubtitleTagsSwedish = ["sv", "sve", "swe", "swedish"];
     private static readonly string[] SubtitleTagsEnglish = ["en", "eng", "english"];
     private static readonly string[] SubtitleTagsVietnamese = ["vi", "vie", "viet", "vietnamese"];
 
-    private readonly Microsoft.Extensions.Options.IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Microsoft.Extensions.Options.Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
+    private readonly IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
     private readonly Shared.Infrastructure.Persistence.AppDbContext? _db = db;
 
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)

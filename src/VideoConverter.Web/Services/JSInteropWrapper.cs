@@ -1,5 +1,3 @@
-using Microsoft.JSInterop;
-
 namespace VideoConverter.Web.Services;
 
 public class JSInteropWrapper(IJSRuntime jsRuntime) : IJSInteropWrapper

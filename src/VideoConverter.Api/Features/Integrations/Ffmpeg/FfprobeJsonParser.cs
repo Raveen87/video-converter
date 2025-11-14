@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using VideoConverter.Api.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
@@ -83,7 +81,7 @@ internal static class FfprobeJsonParser
     {
         return doc.RootElement.TryGetProperty("format", out var formatEl) && formatEl.ValueKind is JsonValueKind.Object &&
                formatEl.TryGetProperty("duration", out var durEl) && durEl.ValueKind is JsonValueKind.String &&
-               double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dur)
+               double.TryParse(durEl.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur)
             ? dur
             : null;
     }

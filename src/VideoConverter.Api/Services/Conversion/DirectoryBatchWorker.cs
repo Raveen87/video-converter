@@ -1,7 +1,4 @@
-using System.Text.Json;
-
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 
 using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;

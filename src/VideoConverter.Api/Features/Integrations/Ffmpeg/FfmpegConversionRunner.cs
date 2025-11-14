@@ -11,7 +11,7 @@ public sealed class FfmpegConversionRunner(
     IConversionRunCoordinator runCoordinator,
     IConversionOutputPlanner outputPlanner,
     IMediaDurationProvider durationProvider,
-    Microsoft.Extensions.Options.IOptions<FfmpegOptions> options,
+    IOptions<FfmpegOptions> options,
     ILogger<FfmpegConversionRunner> logger,
     IFfmpegArgumentsBuilder? argumentsBuilder = null,
     ICommandDisplayFormatter? commandFormatter = null) : IConversionRunner

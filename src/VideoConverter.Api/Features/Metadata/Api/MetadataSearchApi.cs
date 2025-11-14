@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
-
 using VideoConverter.Api.Features.Metadata.Services;
 
 namespace VideoConverter.Api.Features.Metadata.Api;

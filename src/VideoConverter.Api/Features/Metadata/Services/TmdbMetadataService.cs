@@ -138,11 +138,11 @@ public class TmdbMetadataService(
     {
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(responseString);
-            if (doc.RootElement.TryGetProperty("results", out var resultsEl) && resultsEl.ValueKind is System.Text.Json.JsonValueKind.Array)
+            using var doc = JsonDocument.Parse(responseString);
+            if (doc.RootElement.TryGetProperty("results", out var resultsEl) && resultsEl.ValueKind is JsonValueKind.Array)
             {
                 var first = resultsEl.EnumerateArray().FirstOrDefault();
-                if (first.ValueKind is System.Text.Json.JsonValueKind.Object && first.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var id))
+                if (first.ValueKind is JsonValueKind.Object && first.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var id))
                 {
                     var name = first.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : showName;
                     var firstAirDate = first.TryGetProperty("first_air_date", out var fadEl) ? fadEl.GetString() : null;

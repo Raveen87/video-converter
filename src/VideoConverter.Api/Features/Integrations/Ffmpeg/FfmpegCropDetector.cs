@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<FfmpegCropDetector> logger) : ICropDetector
@@ -97,7 +95,7 @@ public sealed class FfmpegCropDetector(IConfiguration configuration, ILogger<Ffm
         var filter = "cropdetect=24:16:0";
         return [
             "-v", "error",
-            "-ss", timestampSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-ss", timestampSeconds.ToString(CultureInfo.InvariantCulture),
             "-i", inputPath,
             "-t", "1",
             "-vf", filter,

@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;

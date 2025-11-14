@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal static class NativeMethods

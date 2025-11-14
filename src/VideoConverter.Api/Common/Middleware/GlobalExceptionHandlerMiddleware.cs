@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using VideoConverter.Api.Common.Exceptions;
 
 namespace VideoConverter.Api.Common.Middleware;

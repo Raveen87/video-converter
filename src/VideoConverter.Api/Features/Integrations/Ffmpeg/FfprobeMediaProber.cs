@@ -2,7 +2,7 @@ using VideoConverter.Api.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
-public sealed class FfprobeMediaProber(IProcessManager processManager, Microsoft.Extensions.Options.IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger, ICommandDisplayFormatter commandFormatter) : IMediaProber
+public sealed class FfprobeMediaProber(IProcessManager processManager, IOptions<FfmpegOptions> options, ILogger<FfprobeMediaProber> logger, ICommandDisplayFormatter commandFormatter) : IMediaProber
 {
     private readonly string _ffprobePath = options.Value.FfprobePath
         ?? Environment.GetEnvironmentVariable("FFPROBE_PATH")

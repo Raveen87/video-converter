@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 using MudBlazor.Services;
 
-using Serilog;
-
 using VideoConverter.Web;
 using VideoConverter.Web.Services;
 

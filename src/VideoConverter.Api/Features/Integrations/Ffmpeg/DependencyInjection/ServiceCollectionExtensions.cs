@@ -4,7 +4,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFfmpegIntegrations(this IServiceCollection services)
     {
-        _ = services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<FfmpegOptions>, ConfigureFfmpegOptions>();
+        _ = services.AddSingleton<IConfigureOptions<FfmpegOptions>, ConfigureFfmpegOptions>();
         _ = services.AddSingleton<IRunningProcessRegistry, RunningProcessRegistry>();
         _ = services.AddSingleton<IProcessController, ProcessController>();
         _ = services.AddSingleton<IProcessManager, ProcessManager>();
