@@ -108,23 +108,31 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    [Inject]
+    private ILogger<Conversions> Logger { get; set; } = null!;
+
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("Conversions page initializing");
         await LoadConversionsAsync().ConfigureAwait(false);
         StartPolling();
+        Logger.LogInformation("Conversions page initialized. Loaded {Count} conversions", _conversions.Count);
     }
 
     private async Task LoadConversionsAsync()
     {
+        Logger.LogDebug("Loading conversions from API");
         try
         {
             _isLoading = true;
             var conversions = await ApiClient.GetConversionsAsync().ConfigureAwait(false);
             _conversions.Clear();
             _conversions.AddRange(conversions);
+            Logger.LogInformation("Successfully loaded {Count} conversions", conversions.Count);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error loading conversions from API");
             Snackbar.Add($"Error loading conversions: {ex.Message}", Severity.Error);
         }
         finally
@@ -135,6 +143,7 @@
 
     private void StartPolling()
     {
+        Logger.LogInformation("Starting progress polling with interval {IntervalMs}ms", PollingIntervalMs);
         _pollingCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
@@ -145,11 +154,11 @@
                     await PollProgressAsync(_pollingCts.Token).ConfigureAwait(false);
                     await Task.Delay(PollingIntervalMs, _pollingCts.Token).ConfigureAwait(false);
                 }
+                Logger.LogInformation("Progress polling stopped (cancellation requested)");
             }
             catch (Exception ex)
             {
-                // Log and notify about unexpected exceptions in the polling loop
-                Console.WriteLine($"Unhandled exception in polling loop: {ex}");
+                Logger.LogError(ex, "Unhandled exception in polling loop");
                 await InvokeAsync(() =>
                 {
                     Snackbar.Add($"Polling stopped due to an unexpected error: {ex.Message}", Severity.Error);
@@ -167,6 +176,7 @@
 
         try
         {
+            Logger.LogDebug("Polling progress for {Count} conversions", _conversions.Count);
             // Poll progress for all conversions
             var tasks = _conversions.Select(c => ApiClient.GetConversionProgressAsync(c.Id, cancellationToken));
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -177,61 +187,97 @@
                 {
                     var conversion = _conversions[i];
                     var progress = results[i];
+                    var previousProgress = _progressData.TryGetValue(conversion.Id, out var prev) ? prev : null;
                     _progressData[conversion.Id] = progress;
+
+                    // Log when progress changes
+                    var hasChanged = previousProgress == null;
+                    if (!hasChanged && previousProgress != null && progress != null)
+                    {
+                        hasChanged = previousProgress.Status != progress.Status;
+                        if (!hasChanged && previousProgress.PercentageComplete.HasValue && progress.PercentageComplete.HasValue)
+                        {
+                            var prevValue = previousProgress.PercentageComplete.Value;
+                            var currValue = progress.PercentageComplete.Value;
+                            hasChanged = Math.Abs(prevValue - currValue) > 0.01;
+                        }
+                        else if (!hasChanged)
+                        {
+                            hasChanged = previousProgress.PercentageComplete.HasValue != progress.PercentageComplete.HasValue;
+                        }
+                    }
+
+                    if (progress != null && hasChanged)
+                    {
+                        Logger.LogDebug(
+                            "Progress updated for conversion {ConversionId}: {Status}, {Percentage}%",
+                            conversion.Id,
+                            progress.Status,
+                            progress.PercentageComplete?.ToString("F1") ?? "N/A");
+                    }
                 }
                 StateHasChanged();
             }).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            // Expected when cancellation is requested
+            Logger.LogDebug(ex, "Progress polling cancelled");
         }
         catch (Exception ex)
         {
-            // Silently handle polling errors to avoid spam
-            Console.WriteLine($"Error polling progress: {ex.Message}");
+            Logger.LogWarning(ex, "Error polling progress for conversions");
         }
     }
 
     private async Task StartConversion(int id)
     {
+        Logger.LogInformation("User action: Starting conversion {ConversionId}", id);
         try
         {
             await ApiClient.StartConversionAsync(id).ConfigureAwait(false);
             await LoadConversionsAsync().ConfigureAwait(false);
+            Logger.LogInformation("Successfully started conversion {ConversionId}", id);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error starting conversion {ConversionId}", id);
             Snackbar.Add($"Error starting conversion: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task PauseConversion(int id)
     {
+        Logger.LogInformation("User action: Pausing conversion {ConversionId}", id);
         try
         {
             await ApiClient.PauseConversionAsync(id).ConfigureAwait(false);
+            Logger.LogInformation("Successfully paused conversion {ConversionId}", id);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error pausing conversion {ConversionId}", id);
             Snackbar.Add($"Error pausing conversion: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task StopConversion(int id)
     {
+        Logger.LogInformation("User action: Stopping conversion {ConversionId}", id);
         try
         {
             await ApiClient.StopConversionAsync(id).ConfigureAwait(false);
+            Logger.LogInformation("Successfully stopped conversion {ConversionId}", id);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error stopping conversion {ConversionId}", id);
             Snackbar.Add($"Error stopping conversion: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task OpenCreateConversionDialog()
     {
+        Logger.LogInformation("User action: Opening create conversion dialog");
         IDialogReference? dialogRef = null;
         dialogRef = await DialogService.ShowAsync<CreateConversionDialog>("Create Conversion", new DialogParameters<CreateConversionDialog>
         {
@@ -240,6 +286,7 @@
             {
                 await CreateConversionOptimisticAsync(request).ConfigureAwait(false);
                 dialogRef?.Close();
+                Logger.LogDebug("Create conversion dialog closed");
             }) },
         }, new DialogOptions
         {
@@ -247,10 +294,12 @@
             MaxWidth = MaxWidth.Medium,
             FullWidth = true,
         }).ConfigureAwait(false);
+        Logger.LogDebug("Create conversion dialog opened");
     }
 
     private async Task OpenQueueDirectoryDialog()
     {
+        Logger.LogInformation("User action: Opening queue directory dialog");
         IDialogReference? dialogRef = null;
         dialogRef = await DialogService.ShowAsync<QueueDirectoryDialog>("Queue Directory", new DialogParameters<QueueDirectoryDialog>
         {
@@ -259,6 +308,7 @@
             {
                 await QueueDirectoryAsync(request).ConfigureAwait(false);
                 dialogRef?.Close();
+                Logger.LogDebug("Queue directory dialog closed");
             }) },
         }, new DialogOptions
         {
@@ -266,10 +316,12 @@
             MaxWidth = MaxWidth.Medium,
             FullWidth = true,
         }).ConfigureAwait(false);
+        Logger.LogDebug("Queue directory dialog opened");
     }
 
     private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
     {
+        Logger.LogInformation("Creating conversion with optimistic update. Input: {InputPath}", request.InputPath);
         // Create a temporary conversion for optimistic update
         var tempId = GetNextTempId();
         var tempConversion = new ConversionDto(
@@ -283,6 +335,7 @@
             request.Resolution,
             request.OutputFilenameTemplate);
 
+        Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
         // Add optimistically to the list
         await InvokeAsync(() =>
         {
@@ -295,6 +348,8 @@
             // Make the actual API call
             var created = await ApiClient.CreateConversionAsync(request).ConfigureAwait(false);
 
+            Logger.LogInformation("Conversion created successfully with ID {ConversionId}, replacing temporary ID {TempId}", 
+                created.Id, tempId);
             // Replace the temporary conversion with the real one
             await InvokeAsync(() =>
             {
@@ -305,6 +360,7 @@
                 }
                 else
                 {
+                    Logger.LogWarning("Temporary conversion {TempId} not found in list, adding created conversion at index 0", tempId);
                     // If not found, just add it (shouldn't happen, but be safe)
                     _conversions.Insert(0, created);
                 }
@@ -316,6 +372,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
             // Remove the temporary conversion on error
             await InvokeAsync(() =>
             {
@@ -329,9 +386,11 @@
 
     private async Task QueueDirectoryAsync(DirectoryQueueRequestDto request)
     {
+        Logger.LogInformation("Queueing directory for conversion. Directory: {DirectoryPath}", request.DirectoryPath);
         try
         {
             var batchId = await ApiClient.QueueDirectoryAsync(request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully queued directory with batch ID {BatchId}", batchId);
             Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
 
             // Refresh conversions list in case any were created immediately
@@ -339,6 +398,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error queueing directory. Directory: {DirectoryPath}", request.DirectoryPath);
             Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
         }
     }
@@ -369,6 +429,7 @@
 
     public void Dispose()
     {
+        Logger.LogInformation("Conversions page disposing, stopping progress polling");
         _pollingCts?.Cancel();
         _pollingCts?.Dispose();
     }

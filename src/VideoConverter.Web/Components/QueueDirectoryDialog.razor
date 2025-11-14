@@ -47,14 +47,18 @@
     [Parameter]
     public EventCallback<DirectoryQueueRequestDto> OnSubmit { get; set; }
 
+    [Inject]
+    private ILogger<QueueDirectoryDialog> Logger { get; set; } = null!;
 
     private readonly DirectoryFormModel _formModel = new();
     private bool _isSubmitting;
 
     protected override void OnInitialized()
     {
+        Logger.LogDebug("QueueDirectoryDialog initializing");
         if (InitialModel is not null)
         {
+            Logger.LogDebug("Initializing dialog with existing model. Directory: {DirectoryPath}", InitialModel.DirectoryPath);
             _formModel.DirectoryPath = InitialModel.DirectoryPath;
             _formModel.OutputDirectory = InitialModel.OutputDirectory;
             _formModel.Crf = InitialModel.Crf;
@@ -66,10 +70,16 @@
             _formModel.SubtitleLanguagesString = InitialModel.SubtitleLanguages is not null ? string.Join(", ", InitialModel.SubtitleLanguages) : null;
             _formModel.ExtensionsString = InitialModel.Extensions is not null ? string.Join(", ", InitialModel.Extensions) : null;
         }
+        else
+        {
+            Logger.LogDebug("Initializing dialog with empty form");
+        }
     }
 
     private async Task HandleValidSubmit()
     {
+        Logger.LogInformation("Form submission started. Directory: {DirectoryPath}, Output: {OutputDirectory}", 
+            _formModel.DirectoryPath, _formModel.OutputDirectory);
         _isSubmitting = true;
         try
         {
@@ -84,6 +94,11 @@
                 ? _formModel.ExtensionsString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
 
+            Logger.LogDebug("Form data converted. AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}, Extensions: {Extensions}", 
+                audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
+                subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null",
+                extensions != null ? string.Join(", ", extensions) : "null");
+
             var request = new DirectoryQueueRequestDto(
                 _formModel.DirectoryPath,
                 _formModel.OutputDirectory,
@@ -97,6 +112,12 @@
                 extensions);
 
             await OnSubmit.InvokeAsync(request);
+            Logger.LogInformation("Form submission completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during form submission");
+            throw new InvalidOperationException("Failed to submit directory queue form", ex);
         }
         finally
         {

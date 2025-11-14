@@ -43,14 +43,18 @@
     [Parameter]
     public EventCallback<ConversionCreateDto> OnSubmit { get; set; }
 
+    [Inject]
+    private ILogger<CreateConversionDialog> Logger { get; set; } = null!;
 
     private readonly ConversionFormModel _formModel = new();
     private bool _isSubmitting;
 
     protected override void OnInitialized()
     {
+        Logger.LogDebug("CreateConversionDialog initializing");
         if (InitialModel is not null)
         {
+            Logger.LogDebug("Initializing dialog with existing model. Input: {InputPath}", InitialModel.InputPath);
             _formModel.InputPath = InitialModel.InputPath;
             _formModel.OutputDirectory = InitialModel.OutputDirectory;
             _formModel.Crf = InitialModel.Crf;
@@ -66,10 +70,16 @@
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
             _formModel.SubtitleLanguagesString = InitialModel.SubtitleLanguages is not null ? string.Join(", ", InitialModel.SubtitleLanguages) : null;
         }
+        else
+        {
+            Logger.LogDebug("Initializing dialog with empty form");
+        }
     }
 
     private async Task HandleValidSubmit()
     {
+        Logger.LogInformation("Form submission started. Input: {InputPath}, Output: {OutputDirectory}", 
+            _formModel.InputPath, _formModel.OutputDirectory);
         _isSubmitting = true;
         try
         {
@@ -88,6 +98,10 @@
                 ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
 
+            Logger.LogDebug("Form data converted. AudioChannels: {AudioChannels}, AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}", 
+                audioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
+                subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
+
             var request = new ConversionCreateDto(
                 _formModel.InputPath,
                 _formModel.OutputDirectory,
@@ -100,6 +114,12 @@
                 _formModel.OutputFilenameTemplate);
 
             await OnSubmit.InvokeAsync(request);
+            Logger.LogInformation("Form submission completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during form submission");
+            throw new InvalidOperationException("Failed to submit conversion form", ex);
         }
         finally
         {
