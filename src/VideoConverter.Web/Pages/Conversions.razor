@@ -55,7 +55,7 @@
                 <MudTd DataLabel="Progress">
                     @if (_progressData.TryGetValue(context.Id, out var progress) && progress != null)
                     {
-                        <MudProgressLinear Color="@GetProgressColor(progress.Status)" Value="@(progress.PercentageComplete ?? 0)" Class="mb-2" />
+                        <MudProgressLinear Color="@GetProgressColor(progress.Status)" Value="@(progress.PercentageComplete ?? 0)" Class="@($"mb-2 {GetProgressClass(progress.Status)}")" />
                         <MudText Typo="Typo.caption">
                             @if (progress.PercentageComplete.HasValue)
                             {
@@ -422,6 +422,16 @@
             ConversionStatus.Running => Color.Success,
             ConversionStatus.Waiting => Color.Info,
             _ => Color.Default,
+        };
+    }
+
+    private static string GetProgressClass(ConversionStatus status)
+    {
+        return status switch
+        {
+            ConversionStatus.Running => "conversion-running",
+            ConversionStatus.Waiting => "conversion-waiting",
+            _ => string.Empty,
         };
     }
 

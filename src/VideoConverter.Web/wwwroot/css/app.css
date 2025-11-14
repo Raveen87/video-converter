@@ -112,3 +112,11 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.conversion-running .mud-progress-linear-bar {
+    background-color: #00d084 !important;
+}
+
+.conversion-waiting .mud-progress-linear-bar {
+    background-color: #2196f3 !important;
+}
