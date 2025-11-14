@@ -14,7 +14,6 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-#pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
 
             modelBuilder.Entity("VideoConverter.Api.Shared.Domain.Entities.Conversion", b =>
@@ -282,7 +281,6 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Items");
                 });
-#pragma warning restore 612, 618
         }
     }
 }
