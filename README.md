@@ -99,6 +99,36 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     - 200 OK with updated item
     - 400 if validation fails; 404 if item not found; 400 if not in `Pending` state
 
+- PATCH `/api/conversions/{id:int}`
+  - Updates a conversion's settings. Only conversions in `Pending` status can be updated.
+  - Body: JSON Patch document (RFC 6902) with `ConversionPatchDto`:
+    ```json
+    [
+      { "op": "replace", "path": "/outputDirectory", "value": "C:/new/output" },
+      { "op": "replace", "path": "/crf", "value": 28 },
+      { "op": "replace", "path": "/audioBitrateKbps", "value": 192 },
+      { "op": "replace", "path": "/audioChannels", "value": "Surround51" },
+      { "op": "replace", "path": "/resolution", "value": 1080 },
+      { "op": "replace", "path": "/outputFilenameTemplate", "value": "{Title}" },
+      { "op": "replace", "path": "/audioLanguages", "value": ["English", "Spanish"] },
+      { "op": "replace", "path": "/subtitleLanguages", "value": ["English"] }
+    ]
+    ```
+  - Editable fields:
+    - `outputDirectory` (string)
+    - `crf` (int?)
+    - `audioBitrateKbps` (int?)
+    - `audioChannels` (AudioChannels?)
+    - `resolution` (int?)
+    - `outputFilenameTemplate` (string?)
+    - `audioLanguages` (string[]?)
+    - `subtitleLanguages` (string[]?)
+  - Note: `inputPath` cannot be updated. If `audioLanguages` or `subtitleLanguages` are updated, the system will re-process stream matching.
+  - Responses:
+    - 200 OK with updated conversion
+    - 400 if validation fails or conversion is not in `Pending` status (includes user-friendly message explaining why)
+    - 404 if conversion not found
+
 - POST `/api/conversions/queue-directory` (no profiles)
   - Recursively scans a directory, queues all matching files.
   - Default extensions: `.mkv`, `.mp4`. You can override via `extensions`.

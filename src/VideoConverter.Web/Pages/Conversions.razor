@@ -74,6 +74,9 @@
                 </MudTd>
                 <MudTd DataLabel="Actions">
                     <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                        <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary">
+                            Edit
+                        </MudButton>
                         <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="@(() => StartConversion(context.Id))" Size="Size.Small">
                             Start
                         </MudButton>
@@ -317,6 +320,61 @@
             FullWidth = true,
         }).ConfigureAwait(false);
         Logger.LogDebug("Queue directory dialog opened");
+    }
+
+    private async Task OpenEditConversionDialog(ConversionDto conversion)
+    {
+        Logger.LogInformation("User action: Opening edit conversion dialog for conversion {ConversionId}", conversion.Id);
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<EditConversionDialog>("Edit Conversion", new DialogParameters<EditConversionDialog>
+        {
+            { x => x.Conversion, conversion },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ConversionPatchDto>(this, async (patch) =>
+            {
+                await UpdateConversionAsync(conversion.Id, patch).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Edit conversion dialog closed");
+            }) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Edit conversion dialog opened");
+    }
+
+    private async Task UpdateConversionAsync(int id, ConversionPatchDto patch)
+    {
+        Logger.LogInformation("Updating conversion {ConversionId}", id);
+        try
+        {
+            var updated = await ApiClient.UpdateConversionAsync(id, patch).ConfigureAwait(false);
+            Logger.LogInformation("Successfully updated conversion {ConversionId}", id);
+
+            // Update the conversion in the list
+            await InvokeAsync(() =>
+            {
+                var index = _conversions.FindIndex(c => c.Id == id);
+                if (index >= 0)
+                {
+                    _conversions[index] = updated;
+                }
+                else
+                {
+                    Logger.LogWarning("Conversion {ConversionId} not found in list after update", id);
+                    _conversions.Insert(0, updated);
+                }
+                StateHasChanged();
+            }).ConfigureAwait(false);
+
+            Snackbar.Add("Conversion updated successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating conversion {ConversionId}", id);
+            Snackbar.Add($"Error updating conversion: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)

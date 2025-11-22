@@ -69,6 +69,54 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<ConversionDto> UpdateConversionAsync(int id, ConversionPatchDto patch, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Updating conversion {ConversionId}", id);
+        _logger.LogInformation(
+            "Sending patch request for conversion {ConversionId}: OutputDirectory={OutputDirectory}, Crf={Crf}, AudioBitrateKbps={AudioBitrateKbps}, AudioChannels={AudioChannels}, Resolution={Resolution}, OutputFilenameTemplate={OutputFilenameTemplate}",
+            id,
+            patch.OutputDirectory,
+            patch.Crf,
+            patch.AudioBitrateKbps,
+            patch.AudioChannels,
+            patch.Resolution,
+            patch.OutputFilenameTemplate);
+        try
+        {
+            var (request, jsonContent) = CreateJsonPatchRequest(id, patch, _logger);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response: response, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var statusCode = response.StatusCode;
+                _logger.LogError("Update conversion {ConversionId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
+                _logger.LogError("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+
+                throw new HttpRequestException($"Error: {statusCode} - {errorMessage}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Failed to deserialize conversion response");
+            _logger.LogInformation(
+                "Successfully updated conversion {ConversionId}. Received response: OutputDirectory={OutputDirectory}, Crf={Crf}, AudioBitrateKbps={AudioBitrateKbps}, AudioChannels={AudioChannels}, Resolution={Resolution}",
+                id,
+                result.OutputDirectory,
+                result.Crf,
+                result.AudioBitrateKbps,
+                result.AudioChannels,
+                result.Resolution);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating conversion {ConversionId}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug(
@@ -310,5 +358,159 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             throw;
         }
 #pragma warning restore S2139
+    }
+
+    private static List<JsonPatchOperation> CreateJsonPatchOperations(ConversionPatchDto patch)
+    {
+        var patchOperations = new List<JsonPatchOperation>();
+
+        // JSON Patch paths should match the C# property names (PascalCase) for JsonPatchDocument model binding
+        if (patch.OutputDirectory is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/OutputDirectory", Value = patch.OutputDirectory });
+        }
+
+        if (patch.Crf is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/Crf", Value = patch.Crf });
+        }
+
+        if (patch.AudioBitrateKbps is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioBitrateKbps", Value = patch.AudioBitrateKbps });
+        }
+
+        if (patch.AudioChannels is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioChannels", Value = patch.AudioChannels.ToString() });
+        }
+
+        if (patch.Resolution is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/Resolution", Value = patch.Resolution });
+        }
+
+        if (patch.OutputFilenameTemplate is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/OutputFilenameTemplate", Value = patch.OutputFilenameTemplate });
+        }
+
+        if (patch.AudioLanguages is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioLanguages", Value = patch.AudioLanguages });
+        }
+
+        if (patch.SubtitleLanguages is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/SubtitleLanguages", Value = patch.SubtitleLanguages });
+        }
+
+        return patchOperations;
+    }
+
+    private static (HttpRequestMessage Request, string JsonContent) CreateJsonPatchRequest(int id, ConversionPatchDto patch, ILogger<VideoConverterApiClient> logger)
+    {
+        var patchOperations = CreateJsonPatchOperations(patch);
+        logger.LogInformation("Created {Count} patch operations for conversion {ConversionId}", patchOperations.Count, id);
+
+        // Manually construct JSON Patch document to ensure exact RFC 6902 format
+        // ASP.NET Core's JsonPatchDocument model binder is very strict about the format
+        var jsonBuilder = new System.Text.StringBuilder();
+        jsonBuilder.Append('[');
+        for (var i = 0; i < patchOperations.Count; i++)
+        {
+            var op = patchOperations[i];
+            if (i > 0)
+            {
+                jsonBuilder.Append(',');
+            }
+
+            jsonBuilder.Append('{');
+            jsonBuilder.Append("\"op\":\"");
+            jsonBuilder.Append(op.Op);
+            jsonBuilder.Append("\",\"path\":\"");
+            jsonBuilder.Append(op.Path);
+            jsonBuilder.Append("\",\"value\":");
+
+            // Serialize the value properly (handle strings, numbers, arrays, null, etc.)
+            var valueJson = JsonSerializer.Serialize(op.Value);
+            jsonBuilder.Append(valueJson);
+            jsonBuilder.Append('}');
+        }
+
+        jsonBuilder.Append(']');
+        var jsonContent = jsonBuilder.ToString();
+
+        logger.LogInformation("=== JSON Patch Document for conversion {ConversionId} ===", id);
+        logger.LogInformation("JSON Content: {JsonContent}", jsonContent);
+        logger.LogInformation("JSON Length: {Length} bytes", jsonContent.Length);
+        logger.LogInformation("=== End JSON Patch Document ===");
+
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"api/conversions/{id}")
+        {
+            Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json-patch+json"),
+        };
+
+        return (request, jsonContent);
+    }
+
+    private static async Task<string> ExtractUserFriendlyErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var errorJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(errorJson))
+            {
+                return $"Error: {response.StatusCode}";
+            }
+
+            // Log the raw error response for debugging
+            System.Diagnostics.Debug.WriteLine($"Error response body: {errorJson}");
+
+            try
+            {
+                using var doc = JsonDocument.Parse(errorJson);
+                if (doc.RootElement.TryGetProperty("userFriendlyMessage", out var userFriendlyMessage))
+                {
+                    return userFriendlyMessage.GetString() ?? errorJson;
+                }
+
+                if (doc.RootElement.TryGetProperty("errorMessage", out var errorMessage))
+                {
+                    return errorMessage.GetString() ?? errorJson;
+                }
+
+                // If it's a validation error with fieldErrors, include those
+                if (doc.RootElement.TryGetProperty("fieldErrors", out var fieldErrors))
+                {
+                    var fieldErrorsStr = fieldErrors.ToString();
+                    return $"Validation errors: {fieldErrorsStr}";
+                }
+
+                // Return the full JSON if we can't parse it
+                return errorJson;
+            }
+            catch (JsonException)
+            {
+                // If it's not valid JSON, return the raw response
+                return errorJson;
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"Error: {response.StatusCode} - {ex.Message}";
+        }
+    }
+
+    private sealed class JsonPatchOperation
+    {
+        [JsonPropertyName("op")]
+        public string Op { get; set; } = string.Empty;
+
+        [JsonPropertyName("path")]
+        public string Path { get; set; } = string.Empty;
+
+        [JsonPropertyName("value")]
+        public object? Value { get; set; }
     }
 }

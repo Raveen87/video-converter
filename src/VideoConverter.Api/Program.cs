@@ -9,6 +9,7 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Services;
 using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
 
@@ -94,10 +95,12 @@ public static class Program
     private static void RegisterAppServices(IServiceCollection services)
     {
         RegisterFeatureServices(services);
-        _ = services.AddControllers().AddJsonOptions(options =>
-        {
-            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        });
+        _ = services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            })
+            .AddNewtonsoftJson(); // Required for JsonPatchDocument model binding
         RegisterBatching(services);
     }
 
@@ -161,6 +164,7 @@ public static class Program
             logger.LogInformation("Database migrations applied successfully");
 
             await BackfillRanksIfMissingAsync(db, logger, ct).ConfigureAwait(false);
+            await ResetRunningConversionsOnStartupAsync(db, logger, ct).ConfigureAwait(false);
         }
     }
 
@@ -188,6 +192,41 @@ public static class Program
 
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
         logger.LogInformation("Backfill completed");
+    }
+
+    private static async Task ResetRunningConversionsOnStartupAsync(AppDbContext db, ILogger logger, CancellationToken ct)
+    {
+        // Reset conversions that were Running or Failed when the app was stopped
+        // Running: No longer actually running after restart
+        // Failed: May have failed due to transient issues, allow retry
+        var conversionsToReset = await db.Conversions
+            .Where(c => c.Status == ConversionStatus.Running || c.Status == ConversionStatus.Failed)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        if (conversionsToReset is { Count: 0 })
+        {
+            return;
+        }
+
+        var runningCount = conversionsToReset.Count(c => c.Status is ConversionStatus.Running);
+        var failedCount = conversionsToReset.Count(c => c.Status is ConversionStatus.Failed);
+
+        logger.LogInformation(
+            "Resetting {TotalCount} conversion(s) to Pending status (app was restarted): {RunningCount} Running, {FailedCount} Failed",
+            conversionsToReset.Count,
+            runningCount,
+            failedCount);
+
+        foreach (var conversion in conversionsToReset)
+        {
+            var oldStatus = conversion.Status;
+            conversion.Status = ConversionStatus.Pending;
+            logger.LogDebug("Reset conversion {ConversionId} from {OldStatus} to Pending", conversion.Id, oldStatus);
+        }
+
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        logger.LogInformation("Reset {Count} conversion(s) to Pending status", conversionsToReset.Count);
     }
 
     private static void MapEndpoints(WebApplication app)

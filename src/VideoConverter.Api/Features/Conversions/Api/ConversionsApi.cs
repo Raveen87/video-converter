@@ -377,6 +377,45 @@ public sealed class ConversionsApi : ControllerBase
         return Results.Ok(dto);
     }
 
+    [HttpPatch("{id:int}")]
+    public async Task<IResult> UpdateConversionAsync(
+        int id,
+        [FromBody] Microsoft.AspNetCore.JsonPatch.JsonPatchDocument<ConversionPatchDto>? patchDocument,
+        [FromServices] ConversionsEndpoints handlers,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+
+        // Log the raw request body for debugging
+        if (HttpContext.Request.Body.CanSeek)
+        {
+            HttpContext.Request.Body.Position = 0;
+            using var reader = new StreamReader(HttpContext.Request.Body, leaveOpen: true);
+            var requestBody = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+            logger.LogInformation("Raw request body for conversion {ConversionId}: {RequestBody}", id, requestBody);
+            HttpContext.Request.Body.Position = 0;
+        }
+
+        if (patchDocument is null)
+        {
+            logger.LogWarning("Received null patch document for conversion {ConversionId}. ModelState.IsValid: {IsValid}", id, ModelState.IsValid);
+            if (!ModelState.IsValid)
+            {
+                foreach (var error in ModelState)
+                {
+                    logger.LogError("ModelState error for key {Key}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                }
+            }
+        }
+        else
+        {
+            logger.LogDebug("Received patch document for conversion {ConversionId} with {OperationCount} operations", id, patchDocument.Operations.Count);
+        }
+
+        return await handlers.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
+    }
+
     [HttpPatch("{id:int}/reorder")]
     public async Task<IResult> ReorderAsync(
         int id,
