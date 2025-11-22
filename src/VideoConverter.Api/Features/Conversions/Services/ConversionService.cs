@@ -80,6 +80,29 @@ public sealed class ConversionService(
         return conversion;
     }
 
+    public async Task<LanguageProcessingResult> ProcessLanguagesAsync(
+        string inputPath,
+        IEnumerable<string>? audioLanguages,
+        IEnumerable<string>? subtitleLanguages,
+        CancellationToken cancellationToken)
+    {
+        logger.LogDebug(
+            "Processing languages for existing conversion. Input: {InputPath}, Audio: {AudioLanguages}, Subtitle: {SubtitleLanguages}",
+            inputPath,
+            audioLanguages is not null ? string.Join(", ", audioLanguages) : "none",
+            subtitleLanguages is not null ? string.Join(", ", subtitleLanguages) : "none");
+
+        var audioResult = await ProcessAudioLanguagesForUpdateAsync(inputPath, audioLanguages, cancellationToken).ConfigureAwait(false);
+        var subtitleResult = await ProcessSubtitleLanguagesForUpdateAsync(inputPath, subtitleLanguages, cancellationToken).ConfigureAwait(false);
+
+        return new LanguageProcessingResult
+        {
+            AudioIndicesCsv = audioResult.AudioIndicesCsv,
+            SubtitleIndicesCsv = subtitleResult.SubtitleIndicesCsv,
+            ExternalSubtitlePathsCsv = subtitleResult.ExternalSubtitlePathsCsv,
+        };
+    }
+
     private static int DetermineAudioBitrate(int? requestedBitrate, AudioChannels? audioChannels)
     {
         // If bitrate is explicitly provided, use it
@@ -432,6 +455,114 @@ public sealed class ConversionService(
             logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
             return null;
         }
+    }
+
+    private async Task<AudioProcessingResult> ProcessAudioLanguagesForUpdateAsync(string inputPath, IEnumerable<string>? requestedLanguages, CancellationToken cancellationToken)
+    {
+        var requested = requestedLanguages?.ToList();
+
+        if (requested is not { Count: > 0 })
+        {
+            return new AudioProcessingResult();
+        }
+
+        logger.LogDebug(
+            "Processing audio language requirements: {AudioLanguages}",
+            string.Join(", ", requested));
+
+        var probe = await prober.ProbeAsync(inputPath, cancellationToken).ConfigureAwait(false);
+        var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
+        var audioIndicesCsv = string.Join(',', matched);
+
+        logger.LogInformation(
+            "Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
+            audioIndicesCsv,
+            string.Join(", ", requested));
+
+        return new AudioProcessingResult { AudioIndicesCsv = audioIndicesCsv };
+    }
+
+    private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesForUpdateAsync(string inputPath, IEnumerable<string>? requestedLanguages, CancellationToken cancellationToken)
+    {
+        var requested = requestedLanguages?.ToList();
+
+        if (requested is not { Count: > 0 })
+        {
+            return await ProcessDefaultTextSubtitlesForUpdateAsync(inputPath, cancellationToken).ConfigureAwait(false);
+        }
+
+        logger.LogDebug(
+            "Processing subtitle language requirements: {SubtitleLanguages}",
+            string.Join(", ", requested));
+
+        var probe = await prober.ProbeAsync(inputPath, cancellationToken).ConfigureAwait(false);
+        var matchedIndices = new List<int>();
+        var externalPaths = new List<string>();
+
+        foreach (var lang in requested)
+        {
+            try
+            {
+                var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
+                matchedIndices.AddRange(idx);
+                logger.LogDebug(
+                    "Found subtitle stream for language '{Language}': indices {Indices}",
+                    lang,
+                    string.Join(',', idx));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
+
+                var externalPath = FindExternalSubtitle(inputPath, lang);
+                if (externalPath is not null)
+                {
+                    externalPaths.Add(externalPath);
+                    logger.LogDebug("Found external subtitle file: {Path}", externalPath);
+                }
+                else
+                {
+                    logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", lang);
+                    throw new InvalidOperationException($"Requested subtitle language '{lang}' not found in file or as external .srt.");
+                }
+            }
+        }
+
+        var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
+        var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
+
+        logger.LogInformation(
+            "Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
+            subtitleIndicesCsv ?? "none",
+            externalSubtitlePathsCsv ?? "none");
+
+        return new SubtitleProcessingResult
+        {
+            SubtitleIndicesCsv = subtitleIndicesCsv,
+            ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
+        };
+    }
+
+    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesForUpdateAsync(string inputPath, CancellationToken cancellationToken)
+    {
+        // No specific languages requested: include all available text-based internal subtitles.
+        var probeAll = await prober.ProbeAsync(inputPath, cancellationToken).ConfigureAwait(false);
+        var streams = probeAll?.Streams ?? [];
+        var textSubtitleIndices = streams
+            .Where(s =>
+                string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)
+                && SubtitleCodecHelpers.IsTextSubtitle(s.CodecName))
+            .Select(s => s.Index)
+            .ToList();
+
+        var indicesCsv = textSubtitleIndices.Count > 0 ? string.Join(',', textSubtitleIndices) : null;
+        logger.LogInformation("Including all text-based subtitles: {Indices}", indicesCsv ?? "none");
+
+        return new SubtitleProcessingResult
+        {
+            SubtitleIndicesCsv = indicesCsv,
+            ExternalSubtitlePathsCsv = null,
+        };
     }
 
     private sealed record AudioProcessingResult

@@ -19,4 +19,9 @@ internal sealed class StubConversionService : IConversionService
         };
         return Task.FromResult(c);
     }
+
+    public Task<LanguageProcessingResult> ProcessLanguagesAsync(string inputPath, IEnumerable<string>? audioLanguages, IEnumerable<string>? subtitleLanguages, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("Not used in this test");
+    }
 }
