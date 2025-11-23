@@ -62,19 +62,21 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 
 - POST `/api/conversions/{id}/start`
   - Starts conversion for the specified id using ffmpeg (runs in background)
+  - **Single-item processing**: Only one conversion can run at a time. If another conversion is already running, this request will be rejected with a 400 error.
   - Response 200:
     ```json
     { "message": "Started", "processId": 1234, "command": "ffmpeg ..." }
     ```
-  - Response 404 if id not found; 400 if already running or failed to start
+  - Response 404 if id not found; 400 if another conversion is already running or failed to start
 
 - POST `/api/conversions/start-next`
   - Starts the next conversion in the queue (lowest by `Rank`)
+  - **Single-item processing**: Only one conversion can run at a time. If a conversion is already running, this request will be rejected with a 400 error indicating which conversion is currently running.
   - Response 200:
     ```json
     { "message": "Started", "processId": 1234, "command": "ffmpeg ...", "conversionId": 1 }
     ```
-  - Response 404 if queue is empty
+  - Response 404 if queue is empty; 400 if a conversion is already running
 
 - POST `/api/conversions/{id}/pause`
   - Pauses the ffmpeg process for the specified conversion.

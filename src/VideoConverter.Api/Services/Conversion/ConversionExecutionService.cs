@@ -9,6 +9,29 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
 {
     public async Task<ConversionStartResult> RunByIdAsync(int id, CancellationToken ct)
     {
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running && c.Id != id, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is not null)
+        {
+            logger.LogWarning(
+                "Cannot start conversion {ConversionId}: conversion {RunningConversionId} is already running",
+                id,
+                runningConversion.Id);
+            var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                { "runningConversionId", runningConversion.Id },
+            };
+            return new ConversionStartResult
+            {
+                IsSuccess = false,
+                ErrorMessage = $"A conversion is already running. Please pause or stop conversion {runningConversion.Id} before starting a new one.",
+                ErrorDetails = errorDetails,
+            };
+        }
+
         var conversion = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (conversion is null)
         {
@@ -34,6 +57,28 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
 
     public async Task<(ConversionStartResult Result, int ConversionId)> RunNextPendingAsync(CancellationToken ct)
     {
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is not null)
+        {
+            logger.LogWarning(
+                "Cannot start next conversion: conversion {RunningConversionId} is already running",
+                runningConversion.Id);
+            var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                { "runningConversionId", runningConversion.Id },
+            };
+            return (new ConversionStartResult
+            {
+                IsSuccess = false,
+                ErrorMessage = $"A conversion is already running. Please pause or stop conversion {runningConversion.Id} before starting a new one.",
+                ErrorDetails = errorDetails,
+            }, 0);
+        }
+
         var conversion = await db.Conversions
             .OrderBy(c => c.Rank)
             .ThenBy(c => c.CreatedAtUtc)
