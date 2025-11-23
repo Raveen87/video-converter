@@ -416,29 +416,29 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         // Manually construct JSON Patch document to ensure exact RFC 6902 format
         // ASP.NET Core's JsonPatchDocument model binder is very strict about the format
         var jsonBuilder = new System.Text.StringBuilder();
-        jsonBuilder.Append('[');
+        _ = jsonBuilder.Append('[');
         for (var i = 0; i < patchOperations.Count; i++)
         {
             var op = patchOperations[i];
             if (i > 0)
             {
-                jsonBuilder.Append(',');
+                _ = jsonBuilder.Append(',');
             }
 
-            jsonBuilder.Append('{');
-            jsonBuilder.Append("\"op\":\"");
-            jsonBuilder.Append(op.Op);
-            jsonBuilder.Append("\",\"path\":\"");
-            jsonBuilder.Append(op.Path);
-            jsonBuilder.Append("\",\"value\":");
+            _ = jsonBuilder.Append('{');
+            _ = jsonBuilder.Append("\"op\":\"");
+            _ = jsonBuilder.Append(op.Op);
+            _ = jsonBuilder.Append("\",\"path\":\"");
+            _ = jsonBuilder.Append(op.Path);
+            _ = jsonBuilder.Append("\",\"value\":");
 
             // Serialize the value properly (handle strings, numbers, arrays, null, etc.)
             var valueJson = JsonSerializer.Serialize(op.Value);
-            jsonBuilder.Append(valueJson);
-            jsonBuilder.Append('}');
+            _ = jsonBuilder.Append(valueJson);
+            _ = jsonBuilder.Append('}');
         }
 
-        jsonBuilder.Append(']');
+        _ = jsonBuilder.Append(']');
         var jsonContent = jsonBuilder.ToString();
 
         logger.LogInformation("=== JSON Patch Document for conversion {ConversionId} ===", id);

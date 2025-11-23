@@ -155,12 +155,9 @@ public sealed class ConversionsApi : ControllerBase
             result.ErrorMessage,
             result.Command,
             result.ErrorDetails);
-        throw ApiErrorException.BusinessError(
-            ErrorCode.ProcessStartFailed,
-            result.ErrorMessage ?? "Unknown error occurred",
-            "Failed to start the conversion process. Please try again later.",
-            innerException: null,
-            result.ErrorDetails);
+
+        ThrowConversionStartError(result);
+        return Results.Ok(new { message = "Started" }); // Unreachable, but satisfies compiler
     }
 
     [HttpPost("{id:int}/pause")]
@@ -252,6 +249,28 @@ public sealed class ConversionsApi : ControllerBase
         var logger = loggerFactory.CreateLogger("ConversionsApi");
         logger.LogDebug("Starting next conversion from queue");
 
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is not null)
+        {
+            logger.LogWarning(
+                "Cannot start next conversion: conversion {RunningConversionId} is already running",
+                runningConversion.Id);
+            var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                { "runningConversionId", runningConversion.Id },
+            };
+            throw ApiErrorException.BusinessError(
+                ErrorCode.ConversionAlreadyStarted,
+                $"A conversion is already running. Please pause or stop conversion {runningConversion.Id} before starting a new one.",
+                "Another conversion is currently in progress. Please stop or pause the running conversion before starting a new one.",
+                innerException: null,
+                errorDetails);
+        }
+
         var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
@@ -279,12 +298,9 @@ public sealed class ConversionsApi : ControllerBase
             result.ErrorMessage,
             result.Command,
             result.ErrorDetails);
-        throw ApiErrorException.BusinessError(
-            ErrorCode.ProcessStartFailed,
-            result.ErrorMessage ?? "Unknown error occurred",
-            "Failed to start the conversion process. Please try again later.",
-            innerException: null,
-            result.ErrorDetails);
+
+        ThrowConversionStartError(result);
+        return Results.Ok(new { message = "Started" }); // Unreachable, but satisfies compiler
     }
 
     [HttpGet("{id:int}/progress")]
@@ -490,5 +506,25 @@ public sealed class ConversionsApi : ControllerBase
             c.AudioChannels,
             c.Resolution,
             c.MetadataBasedFilename);
+    }
+
+    private static void ThrowConversionStartError(ConversionStartResult result)
+    {
+        if (result.ErrorDetails?.ContainsKey("runningConversionId") is true)
+        {
+            throw ApiErrorException.BusinessError(
+                ErrorCode.ConversionAlreadyStarted,
+                result.ErrorMessage ?? "A conversion is already running.",
+                "Another conversion is currently in progress. Please stop or pause the running conversion before starting a new one.",
+                innerException: null,
+                result.ErrorDetails);
+        }
+
+        throw ApiErrorException.BusinessError(
+            ErrorCode.ProcessStartFailed,
+            result.ErrorMessage ?? "Unknown error occurred",
+            "Failed to start the conversion process. Please try again later.",
+            innerException: null,
+            result.ErrorDetails);
     }
 }
