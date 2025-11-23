@@ -81,7 +81,7 @@ public sealed class ConversionsApiStartTests
     }
 
     [Fact]
-    public async Task StartConversionByIdAsync_When_Another_Conversion_Already_Running_Throws_ApiError()
+    public async Task StartQueueAsync_When_Another_Conversion_Already_Running_Throws_ApiError()
     {
         await using var db = DbContextTestFactory.CreateInMemory();
 
@@ -109,7 +109,7 @@ public sealed class ConversionsApiStartTests
         var loggerFactory = NullLoggerFactory.Instance;
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
-            api.StartConversionByIdAsync(targetConversion.Id, db, executor, loggerFactory, CancellationToken.None));
+            api.StartQueueAsync(db, executor, loggerFactory, CancellationToken.None));
 
         _ = ex.ErrorCode.Should().Be(ErrorCode.ConversionAlreadyStarted);
         _ = ex.ErrorMessage.Should().Contain("already running");
@@ -123,7 +123,7 @@ public sealed class ConversionsApiStartTests
     }
 
     [Fact]
-    public async Task StartConversionByIdAsync_When_No_Running_Conversion_Starts_Conversion()
+    public async Task StartQueueAsync_When_No_Running_Conversion_Starts_Conversion()
     {
         await using var db = DbContextTestFactory.CreateInMemory();
 
@@ -141,7 +141,7 @@ public sealed class ConversionsApiStartTests
         var api = new ConversionsApi();
         var loggerFactory = NullLoggerFactory.Instance;
 
-        var result = await api.StartConversionByIdAsync(conversion.Id, db, executor, loggerFactory, CancellationToken.None);
+        var result = await api.StartQueueAsync(db, executor, loggerFactory, CancellationToken.None);
 
         _ = result.Should().NotBeNull();
         _ = result.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IResult>();

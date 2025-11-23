@@ -150,85 +150,64 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task StartConversionAsync(int id, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Starting conversion {ConversionId}", id);
-        try
-        {
-            var response = await _httpClient.PostAsync(
-                $"api/conversions/{id}/start",
-                content: null,
-                cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
-            _logger.LogInformation("Successfully started conversion {ConversionId}", id);
-        }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error starting conversion {ConversionId}", id);
-            throw;
-        }
-#pragma warning restore S2139
-    }
-
-    public async Task PauseConversionAsync(int id, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Pausing conversion {ConversionId}", id);
-        try
-        {
-            var response = await _httpClient.PostAsync(
-                $"api/conversions/{id}/pause",
-                content: null,
-                cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
-            _logger.LogInformation("Successfully paused conversion {ConversionId}", id);
-        }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pausing conversion {ConversionId}", id);
-            throw;
-        }
-#pragma warning restore S2139
-    }
-
-    public async Task StopConversionAsync(int id, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Stopping conversion {ConversionId}", id);
-        try
-        {
-            var response = await _httpClient.PostAsync(
-                $"api/conversions/{id}/stop",
-                content: null,
-                cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
-            _logger.LogInformation("Successfully stopped conversion {ConversionId}", id);
-        }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error stopping conversion {ConversionId}", id);
-            throw;
-        }
-#pragma warning restore S2139
-    }
-
-    public async Task StartNextConversionAsync(CancellationToken cancellationToken = default)
+    public async Task StartQueueAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting next conversion in queue");
         try
         {
             var response = await _httpClient.PostAsync(
-                "api/conversions/start-next",
+                "api/conversions/queue/start",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
             _ = response.EnsureSuccessStatusCode();
-            _logger.LogInformation("Successfully started next conversion");
+            _logger.LogInformation("Successfully started next conversion in queue");
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error starting next conversion");
+            _logger.LogError(ex, "Error starting queue");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task PauseQueueAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Pausing current conversion in queue");
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "api/conversions/queue/pause",
+                content: null,
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            _logger.LogInformation("Successfully paused queue");
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error pausing queue");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task StopQueueAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Stopping current conversion in queue");
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "api/conversions/queue/stop",
+                content: null,
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            _logger.LogInformation("Successfully stopped queue");
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error stopping queue");
             throw;
         }
 #pragma warning restore S2139

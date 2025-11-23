@@ -9,8 +9,17 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateConversionDialog" Class="mr-2">
                 Create Conversion
             </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog" Class="mr-2">
                 Queue Directory
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_hasPendingConversions || _isRunning)" Class="mr-2">
+                Start Queue
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Pause" OnClick="PauseQueue" Disabled="@(!_isRunning)" Class="mr-2">
+                Pause Queue
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Stop" OnClick="StopQueue" Disabled="@(!_isRunning)">
+                Stop Queue
             </MudButton>
         </div>
     </div>
@@ -73,20 +82,9 @@
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
-                        <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary">
-                            Edit
-                        </MudButton>
-                        <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="@(() => StartConversion(context.Id))" Size="Size.Small">
-                            Start
-                        </MudButton>
-                        <MudButton StartIcon="@Icons.Material.Filled.Pause" OnClick="@(() => PauseConversion(context.Id))" Size="Size.Small">
-                            Pause
-                        </MudButton>
-                        <MudButton StartIcon="@Icons.Material.Filled.Stop" OnClick="@(() => StopConversion(context.Id))" Size="Size.Small" Color="Color.Error">
-                            Stop
-                        </MudButton>
-                    </MudButtonGroup>
+                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                        Edit
+                    </MudButton>
                 </MudTd>
             </RowTemplate>
         </MudTable>
@@ -101,6 +99,8 @@
     private bool _isLoading = true;
     private CancellationTokenSource? _pollingCts;
     private const int PollingIntervalMs = 2000; // Poll every 2 seconds
+    private bool _isRunning = false;
+    private bool _hasPendingConversions = false;
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -131,6 +131,7 @@
             var conversions = await ApiClient.GetConversionsAsync().ConfigureAwait(false);
             _conversions.Clear();
             _conversions.AddRange(conversions);
+            UpdateQueueState();
             Logger.LogInformation("Successfully loaded {Count} conversions", conversions.Count);
         }
         catch (Exception ex)
@@ -142,6 +143,27 @@
         {
             _isLoading = false;
         }
+    }
+
+    private void UpdateQueueState()
+    {
+        _isRunning = _conversions.Any(c =>
+        {
+            if (_progressData.TryGetValue(c.Id, out var progress) && progress != null)
+            {
+                return progress.Status == ConversionStatus.Running;
+            }
+            return false;
+        });
+        _hasPendingConversions = _conversions.Any(c =>
+        {
+            if (_progressData.TryGetValue(c.Id, out var progress) && progress != null)
+            {
+                return progress.Status == ConversionStatus.Waiting;
+            }
+            // If no progress data yet, assume it might be pending
+            return true;
+        });
     }
 
     private void StartPolling()
@@ -219,6 +241,7 @@
                             progress.PercentageComplete?.ToString("F1") ?? "N/A");
                     }
                 }
+                UpdateQueueState();
                 StateHasChanged();
             }).ConfigureAwait(false);
         }
@@ -232,49 +255,53 @@
         }
     }
 
-    private async Task StartConversion(int id)
+    private async Task StartQueue()
     {
-        Logger.LogInformation("User action: Starting conversion {ConversionId}", id);
+        Logger.LogInformation("User action: Starting queue");
         try
         {
-            await ApiClient.StartConversionAsync(id).ConfigureAwait(false);
+            await ApiClient.StartQueueAsync().ConfigureAwait(false);
             await LoadConversionsAsync().ConfigureAwait(false);
-            Logger.LogInformation("Successfully started conversion {ConversionId}", id);
+            Snackbar.Add("Queue started successfully", Severity.Success);
+            Logger.LogInformation("Successfully started queue");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error starting conversion {ConversionId}", id);
-            Snackbar.Add($"Error starting conversion: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error starting queue");
+            Snackbar.Add($"Error starting queue: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task PauseConversion(int id)
+    private async Task PauseQueue()
     {
-        Logger.LogInformation("User action: Pausing conversion {ConversionId}", id);
+        Logger.LogInformation("User action: Pausing queue");
         try
         {
-            await ApiClient.PauseConversionAsync(id).ConfigureAwait(false);
-            Logger.LogInformation("Successfully paused conversion {ConversionId}", id);
+            await ApiClient.PauseQueueAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue paused successfully", Severity.Success);
+            Logger.LogInformation("Successfully paused queue");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error pausing conversion {ConversionId}", id);
-            Snackbar.Add($"Error pausing conversion: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error pausing queue");
+            Snackbar.Add($"Error pausing queue: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task StopConversion(int id)
+    private async Task StopQueue()
     {
-        Logger.LogInformation("User action: Stopping conversion {ConversionId}", id);
+        Logger.LogInformation("User action: Stopping queue");
         try
         {
-            await ApiClient.StopConversionAsync(id).ConfigureAwait(false);
-            Logger.LogInformation("Successfully stopped conversion {ConversionId}", id);
+            await ApiClient.StopQueueAsync().ConfigureAwait(false);
+            await LoadConversionsAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue stopped successfully", Severity.Success);
+            Logger.LogInformation("Successfully stopped queue");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error stopping conversion {ConversionId}", id);
-            Snackbar.Add($"Error stopping conversion: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error stopping queue");
+            Snackbar.Add($"Error stopping queue: {ex.Message}", Severity.Error);
         }
     }
 

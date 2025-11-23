@@ -121,37 +121,62 @@ public sealed class ConversionsApi : ControllerBase
         return Results.Ok(items);
     }
 
-    [HttpPost("{id:int}/start")]
-    public async Task<IResult> StartConversionByIdAsync(
-        int id,
+    [HttpPost("queue/start")]
+    public async Task<IResult> StartQueueAsync(
         [FromServices] AppDbContext db,
         [FromServices] IConversionExecutionService executor,
         [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogInformation("Starting conversion by ID: {ConversionId}", id);
+        logger.LogDebug("Starting next conversion from queue");
 
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
-        if (!exists)
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is not null)
         {
-            logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
-            throw ApiErrorException.NotFound(
-                ErrorCode.ConversionNotFound,
-                $"Conversion with ID {id} was not found.",
-                "The requested conversion could not be found.");
+            logger.LogWarning(
+                "Cannot start next conversion: conversion {RunningConversionId} is already running",
+                runningConversion.Id);
+            var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                { "runningConversionId", runningConversion.Id },
+            };
+            throw ApiErrorException.BusinessError(
+                ErrorCode.ConversionAlreadyStarted,
+                $"A conversion is already running. Please pause or stop the queue before starting a new one.",
+                "Another conversion is currently in progress. Please stop or pause the running conversion before starting a new one.",
+                innerException: null,
+                errorDetails);
         }
 
-        var result = await executor.RunByIdAsync(id, ct).ConfigureAwait(false);
+        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending, ct).ConfigureAwait(false);
+        if (!anyPending)
+        {
+            logger.LogInformation("No conversions found in queue");
+            throw ApiErrorException.NotFound(
+                ErrorCode.QueueEmpty,
+                "No conversions found in the queue.",
+                "There are no conversions available to start.");
+        }
+
+        var (result, conversionId) = await executor.RunNextPendingAsync(ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            logger.LogInformation("Conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}", id, result.ProcessId, result.Command);
-            return Results.Ok(new { message = "Started", result.ProcessId, result.Command });
+            logger.LogInformation(
+                "Next conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}",
+                conversionId,
+                result.ProcessId,
+                result.Command);
+            return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId });
         }
 
         logger.LogError(
-            "Failed to start conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
-            id,
+            "Failed to start next conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
+            conversionId,
             result.ErrorMessage,
             result.Command,
             result.ErrorDetails);
@@ -160,9 +185,8 @@ public sealed class ConversionsApi : ControllerBase
         return Results.Ok(new { message = "Started" }); // Unreachable, but satisfies compiler
     }
 
-    [HttpPost("{id:int}/pause")]
-    public async Task<IResult> PauseConversionByIdAsync(
-        int id,
+    [HttpPost("queue/pause")]
+    public async Task<IResult> PauseQueueAsync(
         [FromServices] AppDbContext db,
         [FromServices] IRunningProcessRegistry registry,
         [FromServices] IProcessController controller,
@@ -170,38 +194,45 @@ public sealed class ConversionsApi : ControllerBase
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
-        if (!exists)
+        logger.LogDebug("Pausing current conversion in queue");
+
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is null)
         {
+            logger.LogWarning("No conversion is currently running");
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
-                $"Conversion with ID {id} was not found.",
-                "The requested conversion could not be found.");
+                "No conversion is currently running.",
+                "There is no conversion currently running to pause.");
         }
 
-        var key = $"conversion:{id}";
+        var key = $"conversion:{runningConversion.Id}";
         if (!registry.TryGet(key, out var handle))
         {
+            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
-                $"Conversion {id} is not currently running.",
-                "The specified conversion is not running.");
+                $"Conversion {runningConversion.Id} is not currently running.",
+                "The running conversion could not be found in the process registry.");
         }
 
         var paused = controller.TryPause(handle.ProcessId);
         if (!paused)
         {
-            logger.LogWarning("Failed to pause conversion {Id} (PID {Pid})", id, handle.ProcessId);
+            logger.LogWarning("Failed to pause conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
             return Results.Problem(title: "Failed to pause process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        logger.LogInformation("Paused conversion {Id} (PID {Pid})", id, handle.ProcessId);
-        return Results.Ok(new { message = "Paused", pid = handle.ProcessId });
+        logger.LogInformation("Paused conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+        return Results.Ok(new { message = "Paused", pid = handle.ProcessId, conversionId = runningConversion.Id });
     }
 
-    [HttpPost("{id:int}/stop")]
-    public async Task<IResult> StopConversionByIdAsync(
-        int id,
+    [HttpPost("queue/stop")]
+    public async Task<IResult> StopQueueAsync(
         [FromServices] AppDbContext db,
         [FromServices] IRunningProcessRegistry registry,
         [FromServices] IProcessController controller,
@@ -209,34 +240,42 @@ public sealed class ConversionsApi : ControllerBase
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        var exists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
-        if (!exists)
+        logger.LogDebug("Stopping current conversion in queue");
+
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is null)
         {
+            logger.LogWarning("No conversion is currently running");
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
-                $"Conversion with ID {id} was not found.",
-                "The requested conversion could not be found.");
+                "No conversion is currently running.",
+                "There is no conversion currently running to stop.");
         }
 
-        var key = $"conversion:{id}";
+        var key = $"conversion:{runningConversion.Id}";
         if (!registry.TryGet(key, out var handle))
         {
+            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
-                $"Conversion {id} is not currently running.",
-                "The specified conversion is not running.");
+                $"Conversion {runningConversion.Id} is not currently running.",
+                "The running conversion could not be found in the process registry.");
         }
 
         var (stopped, forced) = await controller.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
 
         if (!stopped)
         {
-            logger.LogWarning("Failed to stop conversion {Id} (PID {Pid})", id, handle.ProcessId);
+            logger.LogWarning("Failed to stop conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
             return Results.Problem(title: "Failed to stop process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}", id, handle.ProcessId, forced);
-        return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced });
+        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}", runningConversion.Id, handle.ProcessId, forced);
+        return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced, conversionId = runningConversion.Id });
     }
 
     [HttpPost("start-next")]
