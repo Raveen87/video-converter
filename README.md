@@ -60,34 +60,29 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     ]
     ```
 
-- POST `/api/conversions/{id}/start`
-  - Starts conversion for the specified id using ffmpeg (runs in background)
-  - **Single-item processing**: Only one conversion can run at a time. If another conversion is already running, this request will be rejected with a 400 error.
-  - Response 200:
-    ```json
-    { "message": "Started", "processId": 1234, "command": "ffmpeg ..." }
-    ```
-  - Response 404 if id not found; 400 if another conversion is already running or failed to start
-
-- POST `/api/conversions/start-next`
+- POST `/api/conversions/queue/start`
   - Starts the next conversion in the queue (lowest by `Rank`)
-  - **Single-item processing**: Only one conversion can run at a time. If a conversion is already running, this request will be rejected with a 400 error indicating which conversion is currently running.
+  - **Queue-level operation**: Only one conversion can run at a time. If a conversion is already running, this request will be rejected with a 400 error indicating which conversion is currently running.
   - Response 200:
     ```json
     { "message": "Started", "processId": 1234, "command": "ffmpeg ...", "conversionId": 1 }
     ```
   - Response 404 if queue is empty; 400 if a conversion is already running
 
-- POST `/api/conversions/{id}/pause`
-  - Pauses the ffmpeg process for the specified conversion.
+- POST `/api/conversions/queue/pause`
+  - Pauses the currently running conversion in the queue.
   - Windows: suspends the process. Linux/macOS: sends SIGSTOP.
-  - Response 200: `{ "message": "Paused", "pid": 1234 }`
-  - Response 404 if conversion not found or not running
+  - Response 200: `{ "message": "Paused", "pid": 1234, "conversionId": 1 }`
+  - Response 404 if no conversion is currently running
 
-- POST `/api/conversions/{id}/stop`
+- POST `/api/conversions/queue/stop`
+  - Stops the currently running conversion in the queue.
   - Attempts graceful stop by sending `q` to ffmpeg stdin; if still running after 5s, kills the process tree.
-  - Response 200: `{ "message": "Stopped" | "Stopped (forced)", "pid": 1234, "forced": true|false }`
-  - Response 404 if conversion not found or not running
+  - Response 200: `{ "message": "Stopped" | "Stopped (forced)", "pid": 1234, "forced": true|false, "conversionId": 1 }`
+  - Response 404 if no conversion is currently running
+
+- POST `/api/conversions/start-next` (deprecated, use `/api/conversions/queue/start`)
+  - Legacy endpoint for starting the next conversion. Use `/api/conversions/queue/start` instead.
 
 - PATCH `/api/conversions/{id:int}/reorder`
   - Body:

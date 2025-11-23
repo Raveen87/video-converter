@@ -12,13 +12,11 @@ public interface IVideoConverterApiClient
 
     Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default);
 
-    Task StartConversionAsync(int id, CancellationToken cancellationToken = default);
+    Task StartQueueAsync(CancellationToken cancellationToken = default);
 
-    Task PauseConversionAsync(int id, CancellationToken cancellationToken = default);
+    Task PauseQueueAsync(CancellationToken cancellationToken = default);
 
-    Task StopConversionAsync(int id, CancellationToken cancellationToken = default);
-
-    Task StartNextConversionAsync(CancellationToken cancellationToken = default);
+    Task StopQueueAsync(CancellationToken cancellationToken = default);
 
     Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default);
 
