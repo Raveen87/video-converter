@@ -8,15 +8,25 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
-            <MudTextField @bind-Value="_formModel.DirectoryPath" Label="Directory Path" Required="true" Variant="Variant.Outlined" Class="mb-3" />
-            <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.DirectoryPath" Label="Directory Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenDirectoryBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenOutputDirectoryBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
             <MudTextField @bind-Value="_formModel.ExtensionsString" Label="File Extensions (comma-separated)" HelperText="e.g., .mkv,.mp4 (defaults to .mkv,.mp4 if empty)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
-            <MudSelect @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
-                <MudSelectItem Value="@((AudioChannels?)null)">Default</MudSelectItem>
-                <MudSelectItem Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
-                <MudSelectItem Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
+            <MudSelect T="AudioChannels?" @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="AudioChannels?" Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
@@ -33,7 +43,7 @@
                     <text>Queue Directory</text>
                 }
             </MudButton>
-            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="@(() => MudDialog.Close())">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
         </EditForm>
     </DialogContent>
 </MudDialog>
@@ -47,8 +57,14 @@
     [Parameter]
     public EventCallback<DirectoryQueueRequestDto> OnSubmit { get; set; }
 
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
     [Inject]
     private ILogger<QueueDirectoryDialog> Logger { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
 
     private readonly DirectoryFormModel _formModel = new();
     private bool _isSubmitting;
@@ -123,6 +139,80 @@
         {
             _isSubmitting = false;
         }
+    }
+
+    private async Task OpenDirectoryBrowser()
+    {
+        Logger.LogDebug("Opening directory browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Directory to Queue" },
+            { x => x.Mode, FileBrowserMode.Directory },
+            { x => x.InitialPath, _formModel.DirectoryPath },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                HandleDirectorySelected(path);
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Directory to Queue", parameters, options).ConfigureAwait(false);
+    }
+
+    private async Task OpenOutputDirectoryBrowser()
+    {
+        Logger.LogDebug("Opening output directory browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Output Directory" },
+            { x => x.Mode, FileBrowserMode.Directory },
+            { x => x.InitialPath, _formModel.OutputDirectory },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                HandleOutputDirectorySelected(path);
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Output Directory", parameters, options).ConfigureAwait(false);
+    }
+
+    private void HandleDirectorySelected(string path)
+    {
+        Logger.LogInformation("Directory selected from browser: {Path}", path);
+        _formModel.DirectoryPath = path;
+        StateHasChanged();
+    }
+
+    private void HandleOutputDirectorySelected(string path)
+    {
+        Logger.LogInformation("Output directory selected from browser: {Path}", path);
+        _formModel.OutputDirectory = path;
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        Logger.LogDebug("Queue directory dialog cancelled");
+        await OnCancel.InvokeAsync().ConfigureAwait(false);
     }
 
     private sealed class DirectoryFormModel

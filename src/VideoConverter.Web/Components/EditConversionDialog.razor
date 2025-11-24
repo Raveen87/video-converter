@@ -5,7 +5,12 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
-            <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="mb-3" />
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenDirectoryBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
             <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
             <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
             <MudSelect T="AudioChannels?" @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
@@ -28,7 +33,7 @@
                     <text>Update</text>
                 }
             </MudButton>
-            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="@(() => MudDialog.Close())">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
         </EditForm>
     </DialogContent>
 </MudDialog>
@@ -45,8 +50,14 @@
     [Parameter]
     public EventCallback<ConversionPatchDto> OnSubmit { get; set; }
 
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
     [Inject]
     private ILogger<EditConversionDialog> Logger { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
 
     private readonly ConversionFormModel _formModel = new();
     private bool _isSubmitting;
@@ -132,6 +143,46 @@
         {
             _isSubmitting = false;
         }
+    }
+
+    private async Task OpenDirectoryBrowser()
+    {
+        Logger.LogDebug("Opening directory browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Output Directory" },
+            { x => x.Mode, FileBrowserMode.Directory },
+            { x => x.InitialPath, _formModel.OutputDirectory },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                HandleDirectorySelected(path);
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Output Directory", parameters, options).ConfigureAwait(false);
+    }
+
+    private void HandleDirectorySelected(string path)
+    {
+        Logger.LogInformation("Directory selected from browser: {Path}", path);
+        _formModel.OutputDirectory = path;
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        Logger.LogDebug("Edit conversion dialog cancelled");
+        await OnCancel.InvokeAsync().ConfigureAwait(false);
     }
 
     private sealed class ConversionFormModel
