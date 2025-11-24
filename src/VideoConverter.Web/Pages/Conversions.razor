@@ -248,6 +248,11 @@
                 }
                 Logger.LogInformation("Progress polling stopped (cancellation requested)");
             }
+            catch (OperationCanceledException ex)
+            {
+                // Expected when component is disposed or navigation occurs
+                Logger.LogDebug(ex, "Progress polling cancelled");
+            }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Unhandled exception in polling loop");
