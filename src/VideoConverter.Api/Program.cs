@@ -110,6 +110,7 @@ public static class Program
         _ = Features.Metadata.DependencyInjection.ServiceCollectionExtensions.AddMetadataFeature(services);
         _ = Features.Conversions.DependencyInjection.ServiceCollectionExtensions.AddConversionsFeature(services);
         _ = Features.Profiles.DependencyInjection.ServiceCollectionExtensions.AddProfilesFeature(services);
+        _ = Features.FileBrowser.DependencyInjection.ServiceCollectionExtensions.AddFileBrowserFeature(services);
         RegisterValidation(services);
         RegisterHosted(services);
         _ = services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();

@@ -348,6 +348,7 @@
                 dialogRef?.Close();
                 Logger.LogDebug("Create conversion dialog closed");
             }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
         }, new DialogOptions
         {
             CloseOnEscapeKey = true,
@@ -370,6 +371,7 @@
                 dialogRef?.Close();
                 Logger.LogDebug("Queue directory dialog closed");
             }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
         }, new DialogOptions
         {
             CloseOnEscapeKey = true,
@@ -392,6 +394,7 @@
                 dialogRef?.Close();
                 Logger.LogDebug("Edit conversion dialog closed");
             }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
         }, new DialogOptions
         {
             CloseOnEscapeKey = true,

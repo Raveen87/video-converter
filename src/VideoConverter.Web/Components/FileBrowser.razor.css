@@ -1,0 +1,17 @@
+.file-browser-container {
+    min-width: 500px;
+    min-height: 300px;
+}
+
+.selected-file {
+    background-color: var(--mud-palette-primary-lighten);
+}
+
+.file-browser-container .mud-list-item {
+    cursor: pointer;
+}
+
+.file-browser-container .mud-list-item:hover {
+    background-color: var(--mud-palette-action-hover);
+}
+

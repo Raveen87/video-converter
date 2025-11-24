@@ -189,8 +189,51 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     }
     ```
 
-### Web UI queue reordering
+- GET `/api/file-browser/directories?path={encodedPath}`
+  - Lists directories and files at a given path for file browser functionality
+  - Query parameters:
+    - `path` (optional): The directory path to browse. If omitted, returns root directory (Windows: first available drive, Linux/macOS: `/`)
+  - Response 200:
+    ```json
+    {
+      "currentPath": "C:\\videos",
+      "parentPath": "C:\\",
+      "directories": [
+        { "name": "movies", "path": "C:\\videos\\movies" },
+        { "name": "tv", "path": "C:\\videos\\tv" }
+      ],
+      "files": [
+        { "name": "movie.mp4", "path": "C:\\videos\\movie.mp4", "size": 1073741824, "lastModified": "2024-01-15T10:30:00Z" }
+      ]
+    }
+    ```
+  - Behavior:
+    - Only shows video files (filtered by common video extensions: `.mkv`, `.mp4`, `.avi`, `.mov`, `.wmv`, `.flv`, `.webm`, `.m4v`, `.mpg`, `.mpeg`, `.3gp`, `.ogv`, `.ts`, `.m2ts`)
+    - Validates paths to prevent directory traversal attacks
+    - Returns 404 if directory not found
+    - Returns 403 if access denied
+  - Security:
+    - Paths are validated to prevent directory traversal (`..` segments)
+    - Access is restricted to paths within the root directory
+    - Supports both Windows and Linux path formats
 
+### Web UI features
+
+#### File Browser
+- The web UI includes a file browser component that allows users to browse and select files/directories without manually typing paths
+- Available in:
+  - **Create Conversion** dialog: Browse button next to "Input File Path" and "Output Directory" fields
+  - **Queue Directory** dialog: Browse button next to "Directory Path" and "Output Directory" fields
+  - **Edit Conversion** dialog: Browse button next to "Output Directory" field
+- Features:
+  - Breadcrumb navigation for easy path traversal
+  - Click directories to navigate into them
+  - Click files to select them (in file selection mode)
+  - Shows file metadata (size, last modified date)
+  - Filters to show only video files
+  - Works in all modern browsers (no browser-specific APIs required)
+
+#### Queue Reordering
 - The `Conversions` page shows a dedicated **Pending Queue** card listing all pending conversions in their current processing order.
 - Drag and drop items within the card to preview a new order; unsaved changes are highlighted.
 - Click **Save Queue Order** to persist the arrangement via `PUT /api/conversions/queue/reorder`.
