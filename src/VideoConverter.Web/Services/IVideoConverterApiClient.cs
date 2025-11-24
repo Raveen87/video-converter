@@ -16,6 +16,8 @@ public interface IVideoConverterApiClient
 
     Task PauseQueueAsync(CancellationToken cancellationToken = default);
 
+    Task ResumeQueueAsync(CancellationToken cancellationToken = default);
+
     Task StopQueueAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ConversionDto>> ReorderQueueAsync(IReadOnlyList<int> orderedIds, CancellationToken cancellationToken = default);

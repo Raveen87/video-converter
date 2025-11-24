@@ -7,6 +7,7 @@ internal static class NativeMethods
 
     // Unix
     internal const int SigStop = 19;
+    internal const int SigCont = 18;
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern IntPtr OpenProcess(int processAccess, bool bInheritHandle, int processId);
@@ -16,6 +17,9 @@ internal static class NativeMethods
 
     [DllImport("ntdll.dll", SetLastError = true)]
     internal static extern int NtSuspendProcess(IntPtr processHandle);
+
+    [DllImport("ntdll.dll", SetLastError = true)]
+    internal static extern int NtResumeProcess(IntPtr processHandle);
 
     [DllImport("libc", SetLastError = true, EntryPoint = "kill")]
     internal static extern int NativeKill(int processId, int signal);
