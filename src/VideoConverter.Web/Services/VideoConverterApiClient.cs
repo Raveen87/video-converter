@@ -213,6 +213,35 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<IReadOnlyList<ConversionDto>> ReorderQueueAsync(IReadOnlyList<int> orderedIds, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Reordering queue with {Count} conversion IDs", orderedIds.Count);
+        try
+        {
+            var request = new QueueReorderRequestDto(orderedIds);
+            var response = await _httpClient.PutAsJsonAsync(
+                "api/conversions/queue/reorder",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            _ = response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<IReadOnlyList<ConversionDto>>(
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false) ?? Array.Empty<ConversionDto>();
+
+            _logger.LogInformation("Successfully reordered queue");
+            return result;
+        }
+#pragma warning disable S2139
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reordering queue");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting progress for conversion {ConversionId}", id);

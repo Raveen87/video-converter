@@ -70,6 +70,7 @@ public sealed class ConversionsEndpoints(
             conversion.InputPath,
             conversion.OutputDirectory,
             conversion.CreatedAtUtc,
+            conversion.Status,
             conversion.Crf,
             conversion.AudioBitrateKbps,
             conversion.AudioChannels,

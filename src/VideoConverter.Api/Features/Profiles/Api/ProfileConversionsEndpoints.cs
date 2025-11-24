@@ -90,6 +90,7 @@ public sealed class ProfileConversionsEndpoints(
             c.InputPath,
             c.OutputDirectory,
             c.CreatedAtUtc,
+            c.Status,
             c.Crf,
             c.AudioBitrateKbps,
             c.AudioChannels,

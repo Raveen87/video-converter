@@ -24,6 +24,58 @@
         </div>
     </div>
 
+    @if (!_isLoading)
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <div class="d-flex justify-space-between align-center mb-2">
+                <MudText Typo="Typo.h6">Pending Queue</MudText>
+                <div class="d-flex align-center">
+                    @if (_pendingOrderDirty)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="mr-2">Unsaved changes</MudText>
+                    }
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!_pendingOrderDirty || _pendingConversions.Count == 0 || _isSavingQueueOrder)"
+                               OnClick="SaveQueueOrderAsync">
+                        Save Queue Order
+                    </MudButton>
+                </div>
+            </div>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                Drag and drop queued items to change their processing order. Changes are applied once you save.
+            </MudAlert>
+            <div class="queue-list"
+                 @ondragover:preventDefault="@true"
+                 @ondrop="HandleQueueDropOutside"
+                 @ondrop:preventDefault="@true">
+                @if (_pendingConversions.Count == 0)
+                {
+                    <MudText Typo="Typo.body2">No pending conversions to reorder.</MudText>
+                }
+                else
+                {
+                    @foreach (var conversion in _pendingConversions)
+                    {
+                        <div class="queue-item"
+                             draggable="true"
+                             @ondragstart="@(() => OnDragStart(conversion.Id))"
+                             @ondragend="OnDragEnd"
+                             @ondragover:preventDefault="@true"
+                             @ondrop="@((DragEventArgs e) => OnDrop(conversion.Id, e))"
+                             @ondrop:preventDefault="@true">
+                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="queue-item-handle" />
+                            <div class="queue-item-content">
+                                <MudText Typo="Typo.body2">@conversion.InputPath</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@conversion.OutputDirectory</MudText>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </MudPaper>
+    }
+
     @if (_isLoading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
@@ -43,6 +95,7 @@
                 <MudTh>Input Path</MudTh>
                 <MudTh>Output Directory</MudTh>
                 <MudTh>Created</MudTh>
+                <MudTh>Status</MudTh>
                 <MudTh>Progress</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
@@ -60,6 +113,11 @@
                 </MudTd>
                 <MudTd DataLabel="Created">
                     <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                        @context.Status
+                    </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Progress">
                     @if (_progressData.TryGetValue(context.Id, out var progress) && progress != null)
@@ -95,12 +153,16 @@
 
 @code {
     private readonly List<ConversionDto> _conversions = new();
+    private readonly List<ConversionDto> _pendingConversions = new();
     private readonly Dictionary<int, ConversionProgressDto?> _progressData = new();
     private bool _isLoading = true;
     private CancellationTokenSource? _pollingCts;
     private const int PollingIntervalMs = 2000; // Poll every 2 seconds
     private bool _isRunning = false;
     private bool _hasPendingConversions = false;
+    private bool _pendingOrderDirty;
+    private bool _isSavingQueueOrder;
+    private int? _draggingConversionId;
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -131,7 +193,8 @@
             var conversions = await ApiClient.GetConversionsAsync().ConfigureAwait(false);
             _conversions.Clear();
             _conversions.AddRange(conversions);
-            UpdateQueueState();
+            ResetPendingQueueFromServer();
+            RecalculateQueueFlags();
             Logger.LogInformation("Successfully loaded {Count} conversions", conversions.Count);
         }
         catch (Exception ex)
@@ -145,25 +208,20 @@
         }
     }
 
-    private void UpdateQueueState()
+    private void ResetPendingQueueFromServer()
     {
-        _isRunning = _conversions.Any(c =>
-        {
-            if (_progressData.TryGetValue(c.Id, out var progress) && progress != null)
-            {
-                return progress.Status == ConversionStatus.Running;
-            }
-            return false;
-        });
-        _hasPendingConversions = _conversions.Any(c =>
-        {
-            if (_progressData.TryGetValue(c.Id, out var progress) && progress != null)
-            {
-                return progress.Status == ConversionStatus.Waiting;
-            }
-            // If no progress data yet, assume it might be pending
-            return true;
-        });
+        _pendingConversions.Clear();
+        _pendingConversions.AddRange(_conversions.Where(c => c.Status == ConversionItemStatus.Pending));
+        _pendingOrderDirty = false;
+    }
+
+    private void RecalculateQueueFlags()
+    {
+        _isRunning = _conversions.Any(c => c.Status == ConversionItemStatus.Running)
+            || _progressData.Values.Any(progress => progress?.Status == ConversionProgressStatus.Running);
+
+        _hasPendingConversions = _conversions.Any(c => c.Status == ConversionItemStatus.Pending)
+            || _progressData.Values.Any(progress => progress?.Status == ConversionProgressStatus.Waiting);
     }
 
     private void StartPolling()
@@ -241,8 +299,8 @@
                             progress.PercentageComplete?.ToString("F1") ?? "N/A");
                     }
                 }
-                UpdateQueueState();
                 StateHasChanged();
+                RecalculateQueueFlags();
             }).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
@@ -392,6 +450,8 @@
                     Logger.LogWarning("Conversion {ConversionId} not found in list after update", id);
                     _conversions.Insert(0, updated);
                 }
+                ResetPendingQueueFromServer();
+                RecalculateQueueFlags();
                 StateHasChanged();
             }).ConfigureAwait(false);
 
@@ -414,6 +474,7 @@
             request.InputPath,
             request.OutputDirectory,
             DateTime.UtcNow,
+            ConversionItemStatus.Pending,
             request.Crf,
             request.AudioBitrateKbps,
             request.AudioChannels,
@@ -425,6 +486,8 @@
         await InvokeAsync(() =>
         {
             _conversions.Insert(0, tempConversion);
+            ResetPendingQueueFromServer();
+            RecalculateQueueFlags();
             StateHasChanged();
         }).ConfigureAwait(false);
 
@@ -450,6 +513,8 @@
                     _conversions.Insert(0, created);
                 }
 
+                ResetPendingQueueFromServer();
+                RecalculateQueueFlags();
                 StateHasChanged();
             }).ConfigureAwait(false);
 
@@ -462,6 +527,8 @@
             await InvokeAsync(() =>
             {
                 _conversions.RemoveAll(c => c.Id == tempId);
+                ResetPendingQueueFromServer();
+                RecalculateQueueFlags();
                 StateHasChanged();
             }).ConfigureAwait(false);
 
@@ -488,6 +555,100 @@
         }
     }
 
+    private async Task SaveQueueOrderAsync()
+    {
+        if (_pendingConversions.Count == 0 || !_pendingOrderDirty || _isSavingQueueOrder)
+        {
+            return;
+        }
+
+        _isSavingQueueOrder = true;
+        StateHasChanged();
+        try
+        {
+            var orderedIds = _pendingConversions.Select(c => c.Id).ToList();
+            await ApiClient.ReorderQueueAsync(orderedIds).ConfigureAwait(false);
+            Snackbar.Add("Queue order updated", Severity.Success);
+            await LoadConversionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving queue order");
+            Snackbar.Add($"Error saving queue order: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSavingQueueOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnDragStart(int conversionId)
+    {
+        _draggingConversionId = conversionId;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggingConversionId = null;
+    }
+
+    private void OnDrop(int targetConversionId, DragEventArgs _)
+    {
+        if (_draggingConversionId is null || _draggingConversionId.Value == targetConversionId)
+        {
+            return;
+        }
+
+        var targetIndex = _pendingConversions.FindIndex(c => c.Id == targetConversionId);
+        if (targetIndex < 0)
+        {
+            return;
+        }
+
+        MoveConversionToIndex(_draggingConversionId.Value, targetIndex);
+        OnDragEnd();
+    }
+
+    private void HandleQueueDropOutside(DragEventArgs _)
+    {
+        if (_draggingConversionId is null)
+        {
+            return;
+        }
+
+        MoveConversionToIndex(_draggingConversionId.Value, _pendingConversions.Count);
+        OnDragEnd();
+    }
+
+    private void MoveConversionToIndex(int conversionId, int targetIndex)
+    {
+        var sourceIndex = _pendingConversions.FindIndex(c => c.Id == conversionId);
+        if (sourceIndex < 0)
+        {
+            return;
+        }
+
+        var normalizedTargetIndex = Math.Max(0, Math.Min(targetIndex, _pendingConversions.Count));
+        if (sourceIndex == normalizedTargetIndex)
+        {
+            return;
+        }
+
+        var item = _pendingConversions[sourceIndex];
+        _pendingConversions.RemoveAt(sourceIndex);
+
+        if (sourceIndex < normalizedTargetIndex)
+        {
+            normalizedTargetIndex--;
+        }
+
+        normalizedTargetIndex = Math.Max(0, Math.Min(normalizedTargetIndex, _pendingConversions.Count));
+        _pendingConversions.Insert(normalizedTargetIndex, item);
+        _pendingOrderDirty = true;
+        StateHasChanged();
+    }
+
     private int GetNextTempId()
     {
         // Use negative IDs for temporary conversions to avoid conflicts
@@ -500,23 +661,35 @@
         return existingTempIds.Min() - 1;
     }
 
-    private static Color GetProgressColor(ConversionStatus status)
+    private static Color GetProgressColor(ConversionProgressStatus status)
     {
         return status switch
         {
-            ConversionStatus.Running => Color.Success,
-            ConversionStatus.Waiting => Color.Info,
+            ConversionProgressStatus.Running => Color.Success,
+            ConversionProgressStatus.Waiting => Color.Info,
             _ => Color.Default,
         };
     }
 
-    private static string GetProgressClass(ConversionStatus status)
+    private static string GetProgressClass(ConversionProgressStatus status)
     {
         return status switch
         {
-            ConversionStatus.Running => "conversion-running",
-            ConversionStatus.Waiting => "conversion-waiting",
+            ConversionProgressStatus.Running => "conversion-running",
+            ConversionProgressStatus.Waiting => "conversion-waiting",
             _ => string.Empty,
+        };
+    }
+
+    private static Color GetStatusColor(ConversionItemStatus status)
+    {
+        return status switch
+        {
+            ConversionItemStatus.Pending => Color.Info,
+            ConversionItemStatus.Running => Color.Warning,
+            ConversionItemStatus.Completed => Color.Success,
+            ConversionItemStatus.Failed => Color.Error,
+            _ => Color.Default,
         };
     }
 

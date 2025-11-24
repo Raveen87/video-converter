@@ -13,7 +13,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
             ConversionId = conversionId,
             TotalDurationSeconds = totalDurationSeconds,
             StartTime = DateTime.UtcNow,
-            Status = ConversionStatus.Running,
+            Status = ConversionProgressStatus.Running,
         };
 
         _ = _activeConversions.AddOrUpdate(conversionId, state, (_, _) => state);
@@ -93,7 +93,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
 
         return new ConversionProgress
         {
-            Status = ConversionStatus.Waiting,
+            Status = ConversionProgressStatus.Waiting,
             PercentageComplete = null,
             CurrentTimeSeconds = null,
             TotalDurationSeconds = null,
@@ -141,7 +141,7 @@ public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgress
     {
         public int ConversionId { get; init; }
 
-        public ConversionStatus Status { get; set; }
+        public ConversionProgressStatus Status { get; set; }
 
         public double TotalDurationSeconds { get; init; }
 

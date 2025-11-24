@@ -11,7 +11,7 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithStringValue_ReturnsEnum()
     {
         // Arrange - API returns string enum from System.Text.Json
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"}""";
+        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":"Stereo20"}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -30,7 +30,7 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithSurround51Value_ReturnsEnum()
     {
         // Arrange
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Surround51"}""";
+        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":"Surround51"}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -49,7 +49,7 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithNullValue_ReturnsNull()
     {
         // Arrange
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":null}""";
+        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":null}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -68,7 +68,7 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithMissingProperty_ReturnsNull()
     {
         // Arrange
-        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z"}""";
+        var json = """{"id":1,"inputPath":"test.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending"}""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -92,6 +92,7 @@ public sealed class AudioChannelsConverterTests
             InputPath: "test.mp4",
             OutputDirectory: "out",
             CreatedAtUtc: DateTime.UtcNow,
+            Status: ConversionItemStatus.Pending,
             Crf: null,
             AudioBitrateKbps: null,
             AudioChannels: AudioChannels.Stereo20,
@@ -119,6 +120,7 @@ public sealed class AudioChannelsConverterTests
             InputPath: "test.mp4",
             OutputDirectory: "out",
             CreatedAtUtc: DateTime.UtcNow,
+            Status: ConversionItemStatus.Pending,
             Crf: null,
             AudioBitrateKbps: null,
             AudioChannels: null,
@@ -142,7 +144,7 @@ public sealed class AudioChannelsConverterTests
     public void Deserialize_WithArrayOfConversions_HandlesAllFormats()
     {
         // Arrange - Simulates the actual API response format
-        var json = """[{"id":1,"inputPath":"test1.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Stereo20"},{"id":2,"inputPath":"test2.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":"Surround51"},{"id":3,"inputPath":"test3.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","audioChannels":null}]""";
+        var json = """[{"id":1,"inputPath":"test1.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":"Stereo20"},{"id":2,"inputPath":"test2.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":"Surround51"},{"id":3,"inputPath":"test3.mp4","outputDirectory":"out","createdAtUtc":"2024-01-01T00:00:00Z","status":"Pending","audioChannels":null}]""";
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

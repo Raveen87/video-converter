@@ -5,6 +5,7 @@ public record ConversionDto(
     string InputPath,
     string OutputDirectory,
     DateTime CreatedAtUtc,
+    ConversionItemStatus Status,
     int? Crf,
     int? AudioBitrateKbps,
     AudioChannels? AudioChannels,

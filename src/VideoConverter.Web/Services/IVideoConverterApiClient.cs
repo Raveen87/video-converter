@@ -18,6 +18,8 @@ public interface IVideoConverterApiClient
 
     Task StopQueueAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ConversionDto>> ReorderQueueAsync(IReadOnlyList<int> orderedIds, CancellationToken cancellationToken = default);
+
     Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken cancellationToken = default);

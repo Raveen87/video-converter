@@ -2,7 +2,7 @@ namespace VideoConverter.Api.Features.Conversions.Dtos;
 
 public sealed record ConversionProgress
 {
-    public ConversionStatus Status { get; init; }
+    public ConversionProgressStatus Status { get; init; }
 
     public double? PercentageComplete { get; init; }
 

@@ -46,7 +46,7 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionDto_RoundTrips_WithValues()
     {
-        var dto = new ConversionDto(1, "test.mp4", "output", DateTime.UtcNow, 23, 128, AudioChannels.Stereo20, 1080, "Name.mp4");
+        var dto = new ConversionDto(1, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, 23, 128, AudioChannels.Stereo20, 1080, "Name.mp4");
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionDto>(json);
         _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
@@ -56,7 +56,7 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionDto_RoundTrips_WithNullables()
     {
-        var dto = new ConversionDto(2, "test.mp4", "output", DateTime.UtcNow, Crf: 30, AudioBitrateKbps: null, Resolution: null, MetadataBasedFilename: null, AudioChannels: null);
+        var dto = new ConversionDto(2, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, Crf: 30, AudioBitrateKbps: null, Resolution: null, MetadataBasedFilename: null, AudioChannels: null);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionDto>(json);
         _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
