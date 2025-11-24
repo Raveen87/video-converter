@@ -289,7 +289,6 @@ public sealed class ConversionsApi : ControllerBase
         logger.LogDebug("Stopping current conversion in queue");
 
         var runningConversion = await db.Conversions
-            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
@@ -320,7 +319,11 @@ public sealed class ConversionsApi : ControllerBase
             return Results.Problem(title: "Failed to stop process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}", runningConversion.Id, handle.ProcessId, forced);
+        // Update conversion status to Failed since it was stopped by user
+        runningConversion.Status = Shared.Domain.ValueObjects.ConversionStatus.Failed;
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}, status updated to Failed", runningConversion.Id, handle.ProcessId, forced);
         return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced, conversionId = runningConversion.Id });
     }
 

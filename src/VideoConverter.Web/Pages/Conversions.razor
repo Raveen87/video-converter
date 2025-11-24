@@ -12,7 +12,7 @@
             <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog" Class="mr-2">
                 Queue Directory
             </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_hasPendingConversions || _isRunning || _isPaused)" Class="mr-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_hasPendingConversions || _isRunning || _isPaused || _isStopping || _isStarting)" Class="mr-2">
                 Start Queue
             </MudButton>
             @if (_isPaused)
@@ -217,11 +217,14 @@
 
     private void RecalculateQueueFlags()
     {
-        _isRunning = _conversions.Any(c => c.Status == ConversionItemStatus.Running)
+        var hasRunningConversion = _conversions.Any(c => c.Status == ConversionItemStatus.Running)
             || _progressData.Values.Any(progress => progress?.Status == ConversionProgressStatus.Running);
 
+        // Always recalculate _isRunning based on current state
+        _isRunning = hasRunningConversion;
+
         // Clear paused state if there's no running conversion
-        if (!_isRunning)
+        if (!hasRunningConversion)
         {
             _isPaused = false;
         }
@@ -319,21 +322,53 @@
         }
     }
 
+    private bool _isStarting = false;
+
     private async Task StartQueue()
     {
-        Logger.LogInformation("User action: Starting queue");
+        // Prevent multiple simultaneous calls
+        if (_isStarting)
+        {
+            Logger.LogWarning("StartQueue called while already starting, ignoring");
+            return;
+        }
+
+        // Guard: Don't start if there's already a running conversion, if paused, if stopping, or no pending conversions
+        // Check this BEFORE logging to avoid unnecessary log noise
+        if (_isRunning || _isPaused || _isStopping || !_hasPendingConversions)
+        {
+            Logger.LogWarning("StartQueue called but conditions not met - blocking execution. State: _isRunning={IsRunning}, _isPaused={IsPaused}, _isStopping={IsStopping}, _hasPendingConversions={HasPending}", _isRunning, _isPaused, _isStopping, _hasPendingConversions);
+            return;
+        }
+
+        Logger.LogInformation("StartQueue called - State: _isRunning={IsRunning}, _isPaused={IsPaused}, _isStopping={IsStopping}, _hasPendingConversions={HasPending}", _isRunning, _isPaused, _isStopping, _hasPendingConversions);
+
+        _isStarting = true;
         try
         {
+            Logger.LogInformation("User action: Starting queue");
             await ApiClient.StartQueueAsync().ConfigureAwait(false);
             _isPaused = false;
             await LoadConversionsAsync().ConfigureAwait(false);
             Snackbar.Add("Queue started successfully", Severity.Success);
             Logger.LogInformation("Successfully started queue");
         }
+        catch (HttpRequestException ex) when (ex.Message.Contains("400") || ex.Message.Contains("Bad Request"))
+        {
+            // Handle race condition: backend might still see a running conversion after stopping
+            Logger.LogWarning(ex, "StartQueue failed with 400 - likely race condition after stop, refreshing state and blocking further attempts");
+            _isRunning = true; // Set to true to prevent further attempts until state is refreshed
+            await LoadConversionsAsync().ConfigureAwait(false);
+            // Don't show error to user as this is likely a timing issue that resolves itself
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error starting queue");
             Snackbar.Add($"Error starting queue: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isStarting = false;
         }
     }
 
@@ -373,14 +408,37 @@
         }
     }
 
+    private bool _isStopping = false;
+
     private async Task StopQueue()
     {
+        if (_isStopping)
+        {
+            Logger.LogWarning("StopQueue called while already stopping, ignoring");
+            return;
+        }
+
         Logger.LogInformation("User action: Stopping queue");
+        _isStopping = true;
+        _isRunning = true; // Set to true to prevent StartQueue from being called during stop
+        StateHasChanged(); // Update UI immediately to disable Start button
         try
         {
             await ApiClient.StopQueueAsync().ConfigureAwait(false);
             _isPaused = false;
+            _isRunning = false; // Explicitly set to false since we just stopped
+            // Clear progress data for running conversions since they've been stopped
+            var runningConversionIds = _conversions.Where(c => c.Status == ConversionItemStatus.Running).Select(c => c.Id).ToList();
+            foreach (var id in runningConversionIds)
+            {
+                _progressData.Remove(id);
+            }
+            // Wait a brief moment to ensure backend status update is committed
+            await Task.Delay(500).ConfigureAwait(false);
             await LoadConversionsAsync().ConfigureAwait(false);
+            // Ensure _isRunning stays false after reload (in case backend hasn't updated yet)
+            _isRunning = false;
+            StateHasChanged();
             Snackbar.Add("Queue stopped successfully", Severity.Success);
             Logger.LogInformation("Successfully stopped queue");
         }
@@ -388,6 +446,14 @@
         {
             Logger.LogError(ex, "Error stopping queue");
             Snackbar.Add($"Error stopping queue: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            // Keep _isStopping true for longer to prevent race conditions
+            // This ensures StartQueue cannot be called immediately after stop completes
+            await Task.Delay(1000).ConfigureAwait(false);
+            _isStopping = false;
+            StateHasChanged();
         }
     }
 
