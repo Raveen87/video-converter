@@ -69,7 +69,6 @@
                 <MudTh>Output Directory</MudTh>
                 <MudTh>Created</MudTh>
                 <MudTh>Status</MudTh>
-                <MudTh>Progress</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -88,28 +87,31 @@
                     <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</MudText>
                 </MudTd>
                 <MudTd DataLabel="Status">
-                    <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(context.Status)" Size="Size.Small">
-                        @context.Status
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="Progress">
-                    @if (_progressData.TryGetValue(context.Id, out var progress) && progress != null)
+                    @{
+                        var effectiveStatus = GetEffectiveStatus(context);
+                        var progress = _progressData.TryGetValue(context.Id, out var prog) ? prog : null;
+                        var isRunning = effectiveStatus == ConversionItemStatus.Running && progress?.Status == ConversionProgressStatus.Running;
+                    }
+                    @if (isRunning && progress != null)
                     {
-                        <MudProgressLinear Color="@GetProgressColor(progress.Status)" Value="@(progress.PercentageComplete ?? 0)" Class="@($"mb-2 {GetProgressClass(progress.Status)}")" />
-                        <MudText Typo="Typo.caption">
-                            @if (progress.PercentageComplete.HasValue)
-                            {
-                                <text>@($"{progress.PercentageComplete:F1}%")</text>
-                            }
-                            else
-                            {
-                                <text>@progress.Status</text>
-                            }
-                        </MudText>
+                        <div>
+                            <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(effectiveStatus)" Size="Size.Small" Class="mb-2">
+                                @effectiveStatus
+                            </MudChip>
+                            <MudProgressLinear Color="@GetStatusColor(effectiveStatus)" Value="@(progress.PercentageComplete ?? 0)" Class="mb-1" />
+                            <MudText Typo="Typo.caption">
+                                @if (progress.PercentageComplete.HasValue)
+                                {
+                                    <text>@($"{progress.PercentageComplete:F1}%")</text>
+                                }
+                            </MudText>
+                        </div>
                     }
                     else
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Default">Unknown</MudText>
+                        <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(effectiveStatus)" Size="Size.Small">
+                            @effectiveStatus
+                        </MudChip>
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
@@ -578,24 +580,24 @@
         return existingTempIds.Min() - 1;
     }
 
-    private static Color GetProgressColor(ConversionProgressStatus status)
+    private ConversionItemStatus GetEffectiveStatus(ConversionDto conversion)
     {
-        return status switch
+        // For Completed and Failed, use the status as-is
+        if (conversion.Status == ConversionItemStatus.Completed || conversion.Status == ConversionItemStatus.Failed)
         {
-            ConversionProgressStatus.Running => Color.Success,
-            ConversionProgressStatus.Waiting => Color.Info,
-            _ => Color.Default,
-        };
-    }
+            return conversion.Status;
+        }
 
-    private static string GetProgressClass(ConversionProgressStatus status)
-    {
-        return status switch
+        // For Running/Pending, check progress data if available
+        if (_progressData.TryGetValue(conversion.Id, out var progress) && progress != null)
         {
-            ConversionProgressStatus.Running => "conversion-running",
-            ConversionProgressStatus.Waiting => "conversion-waiting",
-            _ => string.Empty,
-        };
+            return progress.Status == ConversionProgressStatus.Running
+                ? ConversionItemStatus.Running
+                : ConversionItemStatus.Pending;
+        }
+
+        // If no progress data, use the conversion status
+        return conversion.Status;
     }
 
     private static Color GetStatusColor(ConversionItemStatus status)
