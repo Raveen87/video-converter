@@ -231,6 +231,52 @@ public sealed class ConversionsApi : ControllerBase
         return Results.Ok(new { message = "Paused", pid = handle.ProcessId, conversionId = runningConversion.Id });
     }
 
+    [HttpPost("queue/resume")]
+    public async Task<IResult> ResumeQueueAsync(
+        [FromServices] AppDbContext db,
+        [FromServices] IRunningProcessRegistry registry,
+        [FromServices] IProcessController controller,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogDebug("Resuming current conversion in queue");
+
+        var runningConversion = await db.Conversions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .ConfigureAwait(false);
+
+        if (runningConversion is null)
+        {
+            logger.LogWarning("No conversion is currently running");
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                "No conversion is currently running.",
+                "There is no conversion currently running to resume.");
+        }
+
+        var key = $"conversion:{runningConversion.Id}";
+        if (!registry.TryGet(key, out var handle))
+        {
+            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion {runningConversion.Id} is not currently running.",
+                "The running conversion could not be found in the process registry.");
+        }
+
+        var resumed = controller.TryResume(handle.ProcessId);
+        if (!resumed)
+        {
+            logger.LogWarning("Failed to resume conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+            return Results.Problem(title: "Failed to resume process", statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        logger.LogInformation("Resumed conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+        return Results.Ok(new { message = "Resumed", pid = handle.ProcessId, conversionId = runningConversion.Id });
+    }
+
     [HttpPost("queue/stop")]
     public async Task<IResult> StopQueueAsync(
         [FromServices] AppDbContext db,

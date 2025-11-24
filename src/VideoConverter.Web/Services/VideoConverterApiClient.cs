@@ -192,6 +192,27 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task ResumeQueueAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resuming current conversion in queue");
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "api/conversions/queue/resume",
+                content: null,
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            _logger.LogInformation("Successfully resumed queue");
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resuming queue");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task StopQueueAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Stopping current conversion in queue");

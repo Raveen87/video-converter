@@ -47,6 +47,51 @@ public sealed class ProcessController(ILogger<ProcessController> logger) : IProc
         }
     }
 
+    public bool TryResume(int pid)
+    {
+        try
+        {
+            bool WindowsResume(int processId)
+            {
+                var handle = NativeMethods.OpenProcess(NativeMethods.ProcessSuspendResumeAccess, bInheritHandle: false, processId: processId);
+                if (handle == IntPtr.Zero)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    var status = NativeMethods.NtResumeProcess(processHandle: handle);
+                    return status is 0;
+                }
+                finally
+                {
+                    _ = NativeMethods.CloseHandle(handle);
+                }
+            }
+
+            bool UnixSignal(int processId, int signal)
+            {
+                var result = NativeMethods.NativeKill(processId: processId, signal: signal);
+                if (result is 0)
+                {
+                    return true;
+                }
+
+                var errno = Marshal.GetLastPInvokeError();
+                _ = errno; // reserved for future enhanced logging
+                return false;
+            }
+
+            return OperatingSystem.IsWindows() ? WindowsResume(pid) : UnixSignal(pid, NativeMethods.SigCont);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to resume process {Pid}", pid);
+            return false;
+        }
+    }
+
     public async Task<(bool Stopped, bool Forced)> TryGracefulStopAsync(RunningProcessHandle handle, TimeSpan timeout, CancellationToken ct)
     {
         try
