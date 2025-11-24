@@ -1,9 +1,9 @@
 namespace VideoConverter.Web.Models;
 
 /// <summary>
-/// Status of a conversion progress update.
+/// Status reported by the progress tracker endpoint.
 /// </summary>
-public enum ConversionStatus
+public enum ConversionProgressStatus
 {
     Waiting,
     Running,

@@ -367,7 +367,7 @@ public sealed class ConversionsApi : ControllerBase
         // Get progress from tracker
         var progress = progressTracker.GetProgress(id);
 
-        var isTracked = progress?.Status is ConversionStatus.Running;
+        var isTracked = progress?.Status is ConversionProgressStatus.Running;
         logger.LogDebug(
             "Retrieved progress for conversion {ConversionId}: Status={Status}, IsTracked={IsTracked}, Percentage={Percentage:F1}%, CurrentTime={CurrentTime}s/{TotalDuration}s, ETA={ETA}",
             id,
@@ -378,7 +378,7 @@ public sealed class ConversionsApi : ControllerBase
             progress?.TotalDurationSeconds ?? 0,
             progress?.EstimatedTimeRemaining?.ToString(@"hh\:mm\:ss") ?? "N/A");
 
-        if (!isTracked && progress?.Status is ConversionStatus.Waiting)
+        if (!isTracked && progress?.Status is ConversionProgressStatus.Waiting)
         {
             logger.LogDebug(
                 "Conversion {ConversionId} exists but is not being tracked (Waiting status). Progress tracking may not have started - duration probe may have failed or conversion hasn't started yet.",
@@ -533,6 +533,104 @@ public sealed class ConversionsApi : ControllerBase
         return Results.Ok(ToDto(target));
     }
 
+    [HttpPut("queue/reorder")]
+    public async Task<IResult> ReorderQueueAsync(
+        [FromBody] QueueReorderRequestDto request,
+        [FromServices] AppDbContext db,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+
+        if (request is null || request.OrderedIds is null)
+        {
+            throw ApiErrorException.ValidationError(
+                "OrderedIds must be provided.",
+                "Submit the desired queue order as an array of conversion IDs.");
+        }
+
+        var orderedIds = request.OrderedIds;
+        var uniqueIds = ValidateOrderedIds(orderedIds);
+
+        var pendingConversions = await db.Conversions
+            .Where(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending)
+            .OrderBy(c => c.Rank ?? Shared.Domain.ValueObjects.RankKey.Max())
+            .ThenBy(c => c.CreatedAtUtc)
+            .ThenBy(c => c.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        if (pendingConversions.Count is 0)
+        {
+            logger.LogInformation("No pending conversions available for reorder");
+            return Results.Ok(Array.Empty<ConversionDto>());
+        }
+
+        if (orderedIds.Count is 0)
+        {
+            throw ApiErrorException.ValidationError(
+                "orderedIds must include at least one pending conversion ID.",
+                "Nothing to reorder. Refresh the queue and provide the IDs you want to prioritize.");
+        }
+
+        var lookup = pendingConversions.ToDictionary(c => c.Id);
+
+        var ordered = BuildOrderedQueue(orderedIds, lookup, pendingConversions, uniqueIds);
+        ApplySequentialRanks(ordered);
+
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation("Reordered {Count} pending conversions", ordered.Count);
+        return Results.Ok(ordered.Select(ToDto).ToList());
+    }
+
+    private static HashSet<int> ValidateOrderedIds(IReadOnlyList<int> orderedIds)
+    {
+        var uniqueIds = orderedIds.ToHashSet();
+        if (uniqueIds.Count != orderedIds.Count)
+        {
+            throw ApiErrorException.ValidationError(
+                "Duplicate conversion IDs are not allowed.",
+                "Ensure each conversion ID appears only once in the reorder request.");
+        }
+
+        return uniqueIds;
+    }
+
+    private static List<Shared.Domain.Entities.Conversion> BuildOrderedQueue(
+        IReadOnlyList<int> orderedIds,
+        IReadOnlyDictionary<int, Shared.Domain.Entities.Conversion> lookup,
+        IReadOnlyList<Shared.Domain.Entities.Conversion> pendingConversions,
+        HashSet<int> includedIds)
+    {
+        var ordered = new List<Shared.Domain.Entities.Conversion>(pendingConversions.Count);
+
+        foreach (var id in orderedIds)
+        {
+            if (!lookup.TryGetValue(id, out var conversion))
+            {
+                throw ApiErrorException.NotFound(
+                    ErrorCode.ConversionNotFound,
+                    $"Pending conversion with ID {id} was not found.",
+                    "Only pending (queued) conversions can be reordered. Refresh the queue and try again.");
+            }
+
+            ordered.Add(conversion);
+        }
+
+        ordered.AddRange(pendingConversions.Where(c => !includedIds.Contains(c.Id)));
+        return ordered;
+    }
+
+    private static void ApplySequentialRanks(IReadOnlyList<Shared.Domain.Entities.Conversion> ordered)
+    {
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var sequence = (i + 1) * 1000;
+            ordered[i].Rank = sequence.ToString("D8", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
     private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
     {
         return new ConversionDto(
@@ -540,6 +638,7 @@ public sealed class ConversionsApi : ControllerBase
             c.InputPath,
             c.OutputDirectory,
             c.CreatedAtUtc,
+            c.Status,
             c.Crf,
             c.AudioBitrateKbps,
             c.AudioChannels,

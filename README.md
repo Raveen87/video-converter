@@ -51,6 +51,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "inputPath": "C:/videos/input.mp4",
         "outputDirectory": "C:/videos/out",
         "createdAtUtc": "2025-10-06T12:00:00Z",
+        "status": "Pending",
         "crf": 40,
         "audioBitrateKbps": 128,
         "audioChannels": "Stereo20",
@@ -95,6 +96,19 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
   - Responses:
     - 200 OK with updated item
     - 400 if validation fails; 404 if item not found; 400 if not in `Pending` state
+
+- PUT `/api/conversions/queue/reorder`
+  - Body:
+    ```json
+    { "orderedIds": [3, 5, 2, 1] }
+    ```
+  - Behavior:
+    - Applies a new order to the entire pending queue in a single call.
+    - Only IDs for pending conversions are accepted; missing IDs retain their relative order after the provided list.
+  - Responses:
+    - 200 OK with the pending queue in its new order
+    - 400 if the payload is invalid or contains duplicates
+    - 404 if any referenced conversion is not pending/does not exist
 
 - PATCH `/api/conversions/{id:int}`
   - Updates a conversion's settings. Only conversions in `Pending` status can be updated.
@@ -174,6 +188,13 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "estimatedTimeRemaining": "00:01:15"
     }
     ```
+
+### Web UI queue reordering
+
+- The `Conversions` page shows a dedicated **Pending Queue** card listing all pending conversions in their current processing order.
+- Drag and drop items within the card to preview a new order; unsaved changes are highlighted.
+- Click **Save Queue Order** to persist the arrangement via `PUT /api/conversions/queue/reorder`.
+- Queue controls (start, pause, stop) continue to respect the updated order immediately after saving.
 
 - POST `/api/profiles/{id:int}/conversions`
   - Body:

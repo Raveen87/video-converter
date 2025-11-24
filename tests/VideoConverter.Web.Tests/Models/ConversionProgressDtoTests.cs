@@ -34,7 +34,7 @@ public class ConversionProgressDtoTests
 
         // Assert
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be(ConversionStatus.Running);
+        _ = result!.Status.Should().Be(ConversionProgressStatus.Running);
         _ = result.PercentageComplete.Should().Be(45.5);
         _ = result.CurrentTimeSeconds.Should().Be(1234.56);
         _ = result.TotalDurationSeconds.Should().Be(2712.34);
@@ -66,7 +66,7 @@ public class ConversionProgressDtoTests
 
         // Assert
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be(ConversionStatus.Waiting);
+        _ = result!.Status.Should().Be(ConversionProgressStatus.Waiting);
         _ = result.PercentageComplete.Should().BeNull();
         _ = result.CurrentTimeSeconds.Should().BeNull();
         _ = result.TotalDurationSeconds.Should().BeNull();
@@ -99,7 +99,7 @@ public class ConversionProgressDtoTests
 
         // Assert - Verify all expected fields are present and mapped
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be(ConversionStatus.Running, "Status field must be present and mapped");
+        _ = result!.Status.Should().Be(ConversionProgressStatus.Running, "Status field must be present and mapped");
         _ = result.PercentageComplete.Should().HaveValue("PercentageComplete should be set when provided");
         _ = result.CurrentTimeSeconds.Should().HaveValue("CurrentTimeSeconds should be set when provided");
         _ = result.TotalDurationSeconds.Should().HaveValue("TotalDurationSeconds should be set when provided");
