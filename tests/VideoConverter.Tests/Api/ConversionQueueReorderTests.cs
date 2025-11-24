@@ -29,7 +29,7 @@ public sealed class ConversionQueueReorderTests
             Rank = null,
         };
 
-        _ = db.Conversions.AddRange(pendingA, pendingB, pendingC, completed);
+        db.Conversions.AddRange(pendingA, pendingB, pendingC, completed);
         _ = await db.SaveChangesAsync();
 
         var api = new ConversionsApi();
@@ -178,7 +178,7 @@ public sealed class ConversionQueueReorderTests
         var pendingB = CreatePendingConversion("b.mp4", rank: "00002000");
         var pendingC = CreatePendingConversion("c.mp4", rank: "00003000");
         var pendingD = CreatePendingConversion("d.mp4", rank: "00004000");
-        _ = db.Conversions.AddRange(pendingA, pendingB, pendingC, pendingD);
+        db.Conversions.AddRange(pendingA, pendingB, pendingC, pendingD);
         _ = await db.SaveChangesAsync();
 
         var api = new ConversionsApi();
@@ -251,7 +251,7 @@ public sealed class ConversionQueueReorderTests
             Status = ConversionStatus.Running,
             Rank = "00000000",
         };
-        _ = db.Conversions.AddRange(pendingA, pendingB, pendingC, running);
+        db.Conversions.AddRange(pendingA, pendingB, pendingC, running);
         _ = await db.SaveChangesAsync();
 
         var api = new ConversionsApi();
@@ -293,7 +293,7 @@ public sealed class ConversionQueueReorderTests
             Status = ConversionStatus.Failed,
             Rank = null,
         };
-        _ = db.Conversions.AddRange(pendingA, pendingB, completed, failed);
+        db.Conversions.AddRange(pendingA, pendingB, completed, failed);
         _ = await db.SaveChangesAsync();
 
         var api = new ConversionsApi();
@@ -318,7 +318,7 @@ public sealed class ConversionQueueReorderTests
         var pendingA = CreatePendingConversion("a.mp4", rank: "00001000");
         var pendingB = CreatePendingConversion("b.mp4", rank: "00002000");
         var pendingC = CreatePendingConversion("c.mp4", rank: "00003000");
-        _ = db.Conversions.AddRange(pendingA, pendingB, pendingC);
+        db.Conversions.AddRange(pendingA, pendingB, pendingC);
         _ = await db.SaveChangesAsync();
 
         var api = new ConversionsApi();
@@ -352,4 +352,3 @@ public sealed class ConversionQueueReorderTests
         };
     }
 }
-

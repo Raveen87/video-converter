@@ -11,7 +11,7 @@ public sealed class ConversionProgressApiTests
         // Arrange
         var progress = new ConversionProgress
         {
-            Status = ConversionStatus.Running,
+            Status = ConversionProgressStatus.Running,
             PercentageComplete = 45.2,
             CurrentTimeSeconds = 54.3,
             TotalDurationSeconds = 120.0,
@@ -27,7 +27,7 @@ public sealed class ConversionProgressApiTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.Equal(ConversionStatus.Running, deserialized.Status);
+        Assert.Equal(ConversionProgressStatus.Running, deserialized.Status);
         Assert.Equal(45.2, deserialized.PercentageComplete);
         Assert.Equal(54.3, deserialized.CurrentTimeSeconds);
         Assert.Equal(120.0, deserialized.TotalDurationSeconds);
@@ -40,7 +40,7 @@ public sealed class ConversionProgressApiTests
         // Arrange
         var progress = new ConversionProgress
         {
-            Status = ConversionStatus.Waiting,
+            Status = ConversionProgressStatus.Waiting,
             PercentageComplete = null,
             CurrentTimeSeconds = null,
             TotalDurationSeconds = null,
@@ -56,7 +56,7 @@ public sealed class ConversionProgressApiTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.Equal(ConversionStatus.Waiting, deserialized.Status);
+        Assert.Equal(ConversionProgressStatus.Waiting, deserialized.Status);
         Assert.Null(deserialized.PercentageComplete);
         Assert.Null(deserialized.CurrentTimeSeconds);
         Assert.Null(deserialized.TotalDurationSeconds);
@@ -69,7 +69,7 @@ public sealed class ConversionProgressApiTests
         // Arrange
         var progress = new ConversionProgress
         {
-            Status = ConversionStatus.Running,
+            Status = ConversionProgressStatus.Running,
             PercentageComplete = 0.0,
             CurrentTimeSeconds = 0.0,
             TotalDurationSeconds = 300.0,
@@ -85,7 +85,7 @@ public sealed class ConversionProgressApiTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.Equal(ConversionStatus.Running, deserialized.Status);
+        Assert.Equal(ConversionProgressStatus.Running, deserialized.Status);
         Assert.Equal(0.0, deserialized.PercentageComplete);
         Assert.Equal(0.0, deserialized.CurrentTimeSeconds);
         Assert.Equal(300.0, deserialized.TotalDurationSeconds);
@@ -98,7 +98,7 @@ public sealed class ConversionProgressApiTests
         // Arrange
         var progress = new ConversionProgress
         {
-            Status = ConversionStatus.Running,
+            Status = ConversionProgressStatus.Running,
             PercentageComplete = 100.0,
             CurrentTimeSeconds = 120.0,
             TotalDurationSeconds = 120.0,
@@ -114,7 +114,7 @@ public sealed class ConversionProgressApiTests
 
         // Assert
         Assert.NotNull(deserialized);
-        Assert.Equal(ConversionStatus.Running, deserialized.Status);
+        Assert.Equal(ConversionProgressStatus.Running, deserialized.Status);
         Assert.Equal(100.0, deserialized.PercentageComplete);
         Assert.Equal(120.0, deserialized.CurrentTimeSeconds);
         Assert.Equal(120.0, deserialized.TotalDurationSeconds);

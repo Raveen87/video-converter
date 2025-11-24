@@ -1,0 +1,26 @@
+.queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.queue-drop-indicator {
+    height: 2px;
+    background-color: var(--mud-palette-primary);
+    border-radius: 1px;
+    margin: 0.25rem 0;
+    animation: drop-indicator-pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 4px var(--mud-palette-primary);
+}
+
+@keyframes drop-indicator-pulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scaleX(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scaleX(1.02);
+    }
+}
+
