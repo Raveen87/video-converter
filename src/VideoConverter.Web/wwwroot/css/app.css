@@ -120,3 +120,55 @@ code {
 .conversion-waiting .mud-progress-linear-bar {
     background-color: #2196f3 !important;
 }
+
+.status-pending {
+    color: #9c27b0 !important;
+}
+
+.status-pending .mud-chip-text {
+    color: #9c27b0 !important;
+}
+
+.status-pending .mud-progress-linear-bar {
+    background-color: #9c27b0 !important;
+}
+
+.status-running {
+    color: #2196f3 !important;
+}
+
+.status-running .mud-chip-text {
+    color: #2196f3 !important;
+}
+
+.status-running .mud-progress-linear-bar {
+    background-color: #2196f3 !important;
+}
+
+.status-paused {
+    color: #ff9800 !important;
+}
+
+.status-paused .mud-chip-text {
+    color: #ff9800 !important;
+}
+
+.status-paused .mud-progress-linear-bar {
+    background-color: #ff9800 !important;
+}
+
+.status-completed {
+    color: #4caf50 !important;
+}
+
+.status-completed .mud-chip-text {
+    color: #4caf50 !important;
+}
+
+.status-failed {
+    color: #f44336 !important;
+}
+
+.status-failed .mud-chip-text {
+    color: #f44336 !important;
+}

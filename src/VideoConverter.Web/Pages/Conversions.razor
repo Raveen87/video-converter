@@ -105,10 +105,10 @@
                     @if (isPaused && progress != null)
                     {
                         <div>
-                            <MudChip T="string" Variant="Variant.Text" Color="Color.Warning" Size="Size.Small" Class="mb-2">
+                            <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-paused">
                                 Paused
                             </MudChip>
-                            <MudProgressLinear Color="Color.Warning" Value="@(progress.PercentageComplete ?? 0)" Class="mb-1" />
+                            <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-paused" />
                             <MudText Typo="Typo.caption">
                                 @if (progress.PercentageComplete.HasValue)
                                 {
@@ -120,10 +120,10 @@
                     else if (isRunning && progress != null)
                     {
                         <div>
-                            <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(effectiveStatus)" Size="Size.Small" Class="mb-2">
+                            <MudChip T="ConversionItemStatus" Variant="Variant.Text" Size="Size.Small" Class="@($"mb-2 {GetStatusCssClass(effectiveStatus)}")">
                                 @effectiveStatus
                             </MudChip>
-                            <MudProgressLinear Color="@GetStatusColor(effectiveStatus)" Value="@(progress.PercentageComplete ?? 0)" Class="mb-1" />
+                            <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="@($"mb-1 {GetStatusCssClass(effectiveStatus)}")" />
                             <MudText Typo="Typo.caption">
                                 @if (progress.PercentageComplete.HasValue)
                                 {
@@ -134,7 +134,7 @@
                     }
                     else
                     {
-                        <MudChip T="ConversionItemStatus" Variant="Variant.Text" Color="@GetStatusColor(effectiveStatus)" Size="Size.Small">
+                        <MudChip T="ConversionItemStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(effectiveStatus)">
                             @effectiveStatus
                         </MudChip>
                     }
@@ -725,15 +725,15 @@
         return conversion.Status;
     }
 
-    private static Color GetStatusColor(ConversionItemStatus status)
+    private static string GetStatusCssClass(ConversionItemStatus status)
     {
         return status switch
         {
-            ConversionItemStatus.Pending => Color.Info,
-            ConversionItemStatus.Running => Color.Warning,
-            ConversionItemStatus.Completed => Color.Success,
-            ConversionItemStatus.Failed => Color.Error,
-            _ => Color.Default,
+            ConversionItemStatus.Pending => "status-pending",
+            ConversionItemStatus.Running => "status-running",
+            ConversionItemStatus.Completed => "status-completed",
+            ConversionItemStatus.Failed => "status-failed",
+            _ => "",
         };
     }
 
