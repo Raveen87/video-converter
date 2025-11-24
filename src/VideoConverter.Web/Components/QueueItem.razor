@@ -1,0 +1,88 @@
+<div class="queue-item @GetCssClasses()"
+     draggable="true"
+     @ondragstart="HandleDragStart"
+     @ondragend="HandleDragEnd"
+     @ondragover="@HandleDragOver"
+     @ondragover:preventDefault="@true"
+     @ondrop="@HandleDrop"
+     @ondrop:preventDefault="@true">
+    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="queue-item-handle" />
+    <div class="queue-item-content">
+        <MudText Typo="Typo.body2">@Item.InputPath</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Item.OutputDirectory</MudText>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public ConversionDto Item { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<int> OnDragStart { get; set; }
+
+    [Parameter]
+    public EventCallback OnDragEnd { get; set; }
+
+    [Parameter]
+    public EventCallback<DragEventArgs>? OnDragOver { get; set; }
+
+    [Parameter]
+    public EventCallback<DragEventArgs>? OnDrop { get; set; }
+
+    [Parameter]
+    public bool IsDragging { get; set; }
+
+    [Parameter]
+    public bool IsDragOver { get; set; }
+
+    [Parameter]
+    public string? DragOverPosition { get; set; }
+
+    private string GetCssClasses()
+    {
+        var classes = new List<string>();
+
+        if (IsDragging)
+        {
+            classes.Add("queue-item-dragging");
+        }
+
+        if (IsDragOver)
+        {
+            classes.Add("queue-item-drag-over");
+            if (!string.IsNullOrEmpty(DragOverPosition))
+            {
+                classes.Add($"queue-item-drag-over-{DragOverPosition}");
+            }
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private void HandleDragStart(DragEventArgs e)
+    {
+        OnDragStart.InvokeAsync(Item.Id);
+    }
+
+    private void HandleDragEnd(DragEventArgs e)
+    {
+        OnDragEnd.InvokeAsync();
+    }
+
+    private void HandleDragOver(DragEventArgs e)
+    {
+        if (OnDragOver.HasValue)
+        {
+            OnDragOver.Value.InvokeAsync(e);
+        }
+    }
+
+    private void HandleDrop(DragEventArgs e)
+    {
+        if (OnDrop.HasValue)
+        {
+            OnDrop.Value.InvokeAsync(e);
+        }
+    }
+}
+

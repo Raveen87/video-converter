@@ -1,0 +1,48 @@
+.queue-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border: 1px dashed var(--mud-palette-primary);
+    border-radius: 6px;
+    background-color: var(--mud-palette-surface);
+    cursor: grab;
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.queue-item:active {
+    cursor: grabbing;
+}
+
+.queue-item-dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+.queue-item-drag-over {
+    border-color: var(--mud-palette-primary);
+    border-style: solid;
+    background-color: var(--mud-palette-primary-hover);
+}
+
+.queue-item-drag-over-above {
+    border-top-width: 3px;
+    border-top-color: var(--mud-palette-primary);
+}
+
+.queue-item-drag-over-below {
+    border-bottom-width: 3px;
+    border-bottom-color: var(--mud-palette-primary);
+}
+
+.queue-item-handle {
+    margin-right: 0.5rem;
+    color: var(--mud-palette-primary);
+}
+
+.queue-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+

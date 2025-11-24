@@ -31,7 +31,7 @@ public sealed class ProgressTrackerTests
         // Assert
         var progress = _progressTracker.GetProgress(conversionId);
         Assert.NotNull(progress);
-        Assert.Equal(ConversionStatus.Running, progress.Status);
+        Assert.Equal(ConversionProgressStatus.Running, progress.Status);
         Assert.Equal(totalDuration, progress.TotalDurationSeconds);
         Assert.Null(progress.PercentageComplete);
         Assert.Null(progress.CurrentTimeSeconds);
@@ -87,7 +87,7 @@ public sealed class ProgressTrackerTests
         // Assert
         var progress = _progressTracker.GetProgress(conversionId);
         Assert.NotNull(progress);
-        Assert.Equal(ConversionStatus.Waiting, progress.Status);
+        Assert.Equal(ConversionProgressStatus.Waiting, progress.Status);
         Assert.Null(progress.PercentageComplete);
         Assert.Null(progress.CurrentTimeSeconds);
         Assert.Null(progress.TotalDurationSeconds);
@@ -104,7 +104,7 @@ public sealed class ProgressTrackerTests
 
         // Assert
         Assert.NotNull(progress);
-        Assert.Equal(ConversionStatus.Waiting, progress.Status);
+        Assert.Equal(ConversionProgressStatus.Waiting, progress.Status);
         Assert.Null(progress.PercentageComplete);
         Assert.Null(progress.CurrentTimeSeconds);
         Assert.Null(progress.TotalDurationSeconds);

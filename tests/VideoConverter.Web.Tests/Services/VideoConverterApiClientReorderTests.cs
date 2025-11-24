@@ -16,7 +16,6 @@ public sealed class VideoConverterApiClientReorderTests
     public async Task ReorderQueueAsync_WithValidIds_CallsCorrectEndpoint()
     {
         var orderedIds = new[] { 1, 2, 3 };
-        var expectedRequest = new QueueReorderRequestDto(orderedIds);
         var expectedResponse = new[]
         {
             new ConversionDto(1, "a.mp4", "out", DateTime.UtcNow, ConversionItemStatus.Pending, null, null, null, null, null),
@@ -111,4 +110,3 @@ public sealed class VideoConverterApiClientReorderTests
         result.Should().BeEmpty();
     }
 }
-

@@ -1,0 +1,179 @@
+<div class="queue-list"
+     @ondragover:preventDefault="@true"
+     @ondrop="HandleDropOutside"
+     @ondrop:preventDefault="@true">
+    @if (Items.Count == 0)
+    {
+        <MudText Typo="Typo.body2">No pending conversions to reorder.</MudText>
+    }
+    else
+    {
+        @for (var i = 0; i < Items.Count; i++)
+        {
+            var index = i;
+            var item = Items[i];
+            var isDragging = _draggingItemId.HasValue && _draggingItemId.Value == item.Id;
+            var isDragOver = _dragOverIndex.HasValue && _dragOverIndex.Value == index;
+            var dragOverPosition = isDragOver ? _dragOverPosition : null;
+
+            @if (_dragOverIndex.HasValue && _dragOverIndex.Value == index && _dragOverPosition == "above" && !isDragging)
+            {
+                <div class="queue-drop-indicator"></div>
+            }
+
+            <QueueItem Item="@item"
+                      IsDragging="@isDragging"
+                      IsDragOver="@isDragOver"
+                      DragOverPosition="@dragOverPosition"
+                      OnDragStart="HandleDragStart"
+                      OnDragEnd="HandleDragEnd"
+                      OnDragOver="@(EventCallback.Factory.Create<DragEventArgs>(this, (e) => HandleDragOver(index, e)))"
+                      OnDrop="@(EventCallback.Factory.Create<DragEventArgs>(this, (e) => HandleDrop(index, e)))" />
+
+            @if (_dragOverIndex.HasValue && _dragOverIndex.Value == index && _dragOverPosition == "below" && !isDragging)
+            {
+                <div class="queue-drop-indicator"></div>
+            }
+        }
+
+        @if (_dragOverIndex.HasValue && _dragOverIndex.Value == Items.Count)
+        {
+            <div class="queue-drop-indicator"></div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<ConversionDto> Items { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<List<ConversionDto>> OnOrderChanged { get; set; }
+
+    private int? _draggingItemId;
+    private int? _dragOverIndex;
+    private string? _dragOverPosition;
+
+    private void HandleDragStart(int itemId)
+    {
+        _draggingItemId = itemId;
+    }
+
+    private void HandleDragEnd()
+    {
+        _draggingItemId = null;
+        _dragOverIndex = null;
+        _dragOverPosition = null;
+    }
+
+    private void HandleDragOver(int index, DragEventArgs e)
+    {
+        if (!_draggingItemId.HasValue)
+        {
+            return;
+        }
+
+        var item = Items[index];
+        if (item.Id == _draggingItemId.Value)
+        {
+            _dragOverIndex = null;
+            _dragOverPosition = null;
+            return;
+        }
+
+        var position = DetermineDropPosition(index);
+
+        _dragOverIndex = index;
+        _dragOverPosition = position;
+        StateHasChanged();
+    }
+
+    private string DetermineDropPosition(int index)
+    {
+        if (!_draggingItemId.HasValue)
+        {
+            return "below";
+        }
+
+        var sourceIndex = Items.FindIndex(i => i.Id == _draggingItemId.Value);
+        if (sourceIndex < 0)
+        {
+            return "below";
+        }
+
+        var targetIndex = index;
+
+        if (sourceIndex < targetIndex)
+        {
+            return "below";
+        }
+        else if (sourceIndex > targetIndex)
+        {
+            return "above";
+        }
+
+        return "below";
+    }
+
+    private void HandleDrop(int targetIndex, DragEventArgs e)
+    {
+        if (!_draggingItemId.HasValue || _draggingItemId.Value == Items[targetIndex].Id)
+        {
+            HandleDragEnd();
+            return;
+        }
+
+        var sourceIndex = Items.FindIndex(i => i.Id == _draggingItemId.Value);
+        if (sourceIndex < 0)
+        {
+            HandleDragEnd();
+            return;
+        }
+
+        var position = DetermineDropPosition(targetIndex);
+        var finalTargetIndex = position == "above" ? targetIndex : targetIndex + 1;
+
+        MoveItemToIndex(sourceIndex, finalTargetIndex);
+        HandleDragEnd();
+    }
+
+    private void HandleDropOutside(DragEventArgs e)
+    {
+        if (!_draggingItemId.HasValue)
+        {
+            return;
+        }
+
+        MoveItemToIndex(Items.FindIndex(i => i.Id == _draggingItemId.Value), Items.Count);
+        HandleDragEnd();
+    }
+
+    private void MoveItemToIndex(int sourceIndex, int targetIndex)
+    {
+        if (sourceIndex < 0 || sourceIndex >= Items.Count)
+        {
+            return;
+        }
+
+        var normalizedTargetIndex = Math.Max(0, Math.Min(targetIndex, Items.Count));
+        if (sourceIndex == normalizedTargetIndex)
+        {
+            return;
+        }
+
+        var newItems = new List<ConversionDto>(Items);
+        var item = newItems[sourceIndex];
+        newItems.RemoveAt(sourceIndex);
+
+        if (sourceIndex < normalizedTargetIndex)
+        {
+            normalizedTargetIndex--;
+        }
+
+        normalizedTargetIndex = Math.Max(0, Math.Min(normalizedTargetIndex, newItems.Count));
+        newItems.Insert(normalizedTargetIndex, item);
+
+        OnOrderChanged.InvokeAsync(newItems);
+    }
+}
+

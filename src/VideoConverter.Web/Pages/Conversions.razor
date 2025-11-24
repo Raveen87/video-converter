@@ -45,34 +45,7 @@
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                 Drag and drop queued items to change their processing order. Changes are applied once you save.
             </MudAlert>
-            <div class="queue-list"
-                 @ondragover:preventDefault="@true"
-                 @ondrop="HandleQueueDropOutside"
-                 @ondrop:preventDefault="@true">
-                @if (_pendingConversions.Count == 0)
-                {
-                    <MudText Typo="Typo.body2">No pending conversions to reorder.</MudText>
-                }
-                else
-                {
-                    @foreach (var conversion in _pendingConversions)
-                    {
-                        <div class="queue-item"
-                             draggable="true"
-                             @ondragstart="@(() => OnDragStart(conversion.Id))"
-                             @ondragend="OnDragEnd"
-                             @ondragover:preventDefault="@true"
-                             @ondrop="@((DragEventArgs e) => OnDrop(conversion.Id, e))"
-                             @ondrop:preventDefault="@true">
-                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="queue-item-handle" />
-                            <div class="queue-item-content">
-                                <MudText Typo="Typo.body2">@conversion.InputPath</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@conversion.OutputDirectory</MudText>
-                            </div>
-                        </div>
-                    }
-                }
-            </div>
+            <QueueList Items="@_pendingConversions" OnOrderChanged="HandleQueueOrderChanged" />
         </MudPaper>
     }
 
@@ -162,7 +135,6 @@
     private bool _hasPendingConversions = false;
     private bool _pendingOrderDirty;
     private bool _isSavingQueueOrder;
-    private int? _draggingConversionId;
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -583,68 +555,10 @@
         }
     }
 
-    private void OnDragStart(int conversionId)
+    private void HandleQueueOrderChanged(List<ConversionDto> newOrder)
     {
-        _draggingConversionId = conversionId;
-    }
-
-    private void OnDragEnd()
-    {
-        _draggingConversionId = null;
-    }
-
-    private void OnDrop(int targetConversionId, DragEventArgs _)
-    {
-        if (_draggingConversionId is null || _draggingConversionId.Value == targetConversionId)
-        {
-            return;
-        }
-
-        var targetIndex = _pendingConversions.FindIndex(c => c.Id == targetConversionId);
-        if (targetIndex < 0)
-        {
-            return;
-        }
-
-        MoveConversionToIndex(_draggingConversionId.Value, targetIndex);
-        OnDragEnd();
-    }
-
-    private void HandleQueueDropOutside(DragEventArgs _)
-    {
-        if (_draggingConversionId is null)
-        {
-            return;
-        }
-
-        MoveConversionToIndex(_draggingConversionId.Value, _pendingConversions.Count);
-        OnDragEnd();
-    }
-
-    private void MoveConversionToIndex(int conversionId, int targetIndex)
-    {
-        var sourceIndex = _pendingConversions.FindIndex(c => c.Id == conversionId);
-        if (sourceIndex < 0)
-        {
-            return;
-        }
-
-        var normalizedTargetIndex = Math.Max(0, Math.Min(targetIndex, _pendingConversions.Count));
-        if (sourceIndex == normalizedTargetIndex)
-        {
-            return;
-        }
-
-        var item = _pendingConversions[sourceIndex];
-        _pendingConversions.RemoveAt(sourceIndex);
-
-        if (sourceIndex < normalizedTargetIndex)
-        {
-            normalizedTargetIndex--;
-        }
-
-        normalizedTargetIndex = Math.Max(0, Math.Min(normalizedTargetIndex, _pendingConversions.Count));
-        _pendingConversions.Insert(normalizedTargetIndex, item);
+        _pendingConversions.Clear();
+        _pendingConversions.AddRange(newOrder);
         _pendingOrderDirty = true;
         StateHasChanged();
     }

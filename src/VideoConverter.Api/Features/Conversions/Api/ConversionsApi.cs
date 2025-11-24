@@ -147,7 +147,7 @@ public sealed class ConversionsApi : ControllerBase
             };
             throw ApiErrorException.BusinessError(
                 ErrorCode.ConversionAlreadyStarted,
-                $"A conversion is already running. Please pause or stop the queue before starting a new one.",
+                $"A conversion ({runningConversion.Id}) is already running. Please pause or stop the queue before starting a new one.",
                 "Another conversion is currently in progress. Please stop or pause the running conversion before starting a new one.",
                 innerException: null,
                 errorDetails);
@@ -560,17 +560,26 @@ public sealed class ConversionsApi : ControllerBase
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        if (pendingConversions.Count is 0)
-        {
-            logger.LogInformation("No pending conversions available for reorder");
-            return Results.Ok(Array.Empty<ConversionDto>());
-        }
-
         if (orderedIds.Count is 0)
         {
+            if (pendingConversions.Count is 0)
+            {
+                logger.LogInformation("No pending conversions available for reorder");
+                return Results.Ok(new List<ConversionDto>());
+            }
+
             throw ApiErrorException.ValidationError(
                 "orderedIds must include at least one pending conversion ID.",
                 "Nothing to reorder. Refresh the queue and provide the IDs you want to prioritize.");
+        }
+
+        if (pendingConversions.Count is 0)
+        {
+            var firstId = orderedIds[0];
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Pending conversion with ID {firstId} was not found.",
+                "Only pending (queued) conversions can be reordered. Refresh the queue and try again.");
         }
 
         var lookup = pendingConversions.ToDictionary(c => c.Id);
@@ -627,7 +636,7 @@ public sealed class ConversionsApi : ControllerBase
         for (var i = 0; i < ordered.Count; i++)
         {
             var sequence = (i + 1) * 1000;
-            ordered[i].Rank = sequence.ToString("D8", System.Globalization.CultureInfo.InvariantCulture);
+            ordered[i].Rank = sequence.ToString("D8", CultureInfo.InvariantCulture);
         }
     }
 
