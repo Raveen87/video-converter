@@ -4,6 +4,8 @@ namespace VideoConverter.Api.Features.Profiles.Dtos;
 
 public class ProfilePatchDto
 {
+    public string? Name { get; set; }
+
     public string? OutputDirectory { get; set; }
 
     public int? Crf { get; set; }

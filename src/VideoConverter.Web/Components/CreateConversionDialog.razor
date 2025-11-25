@@ -5,6 +5,13 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
+            <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (Optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
+                <MudSelectItem T="int?" Value="@((int?)null)">None - Enter settings manually</MudSelectItem>
+                @foreach (var profile in _profiles)
+                {
+                    <MudSelectItem T="int?" Value="@profile.Id">@profile.Name</MudSelectItem>
+                }
+            </MudSelect>
             <div class="d-flex align-center mb-3">
                 <MudTextField @bind-Value="_formModel.InputPath" Label="Input File Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenFileBrowser" Class="ml-2" Style="height: 56px;">
@@ -45,6 +52,7 @@
 </MudDialog>
 
 @using VideoConverter.Web.Models
+@using VideoConverter.Web.Services
 
 @code {
     [CascadingParameter]
@@ -65,12 +73,29 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
     private readonly ConversionFormModel _formModel = new();
+    private readonly List<ProfileDto> _profiles = new();
+    private int? _selectedProfileId;
     private bool _isSubmitting;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Logger.LogDebug("CreateConversionDialog initializing");
+        try
+        {
+            var profiles = await ApiClient.GetProfilesAsync().ConfigureAwait(false);
+            _profiles.Clear();
+            _profiles.AddRange(profiles);
+            Logger.LogDebug("Loaded {Count} profiles", profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error loading profiles, continuing without profile selection");
+        }
+
         if (InitialModel is not null)
         {
             Logger.LogDebug("Initializing dialog with existing model. Input: {InputPath}", InitialModel.InputPath);
@@ -87,6 +112,42 @@
         else
         {
             Logger.LogDebug("Initializing dialog with empty form");
+        }
+    }
+
+    private void HandleProfileSelectionChanged(int? profileId)
+    {
+        Logger.LogDebug("Profile selection changed to: {ProfileId}", profileId);
+        _selectedProfileId = profileId;
+
+        if (profileId.HasValue)
+        {
+            var profile = _profiles.FirstOrDefault(p => p.Id == profileId.Value);
+            if (profile is not null)
+            {
+                Logger.LogInformation("Pre-filling form with profile: {ProfileName}", profile.Name);
+                _formModel.OutputDirectory = profile.OutputDirectory ?? _formModel.OutputDirectory;
+                _formModel.Crf = profile.Crf;
+                _formModel.AudioBitrateKbps = profile.AudioBitrateKbps;
+                if (profile.AudioChannels.HasValue)
+                {
+                    var enumString = profile.AudioChannels.Value.ToString();
+                    if (Enum.TryParse<AudioChannels>(enumString, out var audioChannels))
+                    {
+                        _formModel.AudioChannels = audioChannels;
+                    }
+                }
+                else
+                {
+                    _formModel.AudioChannels = null;
+                }
+
+                _formModel.Resolution = profile.Resolution;
+                _formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
+                _formModel.AudioLanguagesString = profile.AudioLanguages is not null ? string.Join(", ", profile.AudioLanguages) : null;
+                _formModel.SubtitleLanguagesString = profile.SubtitleLanguages is not null ? string.Join(", ", profile.SubtitleLanguages) : null;
+                StateHasChanged();
+            }
         }
     }
 

@@ -10,6 +10,12 @@ public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger,
         logger.LogDebug("Starting validation for profile patch request");
         var result = new DomainValidationResult();
 
+        // For PATCH: Name is optional. If provided, it must be non-empty.
+        if (request.Name is not null && string.IsNullOrWhiteSpace(request.Name))
+        {
+            result.Add(nameof(request.Name), "Name cannot be empty.");
+        }
+
         // For PATCH: Output directory is optional. If provided, it must be non-empty and valid.
         if (request.OutputDirectory is not null)
         {

@@ -2,6 +2,8 @@ namespace VideoConverter.Web.Models;
 
 public class ProfilePatchDto
 {
+    public string? Name { get; set; }
+
     public string? OutputDirectory { get; set; }
 
     public int? Crf { get; set; }

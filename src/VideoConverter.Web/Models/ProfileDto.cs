@@ -2,6 +2,7 @@ namespace VideoConverter.Web.Models;
 
 public record ProfileDto(
     int Id,
+    string Name,
     string? OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
