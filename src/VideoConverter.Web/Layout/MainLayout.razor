@@ -1,7 +1,5 @@
 ﻿@inherits LayoutComponentBase
 @implements IDisposable
-@using MudBlazor
-@using VideoConverter.Web.Services
 @inject IThemeService ThemeService
 
 <MudThemeProvider Theme="_currentTheme" IsDarkMode="@_isDarkMode" />
@@ -23,6 +21,7 @@
         <MudNavMenu>
             <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Overview</MudNavLink>
             <MudNavLink Href="conversions" Icon="@Icons.Material.Filled.VideoSettings">Conversions</MudNavLink>
+            <MudNavLink Href="profiles" Icon="@Icons.Material.Filled.Person">Profiles</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
 

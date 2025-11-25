@@ -1,0 +1,307 @@
+@page "/profiles"
+
+<PageTitle>Profiles</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">Profile Management</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateProfileDialog">
+            Create Profile
+        </MudButton>
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudText>Loading profiles...</MudText>
+    }
+    else if (_profiles.Count == 0)
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.body1">No profiles found. Create your first profile to get started.</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@_profiles" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Output Directory</MudTh>
+                <MudTh>CRF</MudTh>
+                <MudTh>Audio Bitrate</MudTh>
+                <MudTh>Audio Channels</MudTh>
+                <MudTh>Resolution</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.Id</MudTd>
+                <MudTd DataLabel="Name">
+                    <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Name</MudText>
+                </MudTd>
+                <MudTd DataLabel="Output Directory">
+                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                        @(context.OutputDirectory ?? "Not set")
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="CRF">@(context.Crf?.ToString() ?? "-")</MudTd>
+                <MudTd DataLabel="Audio Bitrate">@(context.AudioBitrateKbps?.ToString() ?? "-")</MudTd>
+                <MudTd DataLabel="Audio Channels">@(context.AudioChannels?.ToString() ?? "-")</MudTd>
+                <MudTd DataLabel="Resolution">@(context.Resolution?.ToString() ?? "-")</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditProfileDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="mr-1">
+                        Edit
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="@(() => OpenQueueConversionDialog(context))" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="mr-1">
+                        Queue File
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Folder" OnClick="@(() => OpenQueueDirectoryDialog(context))" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="mr-1">
+                        Queue Dir
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => OpenDeleteConfirmDialog(context))" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">
+                        Delete
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@using VideoConverter.Web.Models
+@using VideoConverter.Web.Services
+
+@code {
+    private readonly List<ProfileDto> _profiles = new();
+    private bool _isLoading = true;
+
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
+    [Inject]
+    private ILogger<Profiles> Logger { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Profiles page initializing");
+        await LoadProfilesAsync().ConfigureAwait(false);
+        Logger.LogInformation("Profiles page initialized. Loaded {Count} profiles", _profiles.Count);
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        Logger.LogDebug("Loading profiles from API");
+        try
+        {
+            _isLoading = true;
+            var profiles = await ApiClient.GetProfilesAsync().ConfigureAwait(false);
+            _profiles.Clear();
+            _profiles.AddRange(profiles);
+            Logger.LogInformation("Successfully loaded {Count} profiles", profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profiles from API");
+            Snackbar.Add($"Error loading profiles: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenCreateProfileDialog()
+    {
+        Logger.LogInformation("User action: Opening create profile dialog");
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<CreateProfileDialog>("Create Profile", new DialogParameters<CreateProfileDialog>
+        {
+            { x => x.InitialModel, null },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ProfileCreateDto>(this, async (request) =>
+            {
+                await CreateProfileAsync(request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Create profile dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Create profile dialog opened");
+    }
+
+    private async Task OpenEditProfileDialog(ProfileDto profile)
+    {
+        Logger.LogInformation("User action: Opening edit profile dialog for profile {ProfileId}", profile.Id);
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<EditProfileDialog>("Edit Profile", new DialogParameters<EditProfileDialog>
+        {
+            { x => x.Profile, profile },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ProfilePatchDto>(this, async (patch) =>
+            {
+                await UpdateProfileAsync(profile.Id, patch).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Edit profile dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Edit profile dialog opened");
+    }
+
+    private async Task OpenQueueConversionDialog(ProfileDto profile)
+    {
+        Logger.LogInformation("User action: Opening queue conversion dialog for profile {ProfileId}", profile.Id);
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<ProfileQueueConversionDialog>("Queue Conversion with Profile", new DialogParameters<ProfileQueueConversionDialog>
+        {
+            { x => x.Profile, profile },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ProfileConversionCreateDto>(this, async (request) =>
+            {
+                await QueueConversionWithProfileAsync(profile.Id, request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Queue conversion dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Queue conversion dialog opened");
+    }
+
+    private async Task OpenQueueDirectoryDialog(ProfileDto profile)
+    {
+        Logger.LogInformation("User action: Opening queue directory dialog for profile {ProfileId}", profile.Id);
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<ProfileQueueDirectoryDialog>("Queue Directory with Profile", new DialogParameters<ProfileQueueDirectoryDialog>
+        {
+            { x => x.Profile, profile },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ProfileDirectoryQueueRequestDto>(this, async (request) =>
+            {
+                await QueueDirectoryWithProfileAsync(profile.Id, request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Queue directory dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Queue directory dialog opened");
+    }
+
+    private async Task OpenDeleteConfirmDialog(ProfileDto profile)
+    {
+        Logger.LogInformation("User action: Opening delete confirmation dialog for profile {ProfileId}", profile.Id);
+        var result = await DialogService.ShowMessageBox(
+            "Delete Profile",
+            $"Are you sure you want to delete profile '{profile.Name}' (ID: {profile.Id})? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel").ConfigureAwait(false);
+        if (result == true)
+        {
+            await DeleteProfileAsync(profile.Id).ConfigureAwait(false);
+        }
+    }
+
+    private async Task CreateProfileAsync(ProfileCreateDto request)
+    {
+        Logger.LogInformation("Creating profile. Name: {Name}", request.Name);
+        try
+        {
+            var created = await ApiClient.CreateProfileAsync(request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully created profile with ID {ProfileId}", created.Id);
+            Snackbar.Add("Profile created successfully", Severity.Success);
+            await LoadProfilesAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating profile");
+            Snackbar.Add($"Error creating profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UpdateProfileAsync(int id, ProfilePatchDto patch)
+    {
+        Logger.LogInformation("Updating profile {ProfileId}", id);
+        try
+        {
+            _ = await ApiClient.UpdateProfileAsync(id, patch).ConfigureAwait(false);
+            Logger.LogInformation("Successfully updated profile {ProfileId}", id);
+            Snackbar.Add("Profile updated successfully", Severity.Success);
+            await LoadProfilesAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating profile {ProfileId}", id);
+            Snackbar.Add($"Error updating profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteProfileAsync(int id)
+    {
+        Logger.LogInformation("Deleting profile {ProfileId}", id);
+        try
+        {
+            await ApiClient.DeleteProfileAsync(id).ConfigureAwait(false);
+            Logger.LogInformation("Successfully deleted profile {ProfileId}", id);
+            Snackbar.Add("Profile deleted successfully", Severity.Success);
+            await LoadProfilesAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting profile {ProfileId}", id);
+            Snackbar.Add($"Error deleting profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task QueueConversionWithProfileAsync(int profileId, ProfileConversionCreateDto request)
+    {
+        Logger.LogInformation("Queueing conversion with profile {ProfileId}. Input: {InputPath}", profileId, request.InputPath);
+        try
+        {
+            var conversion = await ApiClient.QueueConversionWithProfileAsync(profileId, request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully queued conversion with profile {ProfileId}. Conversion ID: {ConversionId}", profileId, conversion.Id);
+            Snackbar.Add($"Conversion queued successfully (ID: {conversion.Id})", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error queueing conversion with profile {ProfileId}", profileId);
+            Snackbar.Add($"Error queueing conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task QueueDirectoryWithProfileAsync(int profileId, ProfileDirectoryQueueRequestDto request)
+    {
+        Logger.LogInformation("Queueing directory with profile {ProfileId}. Directory: {DirectoryPath}", profileId, request.DirectoryPath);
+        try
+        {
+            var batchId = await ApiClient.QueueDirectoryWithProfileAsync(profileId, request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully queued directory with profile {ProfileId}. Batch ID: {BatchId}", profileId, batchId);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error queueing directory with profile {ProfileId}", profileId);
+            Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
+        }
+    }
+}
+

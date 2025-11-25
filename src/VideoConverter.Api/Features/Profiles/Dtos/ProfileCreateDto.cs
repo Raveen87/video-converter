@@ -3,6 +3,7 @@ using VideoConverter.Api.Shared.Domain.ValueObjects;
 namespace VideoConverter.Api.Features.Profiles.Dtos;
 
 public record ProfileCreateDto(
+    string Name,
     string? OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,

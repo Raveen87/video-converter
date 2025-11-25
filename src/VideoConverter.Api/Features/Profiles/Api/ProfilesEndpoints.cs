@@ -41,6 +41,7 @@ public sealed class ProfilesEndpoints(
 
         var profile = new Profile
         {
+            Name = request.Name,
             OutputDirectory = request.OutputDirectory,
             Crf = request.Crf,
             AudioBitrateKbps = request.AudioBitrateKbps,
@@ -59,6 +60,17 @@ public sealed class ProfilesEndpoints(
         return Results.Created($"/api/profiles/{profile.Id}", ToDto(profile));
     }
 
+    public async Task<IResult> GetAllProfilesAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Retrieving all profiles");
+
+        var profiles = await _db.Profiles.ToListAsync(cancellationToken).ConfigureAwait(false);
+        var dtos = profiles.Select(ToDto).ToList();
+
+        _logger.LogInformation("Retrieved {Count} profiles", dtos.Count);
+        return Results.Ok(dtos);
+    }
+
     public async Task<IResult> GetProfileByIdAsync(int id, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Retrieving profile with ID: {ProfileId}", id);
@@ -67,6 +79,19 @@ public sealed class ProfilesEndpoints(
 
         _logger.LogInformation("Profile retrieved successfully with ID: {ProfileId}", id);
         return Results.Ok(ToDto(profile));
+    }
+
+    public async Task<IResult> DeleteProfileAsync(int id, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Deleting profile with ID: {ProfileId}", id);
+
+        var profile = await _existsValidator.GetProfileForUpdateAsync(id, _db, cancellationToken).ConfigureAwait(false);
+
+        _ = _db.Profiles.Remove(profile);
+        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("Profile deleted successfully with ID: {ProfileId}", id);
+        return Results.NoContent();
     }
 
     public async Task<IResult> UpdateProfileAsync(
@@ -99,6 +124,7 @@ public sealed class ProfilesEndpoints(
     {
         return new ProfilePatchDto
         {
+            Name = profile.Name,
             OutputDirectory = profile.OutputDirectory,
             Crf = profile.Crf,
             AudioBitrateKbps = profile.AudioBitrateKbps,
@@ -115,6 +141,7 @@ public sealed class ProfilesEndpoints(
     {
         return new ProfileDto(
             profile.Id,
+            profile.Name,
             profile.OutputDirectory,
             profile.Crf,
             profile.AudioBitrateKbps,
@@ -128,6 +155,11 @@ public sealed class ProfilesEndpoints(
 
     private static void UpdateProfileFromPatch(Profile profile, ProfilePatchDto patchModel)
     {
+        if (patchModel.Name is not null)
+        {
+            profile.Name = patchModel.Name;
+        }
+
         profile.OutputDirectory = patchModel.OutputDirectory;
         profile.Crf = patchModel.Crf;
         profile.AudioBitrateKbps = patchModel.AudioBitrateKbps;

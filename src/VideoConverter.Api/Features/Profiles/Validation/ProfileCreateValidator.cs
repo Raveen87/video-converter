@@ -10,6 +10,12 @@ public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logge
         logger.LogDebug("Starting validation for profile create request");
         var result = new DomainValidationResult();
 
+        // Validate required name
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            result.Add(nameof(request.Name), "Name is required.");
+        }
+
         // Validate required output directory
         if (string.IsNullOrWhiteSpace(request.OutputDirectory))
         {

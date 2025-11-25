@@ -389,6 +389,85 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task DeleteProfileAsync(int id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Deleting profile {ProfileId}", id);
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"api/profiles/{id}",
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            _logger.LogInformation("Successfully deleted profile {ProfileId}", id);
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile {ProfileId}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<ConversionDto> QueueConversionWithProfileAsync(int profileId, ProfileConversionCreateDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Queueing conversion with profile {ProfileId}. Input: {InputPath}", profileId, request.InputPath);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/profiles/{profileId}/conversions",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Failed to deserialize conversion response");
+            _logger.LogInformation("Successfully queued conversion with profile {ProfileId}. Conversion ID: {ConversionId}", profileId, result.Id);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error queueing conversion with profile {ProfileId}", profileId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<int> QueueDirectoryWithProfileAsync(int profileId, ProfileDirectoryQueueRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug(
+            "Queueing directory with profile {ProfileId}. Directory: {DirectoryPath}, Output: {OutputDirectory}",
+            profileId,
+            request.DirectoryPath,
+            request.OutputDirectory);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/profiles/{profileId}/conversions/queue-directory",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DirectoryQueueResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+            if (result is null || result.BatchId is 0)
+            {
+                _logger.LogError("Failed to deserialize directory queue response or received invalid batch ID");
+                throw new InvalidOperationException("Failed to deserialize directory queue response or received invalid batch ID");
+            }
+
+            _logger.LogInformation("Successfully queued directory with profile {ProfileId}. Batch ID: {BatchId}", profileId, result.BatchId);
+            return result.BatchId;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error queueing directory with profile {ProfileId}. Directory: {DirectoryPath}", profileId, request.DirectoryPath);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     private static List<JsonPatchOperation> CreateJsonPatchOperations(ConversionPatchDto patch)
     {
         var patchOperations = new List<JsonPatchOperation>();

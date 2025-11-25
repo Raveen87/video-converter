@@ -5,6 +5,7 @@ namespace VideoConverter.Tests.TestUtils.Builders;
 
 public sealed class ProfileBuilder
 {
+    private string _name = "Test Profile";
     private string? _outputDirectory;
     private int? _crf;
     private int? _audioBitrateKbps;
@@ -62,10 +63,17 @@ public sealed class ProfileBuilder
         return this;
     }
 
+    public ProfileBuilder WithName(string name)
+    {
+        _name = name;
+        return this;
+    }
+
     public Profile Build()
     {
         return new Profile
         {
+            Name = _name,
             OutputDirectory = _outputDirectory,
             Crf = _crf,
             AudioBitrateKbps = _audioBitrateKbps,

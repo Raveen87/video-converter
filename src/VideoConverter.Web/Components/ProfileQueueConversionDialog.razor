@@ -1,0 +1,176 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Queue Conversion with Profile</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Info" Class="mb-3">
+            Using profile: <strong>@Profile.Name</strong>
+        </MudAlert>
+        <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.InputPath" Label="Input File Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenFileBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenDirectoryBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <text>Queueing...</text>
+                }
+                else
+                {
+                    <text>Queue Conversion</text>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@using VideoConverter.Web.Models
+
+@code {
+    [CascadingParameter]
+    public IDialogReference MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public ProfileDto Profile { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ProfileConversionCreateDto> OnSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Inject]
+    private ILogger<ProfileQueueConversionDialog> Logger { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
+    private readonly ConversionFormModel _formModel = new();
+    private bool _isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        Logger.LogDebug("ProfileQueueConversionDialog initializing for profile {ProfileId}", Profile.Id);
+        _formModel.OutputDirectory = Profile.OutputDirectory ?? string.Empty;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        Logger.LogInformation("Form submission started. Input: {InputPath}, Output: {OutputDirectory}",
+            _formModel.InputPath, _formModel.OutputDirectory);
+        _isSubmitting = true;
+        try
+        {
+            var request = new ProfileConversionCreateDto(
+                _formModel.InputPath,
+                _formModel.OutputDirectory);
+
+            await OnSubmit.InvokeAsync(request);
+            Logger.LogInformation("Form submission completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during form submission");
+            throw new InvalidOperationException("Failed to submit conversion form", ex);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task OpenFileBrowser()
+    {
+        Logger.LogDebug("Opening file browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Input File" },
+            { x => x.Mode, FileBrowserMode.File },
+            { x => x.InitialPath, !string.IsNullOrWhiteSpace(_formModel.InputPath) ? Path.GetDirectoryName(_formModel.InputPath) : null },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                HandleFileSelected(path);
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Input File", parameters, options).ConfigureAwait(false);
+    }
+
+    private async Task OpenDirectoryBrowser()
+    {
+        Logger.LogDebug("Opening directory browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Output Directory" },
+            { x => x.Mode, FileBrowserMode.Directory },
+            { x => x.InitialPath, _formModel.OutputDirectory },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                HandleDirectorySelected(path);
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Output Directory", parameters, options).ConfigureAwait(false);
+    }
+
+    private void HandleFileSelected(string path)
+    {
+        Logger.LogInformation("File selected from browser: {Path}", path);
+        _formModel.InputPath = path;
+        StateHasChanged();
+    }
+
+    private void HandleDirectorySelected(string path)
+    {
+        Logger.LogInformation("Directory selected from browser: {Path}", path);
+        _formModel.OutputDirectory = path;
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        Logger.LogDebug("Profile queue conversion dialog cancelled");
+        await OnCancel.InvokeAsync().ConfigureAwait(false);
+    }
+
+    private sealed class ConversionFormModel
+    {
+        public string InputPath { get; set; } = string.Empty;
+
+        public string OutputDirectory { get; set; } = string.Empty;
+    }
+}
+
+

@@ -14,7 +14,8 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
+#pragma warning disable 612, 618
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
             modelBuilder.Entity("VideoConverter.Api.Shared.Domain.Entities.Conversion", b =>
                 {
@@ -246,6 +247,11 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("OutputDirectory")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
@@ -281,6 +287,7 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Items");
                 });
+#pragma warning restore 612, 618
         }
     }
 }

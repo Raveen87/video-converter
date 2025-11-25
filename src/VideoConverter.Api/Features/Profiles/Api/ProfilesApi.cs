@@ -8,6 +8,14 @@ namespace VideoConverter.Api.Features.Profiles.Api;
 [Route("api/profiles")]
 public sealed class ProfilesApi : ControllerBase
 {
+    [HttpGet]
+    public Task<IResult> GetAllProfilesAsync(
+        [FromServices] ProfilesEndpoints handlers,
+        CancellationToken ct)
+    {
+        return handlers.GetAllProfilesAsync(ct);
+    }
+
     [HttpPost]
     public Task<IResult> CreateProfileAsync(
         [FromBody] ProfileCreateDto request,
@@ -34,6 +42,15 @@ public sealed class ProfilesApi : ControllerBase
         CancellationToken ct)
     {
         return handlers.UpdateProfileAsync(id, patchDocument, ct);
+    }
+
+    [HttpDelete("{id:int}")]
+    public Task<IResult> DeleteProfileAsync(
+        int id,
+        [FromServices] ProfilesEndpoints handlers,
+        CancellationToken ct)
+    {
+        return handlers.DeleteProfileAsync(id, ct);
     }
 
     [HttpPost("{id:int}/conversions")]

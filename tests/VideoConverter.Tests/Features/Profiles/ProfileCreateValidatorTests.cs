@@ -18,6 +18,7 @@ public class ProfileCreateValidatorTests
         var tempDir = Path.Combine(Path.GetTempPath(), "vc-prof-" + Guid.NewGuid().ToString("N"));
         _ = Directory.CreateDirectory(tempDir);
         var dto = new ProfileCreateDto(
+            "Test Profile",
             tempDir,
             20,
             192,
@@ -43,7 +44,7 @@ public class ProfileCreateValidatorTests
     [Fact]
     public async Task ValidateAsync_WithInvalidValues_ReturnsErrors()
     {
-        var dto = new ProfileCreateDto("C:/invalid<>dir", 100, 0, (VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels)99, 1440, "|invalid|", AudioLanguages: null, SubtitleLanguages: null);
+        var dto = new ProfileCreateDto("Test Profile", "C:/invalid<>dir", 100, 0, (VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels)99, 1440, "|invalid|", AudioLanguages: null, SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();
     }

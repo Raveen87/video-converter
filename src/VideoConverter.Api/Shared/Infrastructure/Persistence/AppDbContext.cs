@@ -66,6 +66,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var profileEntity = modelBuilder.Entity<Profile>();
         _ = profileEntity.HasKey(p => p.Id);
+        _ = profileEntity.Property(p => p.Name)
+            .IsRequired()
+            .HasMaxLength(256);
         _ = profileEntity.Property(p => p.OutputDirectory)
             .HasMaxLength(1024);
         _ = profileEntity.Property(p => p.AudioChannels)
