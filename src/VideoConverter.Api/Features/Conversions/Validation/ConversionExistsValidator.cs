@@ -71,6 +71,7 @@ public sealed class ConversionExistsValidator(ILogger<ConversionExistsValidator>
                 ConversionStatus.Running => "This conversion is currently running and cannot be edited. Please stop it first if you need to make changes.",
                 ConversionStatus.Completed => "This conversion has already completed and cannot be edited.",
                 ConversionStatus.Failed => "This conversion has failed and cannot be edited.",
+                ConversionStatus.Deleted => "This conversion has been deleted and cannot be edited.",
                 ConversionStatus.Pending => "This conversion is pending and can be edited.",
                 _ => $"This conversion is in {conversion.Status} status and cannot be edited.",
             };

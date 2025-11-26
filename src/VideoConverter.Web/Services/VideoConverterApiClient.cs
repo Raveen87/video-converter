@@ -117,6 +117,29 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<ConversionDto> DeleteConversionAsync(int id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Deleting conversion {ConversionId}", id);
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"api/conversions/{id}",
+                cancellationToken).ConfigureAwait(false);
+            _ = response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Failed to deserialize conversion response");
+            _logger.LogInformation("Successfully deleted conversion {ConversionId}", id);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting conversion {ConversionId}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug(

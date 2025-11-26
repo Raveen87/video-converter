@@ -95,6 +95,7 @@ public sealed class ProfileConversionsEndpoints(
             c.AudioBitrateKbps,
             c.AudioChannels,
             c.Resolution,
-            c.MetadataBasedFilename);
+            c.MetadataBasedFilename,
+            c.DeletedAtUtc);
     }
 }

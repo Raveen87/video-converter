@@ -172,3 +172,11 @@ code {
 .status-failed .mud-chip-text {
     color: #f44336 !important;
 }
+
+.status-deleted {
+    color: #757575 !important;
+}
+
+.status-deleted .mud-chip-text {
+    color: #757575 !important;
+}

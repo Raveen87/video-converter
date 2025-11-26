@@ -11,6 +11,10 @@
         <MudText Typo="Typo.body2">@Item.InputPath</MudText>
         <MudText Typo="Typo.caption" Color="Color.Secondary">@Item.OutputDirectory</MudText>
     </div>
+    @if (OnDelete.HasValue)
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="HandleDelete" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="queue-item-delete" />
+    }
 </div>
 
 @code {
@@ -28,6 +32,9 @@
 
     [Parameter]
     public EventCallback<DragEventArgs>? OnDrop { get; set; }
+
+    [Parameter]
+    public EventCallback<int>? OnDelete { get; set; }
 
     [Parameter]
     public bool IsDragging { get; set; }
@@ -82,6 +89,14 @@
         if (OnDrop.HasValue)
         {
             OnDrop.Value.InvokeAsync(e);
+        }
+    }
+
+    private void HandleDelete()
+    {
+        if (OnDelete.HasValue)
+        {
+            OnDelete.Value.InvokeAsync(Item.Id);
         }
     }
 }

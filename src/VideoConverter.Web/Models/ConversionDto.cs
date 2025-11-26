@@ -10,4 +10,5 @@ public record ConversionDto(
     int? AudioBitrateKbps,
     AudioChannels? AudioChannels,
     int? Resolution,
-    string? MetadataBasedFilename);
+    string? MetadataBasedFilename,
+    DateTime? DeletedAtUtc);

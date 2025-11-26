@@ -54,7 +54,7 @@
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                 Drag and drop queued items to change their processing order. Changes are applied once you save.
             </MudAlert>
-            <QueueList Items="@_pendingConversions" OnOrderChanged="HandleQueueOrderChanged" />
+            <QueueList Items="@_pendingConversions" OnOrderChanged="HandleQueueOrderChanged" OnDelete="@(EventCallback.Factory.Create<int>(this, DeleteConversionAsync))" />
         </MudPaper>
     }
 
@@ -140,7 +140,13 @@
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                    @if (context.Status == ConversionItemStatus.Pending)
+                    {
+                        <MudButton StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteConversionAsync(context))" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="mr-2">
+                            Delete
+                        </MudButton>
+                    }
+                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionItemStatus.Deleted)">
                         Edit
                     </MudButton>
                 </MudTd>
@@ -566,6 +572,72 @@
         }
     }
 
+    private async Task DeleteConversionAsync(ConversionDto conversion)
+    {
+        await ShowDeleteConfirmationAsync(conversion).ConfigureAwait(false);
+    }
+
+    private async Task DeleteConversionAsync(int id)
+    {
+        var conversion = _conversions.FirstOrDefault(c => c.Id == id);
+        if (conversion is null)
+        {
+            Logger.LogWarning("Conversion {ConversionId} not found for delete confirmation", id);
+            Snackbar.Add("Conversion not found", Severity.Error);
+            return;
+        }
+
+        await ShowDeleteConfirmationAsync(conversion).ConfigureAwait(false);
+    }
+
+    private async Task ShowDeleteConfirmationAsync(ConversionDto conversion)
+    {
+        Logger.LogInformation("User action: Opening delete confirmation dialog for conversion {ConversionId}", conversion.Id);
+        var result = await DialogService.ShowMessageBox(
+            "Delete Conversion",
+            $"Are you sure you want to delete conversion '{conversion.InputPath}' (ID: {conversion.Id})? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel").ConfigureAwait(false);
+        if (result == true)
+        {
+            await DeleteConversionAsyncInternal(conversion.Id).ConfigureAwait(false);
+        }
+    }
+
+    private async Task DeleteConversionAsyncInternal(int id)
+    {
+        Logger.LogInformation("Deleting conversion {ConversionId}", id);
+        try
+        {
+            var deleted = await ApiClient.DeleteConversionAsync(id).ConfigureAwait(false);
+            Logger.LogInformation("Successfully deleted conversion {ConversionId}", id);
+
+            // Update the conversion in the list
+            await InvokeAsync(() =>
+            {
+                var index = _conversions.FindIndex(c => c.Id == id);
+                if (index >= 0)
+                {
+                    _conversions[index] = deleted;
+                }
+                else
+                {
+                    Logger.LogWarning("Conversion {ConversionId} not found in list after delete", id);
+                }
+                ResetPendingQueueFromServer();
+                RecalculateQueueFlags();
+                StateHasChanged();
+            }).ConfigureAwait(false);
+
+            Snackbar.Add("Conversion deleted successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting conversion {ConversionId}", id);
+            Snackbar.Add($"Error deleting conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
     {
         Logger.LogInformation("Creating conversion with optimistic update. Input: {InputPath}", request.InputPath);
@@ -581,7 +653,8 @@
             request.AudioBitrateKbps,
             request.AudioChannels,
             request.Resolution,
-            request.OutputFilenameTemplate);
+            request.OutputFilenameTemplate,
+            null);
 
         Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
         // Add optimistically to the list
@@ -707,8 +780,8 @@
 
     private ConversionItemStatus GetEffectiveStatus(ConversionDto conversion)
     {
-        // For Completed and Failed, use the status as-is
-        if (conversion.Status == ConversionItemStatus.Completed || conversion.Status == ConversionItemStatus.Failed)
+        // For Completed, Failed, and Deleted, use the status as-is
+        if (conversion.Status == ConversionItemStatus.Completed || conversion.Status == ConversionItemStatus.Failed || conversion.Status == ConversionItemStatus.Deleted)
         {
             return conversion.Status;
         }
@@ -733,6 +806,7 @@
             ConversionItemStatus.Running => "status-running",
             ConversionItemStatus.Completed => "status-completed",
             ConversionItemStatus.Failed => "status-failed",
+            ConversionItemStatus.Deleted => "status-deleted",
             _ => "",
         };
     }

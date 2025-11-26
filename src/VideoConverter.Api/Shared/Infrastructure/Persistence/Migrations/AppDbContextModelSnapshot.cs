@@ -36,6 +36,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Crf")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DetectedCrop")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");

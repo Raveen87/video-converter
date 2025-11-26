@@ -28,7 +28,8 @@
                       OnDragStart="HandleDragStart"
                       OnDragEnd="HandleDragEnd"
                       OnDragOver="@(EventCallback.Factory.Create<DragEventArgs>(this, (e) => HandleDragOver(index, e)))"
-                      OnDrop="@(EventCallback.Factory.Create<DragEventArgs>(this, (e) => HandleDrop(index, e)))" />
+                      OnDrop="@(EventCallback.Factory.Create<DragEventArgs>(this, (e) => HandleDrop(index, e)))"
+                      OnDelete="@(OnDelete.HasValue ? EventCallback.Factory.Create<int>(this, (id) => OnDelete.Value.InvokeAsync(id)) : null)" />
 
             @if (_dragOverIndex.HasValue && _dragOverIndex.Value == index && _dragOverPosition == "below" && !isDragging)
             {
@@ -49,6 +50,9 @@
 
     [Parameter]
     public EventCallback<List<ConversionDto>> OnOrderChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int>? OnDelete { get; set; }
 
     private int? _draggingItemId;
     private int? _dragOverIndex;

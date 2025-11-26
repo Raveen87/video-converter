@@ -75,7 +75,8 @@ public sealed class ConversionsEndpoints(
             conversion.AudioBitrateKbps,
             conversion.AudioChannels,
             conversion.Resolution,
-            conversion.MetadataBasedFilename);
+            conversion.MetadataBasedFilename,
+            conversion.DeletedAtUtc);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)
