@@ -39,31 +39,50 @@ internal static partial class LanguageMatchEngine
         var matched = new List<int>();
         foreach (var req in requestedLanguages)
         {
-            var reqKey = Normalize(req);
+            var (language, isOptional) = ParseLanguageRequest(req);
+            var reqKey = Normalize(language);
             var candidates = GetCandidateTokens(reqKey);
             logger.LogDebug(
-                "Searching for {Kind} language '{RequestedLanguage}' with candidates: {Candidates}",
+                "Searching for {Kind} language '{RequestedLanguage}' (optional: {IsOptional}) with candidates: {Candidates}",
                 kind,
-                req,
+                language,
+                isOptional,
                 string.Join(", ", candidates));
 
             var found = streams.Find(s => MatchesStream(s, candidates));
             if (found is null)
             {
-                logger.LogWarning("{Kind} language '{RequestedLanguage}' not found in available streams", kind, req);
-                throw new InvalidOperationException($"Requested {kind} language '{req}' not found in input file.");
+                if (isOptional)
+                {
+                    logger.LogInformation("{Kind} language '{RequestedLanguage}' not found in available streams (optional, skipping)", kind, language);
+                    continue;
+                }
+
+                logger.LogWarning("{Kind} language '{RequestedLanguage}' not found in available streams", kind, language);
+                throw new InvalidOperationException($"Requested {kind} language '{language}' not found in input file.");
             }
 
             logger.LogDebug(
                 "Matched {Kind} language '{RequestedLanguage}' to stream index {StreamIndex}",
                 kind,
-                req,
+                language,
                 found.Index);
             matched.Add(found.Index);
         }
 
         logger.LogInformation("{Kind} language matching completed: {MatchedIndices}", kind, string.Join(", ", matched));
         return matched;
+    }
+
+    private static (string Language, bool IsOptional) ParseLanguageRequest(string request)
+    {
+        var trimmed = request.Trim();
+        if (trimmed.EndsWith('?'))
+        {
+            return (trimmed[..^1].TrimEnd(), true);
+        }
+
+        return (trimmed, false);
     }
 
     private static bool MatchesStream(MediaStream stream, HashSet<string> candidates)

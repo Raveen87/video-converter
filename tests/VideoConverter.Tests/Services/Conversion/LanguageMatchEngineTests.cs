@@ -40,4 +40,52 @@ public class LanguageMatchEngineTests
         var act = () => matcher.MatchAudioStreams(Streams, ["german"]);
         _ = act.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void Match_WhenOptionalLanguageMissing_ShouldSkip()
+    {
+        var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
+        var result = matcher.MatchAudioStreams(Streams, ["english", "german?"]);
+        _ = result.Should().Equal(0);
+    }
+
+    [Fact]
+    public void Match_WhenOptionalLanguagePresent_ShouldInclude()
+    {
+        var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
+        var result = matcher.MatchAudioStreams(Streams, ["english", "swe?"]);
+        _ = result.Should().Equal(0, 1);
+    }
+
+    [Fact]
+    public void Match_WhenAllOptionalLanguagesMissing_ShouldReturnEmpty()
+    {
+        var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
+        var result = matcher.MatchAudioStreams(Streams, ["german?", "french?"]);
+        _ = result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Match_Subtitle_WhenOptionalLanguageMissing_ShouldSkip()
+    {
+        var matcher = new SubtitleLanguageMatcher(NullLogger<SubtitleLanguageMatcher>.Instance);
+        var result = matcher.MatchSubtitleStreams(Streams, ["eng", "german?"]);
+        _ = result.Should().Equal(2);
+    }
+
+    [Fact]
+    public void Match_Subtitle_WhenOptionalLanguagePresent_ShouldInclude()
+    {
+        var matcher = new SubtitleLanguageMatcher(NullLogger<SubtitleLanguageMatcher>.Instance);
+        var result = matcher.MatchSubtitleStreams(Streams, ["eng", "swedish?"]);
+        _ = result.Should().Equal(2, 3);
+    }
+
+    [Fact]
+    public void Match_WhenRequiredLanguageMissing_ShouldThrowEvenWithOptional()
+    {
+        var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
+        var act = () => matcher.MatchAudioStreams(Streams, ["german", "swe?"]);
+        _ = act.Should().Throw<InvalidOperationException>();
+    }
 }
