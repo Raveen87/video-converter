@@ -436,4 +436,111 @@ public class ConversionServiceTests
         _mockMetadataService.Verify(x => x.GetMovieMetadataAsync("Unknown Movie", 2020, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockFilenameGenerator.Verify(x => x.GenerateFilename(It.IsAny<MediaMetadata>(), It.IsAny<string>()), Times.Never);
     }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WithOptionalSubtitleLanguageMissing_ShouldSkip()
+    {
+        // Arrange
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithSubtitleLanguages("English", "French?")
+            .Build();
+
+        var streams = new List<MediaStream>
+        {
+            new() { Index = 2, CodecType = "subtitle", LanguageTag = "eng" },
+        };
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = streams });
+
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("English"))))
+            .Returns([2]);
+
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("French"))))
+            .Throws(new InvalidOperationException("Subtitle not found"));
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        // Act
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.SelectedSubtitleStreamIndicesCsv.Should().Be("2");
+        _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WithOptionalSubtitleLanguagePresent_ShouldInclude()
+    {
+        // Arrange
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithSubtitleLanguages("English", "Swedish?")
+            .Build();
+
+        var streams = new List<MediaStream>
+        {
+            new() { Index = 2, CodecType = "subtitle", LanguageTag = "eng" },
+            new() { Index = 3, CodecType = "subtitle", LanguageTag = "swe" },
+        };
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = streams });
+
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("English"))))
+            .Returns([2]);
+
+        _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 1 && l.Contains("Swedish"))))
+            .Returns([3]);
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        // Act
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.SelectedSubtitleStreamIndicesCsv.Should().Be("2,3");
+        _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WithOptionalAudioLanguageMissing_ShouldSkip()
+    {
+        // Arrange
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithAudioLanguages("English", "German?")
+            .Build();
+
+        var streams = new List<MediaStream>
+        {
+            new() { Index = 0, CodecType = "audio", LanguageTag = "eng" },
+        };
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = streams });
+
+        // The audio matcher receives the full list with optional markers, but internally parses them
+        // Since German? is optional and not found, it should only return English stream
+        _ = _mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.Is<IReadOnlyList<string>>(l => l.Count == 2 && l.Contains("English") && l.Contains("German?"))))
+            .Returns([0]);
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        // Act
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        // Assert
+        _ = result.Should().NotBeNull();
+        _ = result.SelectedAudioStreamIndicesCsv.Should().Be("0");
+    }
 }

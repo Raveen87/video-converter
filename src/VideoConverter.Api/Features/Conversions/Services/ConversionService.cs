@@ -103,6 +103,17 @@ public sealed class ConversionService(
         };
     }
 
+    private static (string Language, bool IsOptional) ParseLanguageRequest(string request)
+    {
+        var trimmed = request.Trim();
+        if (trimmed.EndsWith('?'))
+        {
+            return (trimmed[..^1].TrimEnd(), true);
+        }
+
+        return (trimmed, false);
+    }
+
     private static int DetermineAudioBitrate(int? requestedBitrate, AudioChannels? audioChannels)
     {
         // If bitrate is explicitly provided, use it
@@ -324,37 +335,7 @@ public sealed class ConversionService(
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
-        var matchedIndices = new List<int>();
-        var externalPaths = new List<string>();
-
-        foreach (var lang in requested)
-        {
-            try
-            {
-                var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
-                matchedIndices.AddRange(idx);
-                logger.LogDebug(
-                    "Found subtitle stream for language '{Language}': indices {Indices}",
-                    lang,
-                    string.Join(',', idx));
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
-
-                var externalPath = FindExternalSubtitle(request.InputPath, lang);
-                if (externalPath is not null)
-                {
-                    externalPaths.Add(externalPath);
-                    logger.LogDebug("Found external subtitle file: {Path}", externalPath);
-                }
-                else
-                {
-                    logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", lang);
-                    throw new InvalidOperationException($"Requested subtitle language '{lang}' not found in file or as external .srt.");
-                }
-            }
-        }
+        var (matchedIndices, externalPaths) = await ProcessSubtitleLanguageListAsync(request.InputPath, requested, probe.Streams).ConfigureAwait(false);
 
         var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
         var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
@@ -369,6 +350,53 @@ public sealed class ConversionService(
             SubtitleIndicesCsv = subtitleIndicesCsv,
             ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
         };
+    }
+
+    private Task<(List<int> MatchedIndices, List<string> ExternalPaths)> ProcessSubtitleLanguageListAsync(
+        string inputPath,
+        List<string> requested,
+        IReadOnlyList<MediaStream> streams)
+    {
+        var matchedIndices = new List<int>();
+        var externalPaths = new List<string>();
+
+        foreach (var lang in requested)
+        {
+            var (language, isOptional) = ParseLanguageRequest(lang);
+            try
+            {
+                var idx = subtitleMatcher.MatchSubtitleStreams(streams, [language]);
+                matchedIndices.AddRange(idx);
+                logger.LogDebug(
+                    "Found subtitle stream for language '{Language}': indices {Indices}",
+                    language,
+                    string.Join(',', idx));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", language);
+
+                var externalPath = FindExternalSubtitle(inputPath, language);
+                if (externalPath is not null)
+                {
+                    externalPaths.Add(externalPath);
+                    logger.LogDebug("Found external subtitle file: {Path}", externalPath);
+                }
+                else
+                {
+                    if (isOptional)
+                    {
+                        logger.LogInformation("Subtitle language '{Language}' not found in file or as external .srt (optional, skipping)", language);
+                        continue;
+                    }
+
+                    logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", language);
+                    throw new InvalidOperationException($"Requested subtitle language '{language}' not found in file or as external .srt.");
+                }
+            }
+        }
+
+        return Task.FromResult((matchedIndices, externalPaths));
     }
 
     private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
@@ -496,37 +524,7 @@ public sealed class ConversionService(
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(inputPath, cancellationToken).ConfigureAwait(false);
-        var matchedIndices = new List<int>();
-        var externalPaths = new List<string>();
-
-        foreach (var lang in requested)
-        {
-            try
-            {
-                var idx = subtitleMatcher.MatchSubtitleStreams(probe.Streams, [lang]);
-                matchedIndices.AddRange(idx);
-                logger.LogDebug(
-                    "Found subtitle stream for language '{Language}': indices {Indices}",
-                    lang,
-                    string.Join(',', idx));
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Subtitle language '{Language}' not found in streams, checking external files", lang);
-
-                var externalPath = FindExternalSubtitle(inputPath, lang);
-                if (externalPath is not null)
-                {
-                    externalPaths.Add(externalPath);
-                    logger.LogDebug("Found external subtitle file: {Path}", externalPath);
-                }
-                else
-                {
-                    logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", lang);
-                    throw new InvalidOperationException($"Requested subtitle language '{lang}' not found in file or as external .srt.");
-                }
-            }
-        }
+        var (matchedIndices, externalPaths) = await ProcessSubtitleLanguageListAsync(inputPath, requested, probe.Streams).ConfigureAwait(false);
 
         var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
         var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
