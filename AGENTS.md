@@ -11,6 +11,15 @@ These rules guide the AI assistant working in this repo. They encode tech choice
 - Target OS: Windows and Linux.
 - Web UI served by the service.
 
+### Project structure
+The solution consists of three main projects:
+
+- **`VideoConverter.Api`**: The backend API service that handles video conversion, queue management, and file operations. Contains domain logic, services, endpoints, and infrastructure.
+- **`VideoConverter.Web`**: The Blazor Web UI that provides the user interface for managing conversions, profiles, and queues. Consumes the API service.
+- **`VideoConverter.Common`**: Shared library containing all models, DTOs, and value objects used by both Api and Web projects. This eliminates duplication and ensures type consistency across the solution.
+  - Contains: Conversion DTOs, Profile DTOs, Queue DTOs, File Browser DTOs, and shared enums (e.g., `ConversionStatus`, `AudioChannels`).
+  - Both Api and Web projects reference Common to access shared models.
+
 ### Agent workflow
 - Create branch (if on main)
 - Solve task
@@ -85,6 +94,7 @@ Tools available in Local environent:
 - Do not commit `.env` or any secrets.
 - Avoid modifying legal or licensing files unless explicitly requested.
 - Never have more than one empty line in a row. Use one empty line between methods, properties groups of fields etc, but never more.
+- **Model placement**: When creating DTOs, models, or value objects that are used by both Api and Web projects, place them in `VideoConverter.Common`. If a model is only used within Api or Web, it can remain in that project. Avoid duplicating models between projects.
 
 ### PR checklist (include in each PR description)
 - [ ] Lint passes (`dotnet format`), analyzers clean, warnings-as-errors satisfied
