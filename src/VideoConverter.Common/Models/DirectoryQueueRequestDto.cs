@@ -1,7 +1,7 @@
-namespace VideoConverter.Web.Models;
+namespace VideoConverter.Common.Models;
 
-public record ConversionCreateDto(
-    string InputPath,
+public record DirectoryQueueRequestDto(
+    string DirectoryPath,
     string OutputDirectory,
     int? Crf,
     int? AudioBitrateKbps,
@@ -9,4 +9,5 @@ public record ConversionCreateDto(
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
-    string? OutputFilenameTemplate = null);
+    string? OutputFilenameTemplate,
+    IEnumerable<string>? Extensions);

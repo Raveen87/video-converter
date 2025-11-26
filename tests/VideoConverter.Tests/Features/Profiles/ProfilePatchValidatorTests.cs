@@ -1,10 +1,8 @@
 using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
-
-using VideoConverter.Api.Features.Profiles.Dtos;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.Features.Profiles;
 
@@ -23,7 +21,7 @@ public class ProfilePatchValidatorTests
     [Fact]
     public async Task ValidateAsync_WithInvalidValues_ReturnsErrors()
     {
-        var dto = new ProfilePatchDto { OutputDirectory = "C:/invalid<>dir", Crf = 100, AudioBitrateKbps = 0, Resolution = 1440, AudioChannels = (VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels)99, MetadataBasedFilename = "|invalid|" };
+        var dto = new ProfilePatchDto { OutputDirectory = "C:/invalid<>dir", Crf = 100, AudioBitrateKbps = 0, Resolution = 1440, AudioChannels = (AudioChannels)99, MetadataBasedFilename = "|invalid|" };
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();
     }

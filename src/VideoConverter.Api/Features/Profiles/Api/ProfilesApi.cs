@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.JsonPatch;
 
-using VideoConverter.Api.Features.Profiles.Dtos;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Profiles.Api;
 

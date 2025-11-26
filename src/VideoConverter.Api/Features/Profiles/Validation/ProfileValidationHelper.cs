@@ -1,4 +1,5 @@
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Profiles.Validation;
 
@@ -8,7 +9,7 @@ internal static class ProfileValidationHelper
         string? outputDirectory,
         int? crf,
         int? audioBitrateKbps,
-        Shared.Domain.ValueObjects.AudioChannels? audioChannels,
+        AudioChannels? audioChannels,
         int? resolution,
         string? metadataBasedFilename,
         IEnumerable<string>? audioLanguages,

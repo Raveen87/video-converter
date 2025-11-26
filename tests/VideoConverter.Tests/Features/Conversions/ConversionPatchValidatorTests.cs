@@ -1,8 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.Features.Conversions;
 
@@ -30,7 +30,7 @@ public class ConversionPatchValidatorTests
             Crf = 23,
             AudioBitrateKbps = 128,
             Resolution = 1080,
-            AudioChannels = VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels.Stereo20,
+            AudioChannels = AudioChannels.Stereo20,
             AudioLanguages = ["English"],
             SubtitleLanguages = ["English"],
         };
@@ -58,7 +58,7 @@ public class ConversionPatchValidatorTests
             Crf = 100,
             AudioBitrateKbps = 0,
             Resolution = 1440,
-            AudioChannels = (VideoConverter.Api.Shared.Domain.ValueObjects.AudioChannels)99,
+            AudioChannels = (AudioChannels)99,
         };
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();

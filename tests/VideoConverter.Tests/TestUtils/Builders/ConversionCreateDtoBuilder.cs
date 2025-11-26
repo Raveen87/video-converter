@@ -1,5 +1,4 @@
-using VideoConverter.Api.Features.Conversions.Dtos;
-using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.TestUtils.Builders;
 

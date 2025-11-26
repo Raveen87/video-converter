@@ -4,8 +4,8 @@ using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
-using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Common.Models;
 using VideoConverter.Tests.Fakes;
 using VideoConverter.Tests.TestUtils;
 

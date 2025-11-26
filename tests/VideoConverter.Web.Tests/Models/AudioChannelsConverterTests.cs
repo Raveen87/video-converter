@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using VideoConverter.Web.Models;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Tests.Models;
 
@@ -92,7 +92,7 @@ public sealed class AudioChannelsConverterTests
             InputPath: "test.mp4",
             OutputDirectory: "out",
             CreatedAtUtc: DateTime.UtcNow,
-            Status: ConversionItemStatus.Pending,
+            Status: ConversionStatus.Pending,
             Crf: null,
             AudioBitrateKbps: null,
             AudioChannels: AudioChannels.Stereo20,
@@ -121,7 +121,7 @@ public sealed class AudioChannelsConverterTests
             InputPath: "test.mp4",
             OutputDirectory: "out",
             CreatedAtUtc: DateTime.UtcNow,
-            Status: ConversionItemStatus.Pending,
+            Status: ConversionStatus.Pending,
             Crf: null,
             AudioBitrateKbps: null,
             AudioChannels: null,

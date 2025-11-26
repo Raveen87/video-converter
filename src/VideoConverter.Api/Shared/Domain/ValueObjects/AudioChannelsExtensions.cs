@@ -1,3 +1,5 @@
+using VideoConverter.Common.Models;
+
 namespace VideoConverter.Api.Shared.Domain.ValueObjects;
 
 public static class AudioChannelsExtensions

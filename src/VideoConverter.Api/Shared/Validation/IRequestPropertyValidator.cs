@@ -1,4 +1,4 @@
-using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Shared.Validation;
 

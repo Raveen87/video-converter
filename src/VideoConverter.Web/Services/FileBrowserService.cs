@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Services;
 

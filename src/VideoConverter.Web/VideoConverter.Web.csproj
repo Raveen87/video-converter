@@ -15,4 +15,8 @@
     <PackageReference Include="Serilog.Sinks.BrowserConsole" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VideoConverter.Common\VideoConverter.Common.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,6 @@
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
-using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Services.Conversion;
 

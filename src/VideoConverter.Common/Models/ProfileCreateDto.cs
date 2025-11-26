@@ -1,6 +1,4 @@
-using VideoConverter.Api.Shared.Domain.ValueObjects;
-
-namespace VideoConverter.Api.Features.Profiles.Dtos;
+namespace VideoConverter.Common.Models;
 
 public record ProfileCreateDto(
     string Name,

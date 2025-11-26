@@ -1,4 +1,4 @@
-namespace VideoConverter.Web.Models;
+namespace VideoConverter.Common.Models;
 
 /// <summary>
 /// Status reported by the progress tracker endpoint.

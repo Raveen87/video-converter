@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Services;
 
@@ -24,7 +24,7 @@ public interface IVideoConverterApiClient
 
     Task<IReadOnlyList<ConversionDto>> ReorderQueueAsync(IReadOnlyList<int> orderedIds, CancellationToken cancellationToken = default);
 
-    Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default);
+    Task<ConversionProgress?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProfileDto>> GetProfilesAsync(CancellationToken cancellationToken = default);
 

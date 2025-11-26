@@ -1,9 +1,9 @@
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 
