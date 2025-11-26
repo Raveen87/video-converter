@@ -1,3 +1,3 @@
-namespace VideoConverter.Api.Features.Conversions.Dtos;
+namespace VideoConverter.Common.Models;
 
 public sealed record QueueReorderRequestDto(IReadOnlyList<int> OrderedIds);

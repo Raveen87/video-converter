@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VideoConverter.Api\VideoConverter.Api.csproj" />
+    <ProjectReference Include="..\..\src\VideoConverter.Common\VideoConverter.Common.csproj" />
   </ItemGroup>
 
 </Project>

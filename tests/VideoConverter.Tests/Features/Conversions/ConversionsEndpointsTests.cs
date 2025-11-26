@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
-using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils;
 
 namespace VideoConverter.Tests.Features.Conversions;
@@ -25,7 +24,7 @@ public class ConversionsEndpointsTests
             InputPath = "test.mp4",
             OutputDirectory = "output",
             CreatedAtUtc = DateTime.UtcNow,
-            Status = VideoConverter.Api.Shared.Domain.ValueObjects.ConversionStatus.Pending,
+            Status = ConversionStatus.Pending,
             Crf = 23,
             AudioBitrateKbps = 128,
         };
@@ -58,7 +57,7 @@ public class ConversionsEndpointsTests
             InputPath = "test.mp4",
             OutputDirectory = "output",
             CreatedAtUtc = DateTime.UtcNow,
-            Status = VideoConverter.Api.Shared.Domain.ValueObjects.ConversionStatus.Running,
+            Status = ConversionStatus.Running,
         };
         _ = db.Conversions.Add(conversion);
         _ = await db.SaveChangesAsync();
@@ -82,7 +81,7 @@ public class ConversionsEndpointsTests
             InputPath = "test.mp4",
             OutputDirectory = "output",
             CreatedAtUtc = DateTime.UtcNow,
-            Status = VideoConverter.Api.Shared.Domain.ValueObjects.ConversionStatus.Completed,
+            Status = ConversionStatus.Completed,
         };
         _ = db.Conversions.Add(conversion);
         _ = await db.SaveChangesAsync();
@@ -118,7 +117,7 @@ public class ConversionsEndpointsTests
             InputPath = "test.mp4",
             OutputDirectory = "output",
             CreatedAtUtc = DateTime.UtcNow,
-            Status = VideoConverter.Api.Shared.Domain.ValueObjects.ConversionStatus.Pending,
+            Status = ConversionStatus.Pending,
         };
         _ = db.Conversions.Add(conversion);
         _ = await db.SaveChangesAsync();
@@ -138,7 +137,7 @@ public class ConversionsEndpointsTests
             InputPath = "test.mp4",
             OutputDirectory = "output",
             CreatedAtUtc = DateTime.UtcNow,
-            Status = VideoConverter.Api.Shared.Domain.ValueObjects.ConversionStatus.Pending,
+            Status = ConversionStatus.Pending,
             Crf = 23,
             AudioBitrateKbps = 128,
             Resolution = 1080,
@@ -175,7 +174,16 @@ public class ConversionsEndpointsTests
     {
         public Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
         {
-            throw new NotSupportedException("Not used in this test");
+            var c = new Conversion
+            {
+                InputPath = request.InputPath,
+                OutputDirectory = request.OutputDirectory,
+                CreatedAtUtc = DateTime.UtcNow,
+                Crf = request.Crf,
+                AudioBitrateKbps = request.AudioBitrateKbps,
+                Resolution = request.Resolution,
+            };
+            return Task.FromResult(c);
         }
 
         public Task<LanguageProcessingResult> ProcessLanguagesAsync(string inputPath, IEnumerable<string>? audioLanguages, IEnumerable<string>? subtitleLanguages, CancellationToken cancellationToken)

@@ -1,8 +1,9 @@
-namespace VideoConverter.Web.Models;
+namespace VideoConverter.Common.Models;
 
 /// <summary>
 /// Audio channel configuration.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AudioChannels
 {
     Stereo20,

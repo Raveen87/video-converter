@@ -1,5 +1,5 @@
 using VideoConverter.Api.Shared.Domain.Entities;
-using VideoConverter.Api.Shared.Domain.ValueObjects;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.TestUtils.Builders;
 

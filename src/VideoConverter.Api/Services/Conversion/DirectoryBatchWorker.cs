@@ -1,9 +1,9 @@
 using Microsoft.Data.Sqlite;
 
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Services.Conversion;
 

@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Exceptions;
 
 using VideoConverter.Api.Common.Exceptions;
-using VideoConverter.Api.Features.Profiles.Dtos;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Profiles.Api;
 

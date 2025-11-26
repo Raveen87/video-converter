@@ -1,13 +1,13 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils;
 
 namespace VideoConverter.Tests.Features.Conversions;

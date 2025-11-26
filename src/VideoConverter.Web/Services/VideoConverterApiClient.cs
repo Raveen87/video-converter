@@ -1,3 +1,4 @@
+using VideoConverter.Common.Models;
 using VideoConverter.Web.Models;
 
 namespace VideoConverter.Web.Services;
@@ -286,12 +287,12 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task<ConversionProgressDto?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ConversionProgress?> GetConversionProgressAsync(int id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting progress for conversion {ConversionId}", id);
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<ConversionProgressDto>(
+            var result = await _httpClient.GetFromJsonAsync<ConversionProgress>(
                 $"api/conversions/{id}/progress",
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);

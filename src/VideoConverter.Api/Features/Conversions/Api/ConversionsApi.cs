@@ -5,6 +5,7 @@ using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
 
@@ -133,7 +134,7 @@ public sealed class ConversionsApi : ControllerBase
 
         var runningConversion = await db.Conversions
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is not null)
@@ -153,7 +154,7 @@ public sealed class ConversionsApi : ControllerBase
                 errorDetails);
         }
 
-        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending, ct).ConfigureAwait(false);
+        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
             logger.LogInformation("No conversions found in queue");
@@ -198,7 +199,7 @@ public sealed class ConversionsApi : ControllerBase
 
         var runningConversion = await db.Conversions
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
@@ -244,7 +245,7 @@ public sealed class ConversionsApi : ControllerBase
 
         var runningConversion = await db.Conversions
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
@@ -289,7 +290,7 @@ public sealed class ConversionsApi : ControllerBase
         logger.LogDebug("Stopping current conversion in queue");
 
         var runningConversion = await db.Conversions
-            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
@@ -320,7 +321,7 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         // Update conversion status to Failed since it was stopped by user
-        runningConversion.Status = Shared.Domain.ValueObjects.ConversionStatus.Failed;
+        runningConversion.Status = ConversionStatus.Failed;
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}, status updated to Failed", runningConversion.Id, handle.ProcessId, forced);
@@ -339,7 +340,7 @@ public sealed class ConversionsApi : ControllerBase
 
         var runningConversion = await db.Conversions
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Running, ct)
+            .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is not null)
@@ -359,7 +360,7 @@ public sealed class ConversionsApi : ControllerBase
                 errorDetails);
         }
 
-        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending, ct).ConfigureAwait(false);
+        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
             logger.LogInformation("No conversions found in queue");
@@ -540,7 +541,7 @@ public sealed class ConversionsApi : ControllerBase
                 "The requested conversion could not be found.");
         }
 
-        if (conversion.Status is not Shared.Domain.ValueObjects.ConversionStatus.Pending)
+        if (conversion.Status is not ConversionStatus.Pending)
         {
             logger.LogWarning("Conversion {ConversionId} is not in Pending status. Current status: {Status}. Only pending conversions can be deleted.", id, conversion.Status);
             throw ApiErrorException.BusinessError(
@@ -549,7 +550,7 @@ public sealed class ConversionsApi : ControllerBase
                 "Only pending (queued) conversions can be deleted.");
         }
 
-        conversion.Status = Shared.Domain.ValueObjects.ConversionStatus.Deleted;
+        conversion.Status = ConversionStatus.Deleted;
         conversion.DeletedAtUtc = DateTime.UtcNow;
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -581,7 +582,7 @@ public sealed class ConversionsApi : ControllerBase
                 "The requested conversion could not be found.");
 
         // Only queued items are ordered; others may be displayed separately
-        if (target.Status is not Shared.Domain.ValueObjects.ConversionStatus.Pending)
+        if (target.Status is not ConversionStatus.Pending)
         {
             throw ApiErrorException.BusinessError(
                 ErrorCode.InvalidConversionState,
@@ -639,7 +640,7 @@ public sealed class ConversionsApi : ControllerBase
         var uniqueIds = ValidateOrderedIds(orderedIds);
 
         var pendingConversions = await db.Conversions
-            .Where(c => c.Status == Shared.Domain.ValueObjects.ConversionStatus.Pending)
+            .Where(c => c.Status == ConversionStatus.Pending)
             .OrderBy(c => c.Rank ?? Shared.Domain.ValueObjects.RankKey.Max())
             .ThenBy(c => c.CreatedAtUtc)
             .ThenBy(c => c.Id)

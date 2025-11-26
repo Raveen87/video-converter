@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Services;
 
@@ -9,7 +9,7 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
     private readonly IVideoConverterApiClient _apiClient = apiClient;
     private readonly ILogger<ConversionStateService> _logger = logger;
     private readonly List<ConversionDto> _conversions = [];
-    private readonly Dictionary<int, ConversionProgressDto?> _progressData = [];
+    private readonly Dictionary<int, ConversionProgress?> _progressData = [];
     private CancellationTokenSource? _pollingCts;
     private bool _disposed;
 
@@ -18,12 +18,12 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
     public IReadOnlyList<ConversionDto> Conversions => _conversions.AsReadOnly();
 
     public IReadOnlyList<ConversionDto> PendingConversions => _conversions
-        .Where(c => c.Status is ConversionItemStatus.Pending)
+        .Where(c => c.Status is ConversionStatus.Pending)
         .ToList()
         .AsReadOnly();
 
     public ConversionDto? CurrentConversion => _conversions
-        .FirstOrDefault(c => c.Status is ConversionItemStatus.Running)
+        .FirstOrDefault(c => c.Status is ConversionStatus.Running)
         ?? _conversions.FirstOrDefault(c =>
         {
             if (_progressData.TryGetValue(c.Id, out var progress) && progress is not null)
@@ -46,14 +46,14 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
 
     public bool IsStopping { get; private set; }
 
-    public ConversionProgressDto? GetProgress(int conversionId)
+    public ConversionProgress? GetProgress(int conversionId)
     {
         return _progressData.TryGetValue(conversionId, out var progress) ? progress : null;
     }
 
-    public ConversionItemStatus GetEffectiveStatus(ConversionDto conversion)
+    public ConversionStatus GetEffectiveStatus(ConversionDto conversion)
     {
-        if (conversion.Status is ConversionItemStatus.Completed or ConversionItemStatus.Failed or ConversionItemStatus.Deleted)
+        if (conversion.Status is ConversionStatus.Completed or ConversionStatus.Failed or ConversionStatus.Deleted)
         {
             return conversion.Status;
         }
@@ -61,8 +61,8 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
         if (_progressData.TryGetValue(conversion.Id, out var progress) && progress is not null)
         {
             return progress.Status is ConversionProgressStatus.Running
-                ? ConversionItemStatus.Running
-                : ConversionItemStatus.Pending;
+                ? ConversionStatus.Running
+                : ConversionStatus.Pending;
         }
 
         return conversion.Status;
@@ -234,7 +234,7 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
             await _apiClient.StopQueueAsync(token).ConfigureAwait(false);
             IsPaused = false;
             IsRunning = false;
-            var runningConversionIds = _conversions.Where(c => c.Status is ConversionItemStatus.Running).Select(c => c.Id).ToList();
+            var runningConversionIds = _conversions.Where(c => c.Status is ConversionStatus.Running).Select(c => c.Id).ToList();
             foreach (var id in runningConversionIds)
             {
                 _ = _progressData.Remove(id);
@@ -332,7 +332,7 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
 
     private void RecalculateQueueFlags()
     {
-        var hasRunningConversion = _conversions.Exists(c => c.Status is ConversionItemStatus.Running)
+        var hasRunningConversion = _conversions.Exists(c => c.Status is ConversionStatus.Running)
             || _progressData.Values.Any(progress => progress?.Status is ConversionProgressStatus.Running);
 
         IsRunning = hasRunningConversion;
@@ -342,7 +342,7 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
             IsPaused = false;
         }
 
-        HasPendingConversions = _conversions.Exists(c => c.Status is ConversionItemStatus.Pending)
+        HasPendingConversions = _conversions.Exists(c => c.Status is ConversionStatus.Pending)
             || _progressData.Values.Any(progress => progress?.Status is ConversionProgressStatus.Waiting);
     }
 

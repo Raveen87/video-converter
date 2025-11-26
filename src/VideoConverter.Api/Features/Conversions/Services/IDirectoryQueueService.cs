@@ -1,4 +1,5 @@
 using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 

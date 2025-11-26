@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Logging;
-
 using Moq;
-
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

@@ -1,7 +1,7 @@
 namespace VideoConverter.Tests.Api;
 
 using System.Text.Json;
-using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Common.Models;
 
 public sealed class ConversionProgressApiTests
 {

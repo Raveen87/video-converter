@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 using FluentAssertions;
 
-using VideoConverter.Web.Models;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Tests.Models;
 
@@ -30,7 +30,7 @@ public class ConversionProgressDtoTests
         };
 
         // Act
-        var result = JsonSerializer.Deserialize<ConversionProgressDto>(json, options);
+        var result = JsonSerializer.Deserialize<ConversionProgress>(json, options);
 
         // Assert
         _ = result.Should().NotBeNull();
@@ -62,7 +62,7 @@ public class ConversionProgressDtoTests
         };
 
         // Act
-        var result = JsonSerializer.Deserialize<ConversionProgressDto>(json, options);
+        var result = JsonSerializer.Deserialize<ConversionProgress>(json, options);
 
         // Assert
         _ = result.Should().NotBeNull();
@@ -95,7 +95,7 @@ public class ConversionProgressDtoTests
         };
 
         // Act
-        var result = JsonSerializer.Deserialize<ConversionProgressDto>(json, options);
+        var result = JsonSerializer.Deserialize<ConversionProgress>(json, options);
 
         // Assert - Verify all expected fields are present and mapped
         _ = result.Should().NotBeNull();

@@ -48,8 +48,8 @@
                     @{
                         var effectiveStatus = _stateService.GetEffectiveStatus(context);
                         var progress = _stateService.GetProgress(context.Id);
-                        var isRunning = effectiveStatus == ConversionItemStatus.Running && progress?.Status == ConversionProgressStatus.Running && !_stateService.IsPaused;
-                        var isPaused = effectiveStatus == ConversionItemStatus.Running && _stateService.IsPaused;
+                        var isRunning = effectiveStatus == ConversionStatus.Running && progress?.Status == ConversionProgressStatus.Running && !_stateService.IsPaused;
+                        var isPaused = effectiveStatus == ConversionStatus.Running && _stateService.IsPaused;
                     }
                     @if (isPaused && progress != null)
                     {
@@ -69,7 +69,7 @@
                     else if (isRunning && progress != null)
                     {
                         <div>
-                            <MudChip T="ConversionItemStatus" Variant="Variant.Text" Size="Size.Small" Class="@($"mb-2 {GetStatusCssClass(effectiveStatus)}")">
+                            <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@($"mb-2 {GetStatusCssClass(effectiveStatus)}")">
                                 @effectiveStatus
                             </MudChip>
                             <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="@($"mb-1 {GetStatusCssClass(effectiveStatus)}")" />
@@ -83,13 +83,13 @@
                     }
                     else
                     {
-                        <MudChip T="ConversionItemStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(effectiveStatus)">
+                        <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(effectiveStatus)">
                             @effectiveStatus
                         </MudChip>
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionItemStatus.Deleted)">
+                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionStatus.Deleted)">
                         Edit
                     </MudButton>
                 </MudTd>
@@ -182,15 +182,15 @@
         }
     }
 
-    private static string GetStatusCssClass(ConversionItemStatus status)
+    private static string GetStatusCssClass(ConversionStatus status)
     {
         return status switch
         {
-            ConversionItemStatus.Pending => "status-pending",
-            ConversionItemStatus.Running => "status-running",
-            ConversionItemStatus.Completed => "status-completed",
-            ConversionItemStatus.Failed => "status-failed",
-            ConversionItemStatus.Deleted => "status-deleted",
+            ConversionStatus.Pending => "status-pending",
+            ConversionStatus.Running => "status-running",
+            ConversionStatus.Completed => "status-completed",
+            ConversionStatus.Failed => "status-failed",
+            ConversionStatus.Deleted => "status-deleted",
             _ => "",
         };
     }

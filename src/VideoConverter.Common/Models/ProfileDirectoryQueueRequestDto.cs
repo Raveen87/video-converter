@@ -1,4 +1,4 @@
-namespace VideoConverter.Api.Features.Profiles.Dtos;
+namespace VideoConverter.Common.Models;
 
 public record ProfileDirectoryQueueRequestDto(
     string DirectoryPath,

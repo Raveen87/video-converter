@@ -1,5 +1,5 @@
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Validation;
 

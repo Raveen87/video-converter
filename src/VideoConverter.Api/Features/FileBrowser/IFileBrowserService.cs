@@ -1,3 +1,5 @@
+using VideoConverter.Common.Models;
+
 namespace VideoConverter.Api.Features.FileBrowser;
 
 public interface IFileBrowserService

@@ -1,4 +1,4 @@
-namespace VideoConverter.Web.Models;
+namespace VideoConverter.Common.Models;
 
 public record ProfileDto(
     int Id,

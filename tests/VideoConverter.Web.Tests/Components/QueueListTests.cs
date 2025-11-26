@@ -2,8 +2,8 @@ using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using VideoConverter.Common.Models;
 using VideoConverter.Web.Components;
-using VideoConverter.Web.Models;
 using Xunit;
 
 namespace VideoConverter.Web.Tests.Components;
@@ -304,7 +304,7 @@ public sealed class QueueListTests : BunitContext
             inputPath,
             $"output-{id}",
             DateTime.UtcNow,
-            ConversionItemStatus.Pending,
+            ConversionStatus.Pending,
             null,
             null,
             null,
