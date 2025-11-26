@@ -10,6 +10,8 @@ public interface IVideoConverterApiClient
 
     Task<ConversionDto> UpdateConversionAsync(int id, ConversionPatchDto patch, CancellationToken cancellationToken = default);
 
+    Task<ConversionDto> DeleteConversionAsync(int id, CancellationToken cancellationToken = default);
+
     Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default);
 
     Task StartQueueAsync(CancellationToken cancellationToken = default);

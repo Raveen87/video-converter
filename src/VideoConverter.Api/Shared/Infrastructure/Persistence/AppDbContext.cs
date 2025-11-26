@@ -36,6 +36,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = entity.Property(c => c.CreatedAtUtc)
             .IsRequired();
 
+        _ = entity.Property(c => c.DeletedAtUtc);
+
         _ = entity.Property(c => c.Rank)
             .HasMaxLength(64);
 

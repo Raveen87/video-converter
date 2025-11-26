@@ -12,6 +12,8 @@ public class Conversion
 
     public DateTime CreatedAtUtc { get; set; }
 
+    public DateTime? DeletedAtUtc { get; set; }
+
     public string? Rank { get; set; }
 
     public ConversionStatus Status { get; set; }

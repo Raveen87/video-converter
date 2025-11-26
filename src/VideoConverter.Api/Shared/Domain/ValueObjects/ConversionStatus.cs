@@ -6,4 +6,5 @@ public enum ConversionStatus
     Running,
     Completed,
     Failed,
+    Deleted,
 }

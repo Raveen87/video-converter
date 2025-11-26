@@ -97,7 +97,8 @@ public sealed class AudioChannelsConverterTests
             AudioBitrateKbps: null,
             AudioChannels: AudioChannels.Stereo20,
             Resolution: null,
-            MetadataBasedFilename: null);
+            MetadataBasedFilename: null,
+            DeletedAtUtc: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -125,7 +126,8 @@ public sealed class AudioChannelsConverterTests
             AudioBitrateKbps: null,
             AudioChannels: null,
             Resolution: null,
-            MetadataBasedFilename: null);
+            MetadataBasedFilename: null,
+            DeletedAtUtc: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

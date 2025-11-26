@@ -520,6 +520,43 @@ public sealed class ConversionsApi : ControllerBase
         return await handlers.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IResult> DeleteConversionAsync(
+        int id,
+        [FromServices] AppDbContext db,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogDebug("Deleting conversion with ID: {ConversionId}", id);
+
+        var conversion = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false);
+        if (conversion is null)
+        {
+            logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                $"Conversion with ID {id} was not found.",
+                "The requested conversion could not be found.");
+        }
+
+        if (conversion.Status is not Shared.Domain.ValueObjects.ConversionStatus.Pending)
+        {
+            logger.LogWarning("Conversion {ConversionId} is not in Pending status. Current status: {Status}. Only pending conversions can be deleted.", id, conversion.Status);
+            throw ApiErrorException.BusinessError(
+                ErrorCode.InvalidConversionState,
+                $"Only conversions in Pending status can be deleted. Current status: {conversion.Status}.",
+                "Only pending (queued) conversions can be deleted.");
+        }
+
+        conversion.Status = Shared.Domain.ValueObjects.ConversionStatus.Deleted;
+        conversion.DeletedAtUtc = DateTime.UtcNow;
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation("Conversion {ConversionId} marked as deleted", id);
+        return Results.Ok(ToDto(conversion));
+    }
+
     [HttpPatch("{id:int}/reorder")]
     public async Task<IResult> ReorderAsync(
         int id,
@@ -701,7 +738,8 @@ public sealed class ConversionsApi : ControllerBase
             c.AudioBitrateKbps,
             c.AudioChannels,
             c.Resolution,
-            c.MetadataBasedFilename);
+            c.MetadataBasedFilename,
+            c.DeletedAtUtc);
     }
 
     private static void ThrowConversionStartError(ConversionStartResult result)

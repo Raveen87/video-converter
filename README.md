@@ -56,7 +56,8 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "audioBitrateKbps": 128,
         "audioChannels": "Stereo20",
         "resolution": 720,
-        "metadataBasedFilename": "Inception.2010.mp4"
+        "metadataBasedFilename": "Inception.2010.mp4",
+        "deletedAtUtc": null
       }
     ]
     ```
@@ -109,6 +110,17 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     - 200 OK with the pending queue in its new order
     - 400 if the payload is invalid or contains duplicates
     - 404 if any referenced conversion is not pending/does not exist
+
+- DELETE `/api/conversions/{id:int}`
+  - Marks a conversion as deleted. Only conversions in `Pending` status can be deleted.
+  - Behavior:
+    - Sets the conversion status to `Deleted` and records the deletion timestamp in `DeletedAtUtc`.
+    - The conversion remains in the database and is visible in the UI, but is excluded from queue operations.
+    - Deleted conversions cannot be edited or reordered.
+  - Responses:
+    - 200 OK with the updated conversion (status: `Deleted`, `deletedAtUtc` set)
+    - 400 if conversion is not in `Pending` status
+    - 404 if conversion not found
 
 - PATCH `/api/conversions/{id:int}`
   - Updates a conversion's settings. Only conversions in `Pending` status can be updated.
@@ -238,6 +250,11 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Drag and drop items within the card to preview a new order; unsaved changes are highlighted.
 - Click **Save Queue Order** to persist the arrangement via `PUT /api/conversions/queue/reorder`.
 - Queue controls (start, pause, stop) continue to respect the updated order immediately after saving.
+
+#### Queue Item Deletion
+- Pending conversions can be deleted from the queue using the delete button in the queue list or the delete action in the conversions table.
+- Deleted items are marked with `Deleted` status and remain visible in the UI but are excluded from queue operations.
+- The deletion timestamp is stored in `deletedAtUtc` for audit purposes.
 
 - POST `/api/profiles/{id:int}/conversions`
   - Body:
@@ -540,6 +557,7 @@ Used in conversion entities and responses. Valid values:
 - `Running`: Conversion is currently in progress
 - `Completed`: Conversion finished successfully
 - `Failed`: Conversion failed with an error
+- `Deleted`: Conversion has been marked as deleted (soft delete)
 
 #### ConversionStatus (Progress DTO)
 

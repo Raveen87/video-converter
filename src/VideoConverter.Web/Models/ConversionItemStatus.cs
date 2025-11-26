@@ -6,4 +6,5 @@ public enum ConversionItemStatus
     Running,
     Completed,
     Failed,
+    Deleted,
 }
