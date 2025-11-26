@@ -35,6 +35,7 @@ var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ??
 
 _ = builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 _ = builder.Services.AddScoped<IVideoConverterApiClient, VideoConverterApiClient>();
+_ = builder.Services.AddScoped<ConversionStateService>();
 _ = builder.Services.AddScoped<IFileBrowserService, FileBrowserService>();
 _ = builder.Services.AddScoped<IJSInteropWrapper, JSInteropWrapper>();
 _ = builder.Services.AddScoped<IThemeService, ThemeService>();
