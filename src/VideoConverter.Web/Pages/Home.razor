@@ -6,21 +6,35 @@
     <MudText Typo="Typo.h4" Class="mb-4">Welcome to Video Converter</MudText>
 
     <MudGrid>
-        <MudItem xs="12" md="6">
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-2" />
+                    Queue
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Manage your conversion queue. Start, pause, stop conversions, and reorder pending items.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/queue">
+                    View Queue
+                </MudButton>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
             <MudCard Elevation="2" Class="pa-4">
                 <MudText Typo="Typo.h6" Class="mb-2">
                     <MudIcon Icon="@Icons.Material.Filled.VideoSettings" Class="mr-2" />
                     Conversions
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mb-3">
-                    View and manage your video conversions. Monitor progress, start, pause, or stop conversions.
+                    Browse all conversions in the database. View current, pending, finished, deleted, and failed conversions.
                 </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/conversions">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/conversions">
                     View Conversions
                 </MudButton>
             </MudCard>
         </MudItem>
-        <MudItem xs="12" md="6">
+        <MudItem xs="12" md="4">
             <MudCard Elevation="2" Class="pa-4">
                 <MudText Typo="Typo.h6" Class="mb-2">
                     <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
@@ -29,7 +43,7 @@
                 <MudText Typo="Typo.body2" Class="mb-3">
                     Create and manage conversion profiles with predefined settings for quick conversion setup.
                 </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/profiles">
+                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/profiles">
                     View Profiles
                 </MudButton>
             </MudCard>

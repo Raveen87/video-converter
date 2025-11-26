@@ -1,0 +1,437 @@
+@page "/queue"
+
+<PageTitle>Queue</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">Conversion Queue</MudText>
+        <div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateConversionDialog" Class="mr-2">
+                Create Conversion
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog" Class="mr-2">
+                Queue Directory
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_stateService.HasPendingConversions || _stateService.IsRunning || _stateService.IsPaused || _stateService.IsStopping || _stateService.IsStarting)" Class="mr-2">
+                Start Queue
+            </MudButton>
+            @if (_stateService.IsPaused)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="ResumeQueue" Disabled="@(!_stateService.IsPaused)" Class="mr-2">
+                    Resume Queue
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Pause" OnClick="PauseQueue" Disabled="@(!_stateService.IsRunning || _stateService.IsPaused)" Class="mr-2">
+                    Pause Queue
+                </MudButton>
+            }
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Stop" OnClick="StopQueue" Disabled="@(!_stateService.IsRunning && !_stateService.IsPaused)">
+                Stop Queue
+            </MudButton>
+        </div>
+    </div>
+
+    @if (_stateService.CurrentConversion != null)
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Currently Running</MudText>
+            @{
+                var current = _stateService.CurrentConversion;
+                var progress = _stateService.GetProgress(current.Id);
+                var isPaused = _stateService.IsPaused;
+            }
+            <div class="mb-2">
+                <MudText Typo="Typo.body1" Class="mb-1">@current.InputPath</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@current.OutputDirectory</MudText>
+            </div>
+            @if (isPaused && progress != null)
+            {
+                <div>
+                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-paused">
+                        Paused
+                    </MudChip>
+                    <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-paused" />
+                    <MudText Typo="Typo.caption">
+                        @if (progress.PercentageComplete.HasValue)
+                        {
+                            <text>@($"{progress.PercentageComplete:F1}%")</text>
+                        }
+                    </MudText>
+                </div>
+            }
+            else if (progress != null)
+            {
+                <div>
+                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-running">
+                        Running
+                    </MudChip>
+                    <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-running" />
+                    <MudText Typo="Typo.caption">
+                        @if (progress.PercentageComplete.HasValue)
+                        {
+                            <text>@($"{progress.PercentageComplete:F1}%")</text>
+                        }
+                    </MudText>
+                </div>
+            }
+        </MudPaper>
+    }
+
+    @if (!_stateService.IsLoading)
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <div class="d-flex justify-space-between align-center mb-2">
+                <MudText Typo="Typo.h6">Pending Queue</MudText>
+                <div class="d-flex align-center">
+                    @if (_pendingOrderDirty)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="mr-2">Unsaved changes</MudText>
+                    }
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!_pendingOrderDirty || _pendingConversions.Count == 0 || _isSavingQueueOrder)"
+                               OnClick="SaveQueueOrderAsync">
+                        Save Queue Order
+                    </MudButton>
+                </div>
+            </div>
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                Drag and drop queued items to change their processing order. Changes are applied once you save.
+            </MudAlert>
+            <QueueList Items="@_pendingConversions" OnOrderChanged="HandleQueueOrderChanged" OnDelete="@(EventCallback.Factory.Create<int>(this, DeleteConversionAsync))" />
+        </MudPaper>
+    }
+
+    @if (_stateService.IsLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudText>Loading queue...</MudText>
+    }
+    else if (_stateService.CurrentConversion == null && _pendingConversions.Count == 0)
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.body1">No conversions in queue.</MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@implements IDisposable
+
+@code {
+    private readonly List<ConversionDto> _pendingConversions = new();
+    private bool _pendingOrderDirty;
+    private bool _isSavingQueueOrder;
+
+    [Inject]
+    private ConversionStateService _stateService { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
+    [Inject]
+    private ILogger<Queue> Logger { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Queue page initializing");
+        _stateService.StateChanged += OnStateChanged;
+        await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+        _stateService.StartPolling();
+        UpdatePendingConversions();
+        Logger.LogInformation("Queue page initialized");
+    }
+
+    private void OnStateChanged(object? sender, EventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            UpdatePendingConversions();
+            StateHasChanged();
+        });
+    }
+
+    private void UpdatePendingConversions()
+    {
+        var pending = _stateService.PendingConversions.ToList();
+        if (!_pendingOrderDirty)
+        {
+            _pendingConversions.Clear();
+            _pendingConversions.AddRange(pending);
+        }
+    }
+
+    private async Task StartQueue()
+    {
+        try
+        {
+            await _stateService.StartQueueAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue started successfully", Severity.Success);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("400") || ex.Message.Contains("Bad Request"))
+        {
+            // Race condition handled by service
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting queue");
+            Snackbar.Add($"Error starting queue: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PauseQueue()
+    {
+        try
+        {
+            await _stateService.PauseQueueAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue paused successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error pausing queue");
+            Snackbar.Add($"Error pausing queue: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResumeQueue()
+    {
+        try
+        {
+            await _stateService.ResumeQueueAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue resumed successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resuming queue");
+            Snackbar.Add($"Error resuming queue: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StopQueue()
+    {
+        try
+        {
+            await _stateService.StopQueueAsync().ConfigureAwait(false);
+            Snackbar.Add("Queue stopped successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error stopping queue");
+            Snackbar.Add($"Error stopping queue: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenCreateConversionDialog()
+    {
+        Logger.LogInformation("User action: Opening create conversion dialog");
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<CreateConversionDialog>("Create Conversion", new DialogParameters<CreateConversionDialog>
+        {
+            { x => x.InitialModel, null },
+            { x => x.OnSubmit, EventCallback.Factory.Create<ConversionCreateDto>(this, async (request) =>
+            {
+                await CreateConversionOptimisticAsync(request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Create conversion dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Create conversion dialog opened");
+    }
+
+    private async Task OpenQueueDirectoryDialog()
+    {
+        Logger.LogInformation("User action: Opening queue directory dialog");
+        IDialogReference? dialogRef = null;
+        dialogRef = await DialogService.ShowAsync<QueueDirectoryDialog>("Queue Directory", new DialogParameters<QueueDirectoryDialog>
+        {
+            { x => x.InitialModel, null },
+            { x => x.OnSubmit, EventCallback.Factory.Create<DirectoryQueueRequestDto>(this, async (request) =>
+            {
+                await QueueDirectoryAsync(request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Queue directory dialog closed");
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        }, new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        }).ConfigureAwait(false);
+        Logger.LogDebug("Queue directory dialog opened");
+    }
+
+    private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
+    {
+        Logger.LogInformation("Creating conversion with optimistic update. Input: {InputPath}", request.InputPath);
+        var tempId = GetNextTempId();
+        var tempConversion = new ConversionDto(
+            tempId,
+            request.InputPath,
+            request.OutputDirectory,
+            DateTime.UtcNow,
+            ConversionItemStatus.Pending,
+            request.Crf,
+            request.AudioBitrateKbps,
+            request.AudioChannels,
+            request.Resolution,
+            request.OutputFilenameTemplate,
+            null);
+
+        Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
+        _stateService.UpdateConversion(tempConversion);
+        UpdatePendingConversions();
+
+        try
+        {
+            var created = await _apiClient.CreateConversionAsync(request).ConfigureAwait(false);
+
+            Logger.LogInformation("Conversion created successfully with ID {ConversionId}, replacing temporary ID {TempId}",
+                created.Id, tempId);
+            _stateService.RemoveConversion(tempId);
+            _stateService.UpdateConversion(created);
+            UpdatePendingConversions();
+
+            Snackbar.Add("Conversion created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
+            _stateService.RemoveConversion(tempId);
+            UpdatePendingConversions();
+            Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task QueueDirectoryAsync(DirectoryQueueRequestDto request)
+    {
+        Logger.LogInformation("Queueing directory for conversion. Directory: {DirectoryPath}", request.DirectoryPath);
+        try
+        {
+            var batchId = await _apiClient.QueueDirectoryAsync(request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully queued directory with batch ID {BatchId}", batchId);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
+            await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+            UpdatePendingConversions();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error queueing directory. Directory: {DirectoryPath}", request.DirectoryPath);
+            Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveQueueOrderAsync()
+    {
+        if (_pendingConversions.Count == 0 || !_pendingOrderDirty || _isSavingQueueOrder)
+        {
+            return;
+        }
+
+        _isSavingQueueOrder = true;
+        StateHasChanged();
+        try
+        {
+            var orderedIds = _pendingConversions.Select(c => c.Id).ToList();
+            await _apiClient.ReorderQueueAsync(orderedIds).ConfigureAwait(false);
+            Snackbar.Add("Queue order updated", Severity.Success);
+            _pendingOrderDirty = false;
+            await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+            UpdatePendingConversions();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving queue order");
+            Snackbar.Add($"Error saving queue order: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSavingQueueOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleQueueOrderChanged(List<ConversionDto> newOrder)
+    {
+        _pendingConversions.Clear();
+        _pendingConversions.AddRange(newOrder);
+        _pendingOrderDirty = true;
+        StateHasChanged();
+    }
+
+    private async Task DeleteConversionAsync(int id)
+    {
+        var conversion = _pendingConversions.FirstOrDefault(c => c.Id == id);
+        if (conversion is null)
+        {
+            Logger.LogWarning("Conversion {ConversionId} not found for delete confirmation", id);
+            Snackbar.Add("Conversion not found", Severity.Error);
+            return;
+        }
+
+        await ShowDeleteConfirmationAsync(conversion).ConfigureAwait(false);
+    }
+
+    private async Task ShowDeleteConfirmationAsync(ConversionDto conversion)
+    {
+        Logger.LogInformation("User action: Opening delete confirmation dialog for conversion {ConversionId}", conversion.Id);
+        var result = await DialogService.ShowMessageBox(
+            "Delete Conversion",
+            $"Are you sure you want to delete conversion '{conversion.InputPath}' (ID: {conversion.Id})? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel").ConfigureAwait(false);
+        if (result == true)
+        {
+            await DeleteConversionAsyncInternal(conversion.Id).ConfigureAwait(false);
+        }
+    }
+
+    private async Task DeleteConversionAsyncInternal(int id)
+    {
+        Logger.LogInformation("Deleting conversion {ConversionId}", id);
+        try
+        {
+            var deleted = await _apiClient.DeleteConversionAsync(id).ConfigureAwait(false);
+            Logger.LogInformation("Successfully deleted conversion {ConversionId}", id);
+            _stateService.UpdateConversion(deleted);
+            UpdatePendingConversions();
+            Snackbar.Add("Conversion deleted successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting conversion {ConversionId}", id);
+            Snackbar.Add($"Error deleting conversion: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private int GetNextTempId()
+    {
+        var existingTempIds = _stateService.Conversions.Where(c => c.Id < 0).Select(c => c.Id).ToList();
+        if (existingTempIds.Count == 0)
+        {
+            return -1;
+        }
+
+        return existingTempIds.Min() - 1;
+    }
+
+    [Inject]
+    private IVideoConverterApiClient _apiClient { get; set; } = null!;
+
+    public void Dispose()
+    {
+        Logger.LogInformation("Queue page disposing");
+        _stateService.StateChanged -= OnStateChanged;
+    }
+}
+

@@ -4,61 +4,10 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.h4">Conversion Overview</MudText>
-        <div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateConversionDialog" Class="mr-2">
-                Create Conversion
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog" Class="mr-2">
-                Queue Directory
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_hasPendingConversions || _isRunning || _isPaused || _isStopping || _isStarting)" Class="mr-2">
-                Start Queue
-            </MudButton>
-            @if (_isPaused)
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="ResumeQueue" Disabled="@(!_isPaused)" Class="mr-2">
-                    Resume Queue
-                </MudButton>
-            }
-            else
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Pause" OnClick="PauseQueue" Disabled="@(!_isRunning || _isPaused)" Class="mr-2">
-                    Pause Queue
-                </MudButton>
-            }
-            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Stop" OnClick="StopQueue" Disabled="@(!_isRunning && !_isPaused)">
-                Stop Queue
-            </MudButton>
-        </div>
+        <MudText Typo="Typo.h4">All Conversions</MudText>
     </div>
 
-    @if (!_isLoading)
-    {
-        <MudPaper Class="pa-4 mb-4">
-            <div class="d-flex justify-space-between align-center mb-2">
-                <MudText Typo="Typo.h6">Pending Queue</MudText>
-                <div class="d-flex align-center">
-                    @if (_pendingOrderDirty)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="mr-2">Unsaved changes</MudText>
-                    }
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Disabled="@(!_pendingOrderDirty || _pendingConversions.Count == 0 || _isSavingQueueOrder)"
-                               OnClick="SaveQueueOrderAsync">
-                        Save Queue Order
-                    </MudButton>
-                </div>
-            </div>
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
-                Drag and drop queued items to change their processing order. Changes are applied once you save.
-            </MudAlert>
-            <QueueList Items="@_pendingConversions" OnOrderChanged="HandleQueueOrderChanged" OnDelete="@(EventCallback.Factory.Create<int>(this, DeleteConversionAsync))" />
-        </MudPaper>
-    }
-
-    @if (_isLoading)
+    @if (_stateService.IsLoading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
         <MudText>Loading conversions...</MudText>
@@ -97,10 +46,10 @@
                 </MudTd>
                 <MudTd DataLabel="Status">
                     @{
-                        var effectiveStatus = GetEffectiveStatus(context);
-                        var progress = _progressData.TryGetValue(context.Id, out var prog) ? prog : null;
-                        var isRunning = effectiveStatus == ConversionItemStatus.Running && progress?.Status == ConversionProgressStatus.Running && !_isPaused;
-                        var isPaused = effectiveStatus == ConversionItemStatus.Running && _isPaused;
+                        var effectiveStatus = _stateService.GetEffectiveStatus(context);
+                        var progress = _stateService.GetProgress(context.Id);
+                        var isRunning = effectiveStatus == ConversionItemStatus.Running && progress?.Status == ConversionProgressStatus.Running && !_stateService.IsPaused;
+                        var isPaused = effectiveStatus == ConversionItemStatus.Running && _stateService.IsPaused;
                     }
                     @if (isPaused && progress != null)
                     {
@@ -140,12 +89,6 @@
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    @if (context.Status == ConversionItemStatus.Pending)
-                    {
-                        <MudButton StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteConversionAsync(context))" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="mr-2">
-                            Delete
-                        </MudButton>
-                    }
                     <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionItemStatus.Deleted)">
                         Edit
                     </MudButton>
@@ -158,20 +101,10 @@
 @implements IDisposable
 
 @code {
-    private readonly List<ConversionDto> _conversions = new();
-    private readonly List<ConversionDto> _pendingConversions = new();
-    private readonly Dictionary<int, ConversionProgressDto?> _progressData = new();
-    private bool _isLoading = true;
-    private CancellationTokenSource? _pollingCts;
-    private const int PollingIntervalMs = 2000; // Poll every 2 seconds
-    private bool _isRunning = false;
-    private bool _isPaused = false;
-    private bool _hasPendingConversions = false;
-    private bool _pendingOrderDirty;
-    private bool _isSavingQueueOrder;
+    private IReadOnlyList<ConversionDto> _conversions = Array.Empty<ConversionDto>();
 
     [Inject]
-    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+    private ConversionStateService _stateService { get; set; } = null!;
 
     [Inject]
     private ISnackbar Snackbar { get; set; } = null!;
@@ -182,336 +115,31 @@
     [Inject]
     private ILogger<Conversions> Logger { get; set; } = null!;
 
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
     protected override async Task OnInitializedAsync()
     {
         Logger.LogInformation("Conversions page initializing");
-        await LoadConversionsAsync().ConfigureAwait(false);
-        StartPolling();
+        _stateService.StateChanged += OnStateChanged;
+        await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+        _stateService.StartPolling();
+        UpdateConversions();
         Logger.LogInformation("Conversions page initialized. Loaded {Count} conversions", _conversions.Count);
     }
 
-    private async Task LoadConversionsAsync()
+    private void OnStateChanged(object? sender, EventArgs e)
     {
-        Logger.LogDebug("Loading conversions from API");
-        try
+        InvokeAsync(() =>
         {
-            _isLoading = true;
-            var conversions = await ApiClient.GetConversionsAsync().ConfigureAwait(false);
-            _conversions.Clear();
-            _conversions.AddRange(conversions);
-            ResetPendingQueueFromServer();
-            RecalculateQueueFlags();
-            Logger.LogInformation("Successfully loaded {Count} conversions", conversions.Count);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading conversions from API");
-            Snackbar.Add($"Error loading conversions: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private void ResetPendingQueueFromServer()
-    {
-        _pendingConversions.Clear();
-        _pendingConversions.AddRange(_conversions.Where(c => c.Status == ConversionItemStatus.Pending));
-        _pendingOrderDirty = false;
-    }
-
-    private void RecalculateQueueFlags()
-    {
-        var hasRunningConversion = _conversions.Any(c => c.Status == ConversionItemStatus.Running)
-            || _progressData.Values.Any(progress => progress?.Status == ConversionProgressStatus.Running);
-
-        // Always recalculate _isRunning based on current state
-        _isRunning = hasRunningConversion;
-
-        // Clear paused state if there's no running conversion
-        if (!hasRunningConversion)
-        {
-            _isPaused = false;
-        }
-
-        _hasPendingConversions = _conversions.Any(c => c.Status == ConversionItemStatus.Pending)
-            || _progressData.Values.Any(progress => progress?.Status == ConversionProgressStatus.Waiting);
-    }
-
-    private void StartPolling()
-    {
-        Logger.LogInformation("Starting progress polling with interval {IntervalMs}ms", PollingIntervalMs);
-        _pollingCts = new CancellationTokenSource();
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                while (!_pollingCts.Token.IsCancellationRequested)
-                {
-                    await PollProgressAsync(_pollingCts.Token).ConfigureAwait(false);
-                    await Task.Delay(PollingIntervalMs, _pollingCts.Token).ConfigureAwait(false);
-                }
-                Logger.LogInformation("Progress polling stopped (cancellation requested)");
-            }
-            catch (OperationCanceledException ex)
-            {
-                // Expected when component is disposed or navigation occurs
-                Logger.LogDebug(ex, "Progress polling cancelled");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Unhandled exception in polling loop");
-                await InvokeAsync(() =>
-                {
-                    Snackbar.Add($"Polling stopped due to an unexpected error: {ex.Message}", Severity.Error);
-                });
-            }
-        }, _pollingCts.Token);
-    }
-
-    private async Task PollProgressAsync(CancellationToken cancellationToken)
-    {
-        if (_conversions.Count == 0 || cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        try
-        {
-            Logger.LogDebug("Polling progress for {Count} conversions", _conversions.Count);
-            // Poll progress for all conversions
-            var tasks = _conversions.Select(c => ApiClient.GetConversionProgressAsync(c.Id, cancellationToken));
-            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-            await InvokeAsync(() =>
-            {
-                for (var i = 0; i < _conversions.Count; i++)
-                {
-                    var conversion = _conversions[i];
-                    var progress = results[i];
-                    var previousProgress = _progressData.TryGetValue(conversion.Id, out var prev) ? prev : null;
-                    _progressData[conversion.Id] = progress;
-
-                    // Log when progress changes
-                    var hasChanged = previousProgress == null;
-                    if (!hasChanged && previousProgress != null && progress != null)
-                    {
-                        hasChanged = previousProgress.Status != progress.Status;
-                        if (!hasChanged && previousProgress.PercentageComplete.HasValue && progress.PercentageComplete.HasValue)
-                        {
-                            var prevValue = previousProgress.PercentageComplete.Value;
-                            var currValue = progress.PercentageComplete.Value;
-                            hasChanged = Math.Abs(prevValue - currValue) > 0.01;
-                        }
-                        else if (!hasChanged)
-                        {
-                            hasChanged = previousProgress.PercentageComplete.HasValue != progress.PercentageComplete.HasValue;
-                        }
-                    }
-
-                    if (progress != null && hasChanged)
-                    {
-                        Logger.LogDebug(
-                            "Progress updated for conversion {ConversionId}: {Status}, {Percentage}%",
-                            conversion.Id,
-                            progress.Status,
-                            progress.PercentageComplete?.ToString("F1") ?? "N/A");
-                    }
-                }
-                StateHasChanged();
-                RecalculateQueueFlags();
-            }).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException ex)
-        {
-            Logger.LogDebug(ex, "Progress polling cancelled");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Error polling progress for conversions");
-        }
-    }
-
-    private bool _isStarting = false;
-
-    private async Task StartQueue()
-    {
-        // Prevent multiple simultaneous calls
-        if (_isStarting)
-        {
-            Logger.LogWarning("StartQueue called while already starting, ignoring");
-            return;
-        }
-
-        // Guard: Don't start if there's already a running conversion, if paused, if stopping, or no pending conversions
-        // Check this BEFORE logging to avoid unnecessary log noise
-        if (_isRunning || _isPaused || _isStopping || !_hasPendingConversions)
-        {
-            Logger.LogWarning("StartQueue called but conditions not met - blocking execution. State: _isRunning={IsRunning}, _isPaused={IsPaused}, _isStopping={IsStopping}, _hasPendingConversions={HasPending}", _isRunning, _isPaused, _isStopping, _hasPendingConversions);
-            return;
-        }
-
-        Logger.LogInformation("StartQueue called - State: _isRunning={IsRunning}, _isPaused={IsPaused}, _isStopping={IsStopping}, _hasPendingConversions={HasPending}", _isRunning, _isPaused, _isStopping, _hasPendingConversions);
-
-        _isStarting = true;
-        try
-        {
-            Logger.LogInformation("User action: Starting queue");
-            await ApiClient.StartQueueAsync().ConfigureAwait(false);
-            _isPaused = false;
-            await LoadConversionsAsync().ConfigureAwait(false);
-            Snackbar.Add("Queue started successfully", Severity.Success);
-            Logger.LogInformation("Successfully started queue");
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("400") || ex.Message.Contains("Bad Request"))
-        {
-            // Handle race condition: backend might still see a running conversion after stopping
-            Logger.LogWarning(ex, "StartQueue failed with 400 - likely race condition after stop, refreshing state and blocking further attempts");
-            _isRunning = true; // Set to true to prevent further attempts until state is refreshed
-            await LoadConversionsAsync().ConfigureAwait(false);
-            // Don't show error to user as this is likely a timing issue that resolves itself
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error starting queue");
-            Snackbar.Add($"Error starting queue: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isStarting = false;
-        }
-    }
-
-    private async Task PauseQueue()
-    {
-        Logger.LogInformation("User action: Pausing queue");
-        try
-        {
-            await ApiClient.PauseQueueAsync().ConfigureAwait(false);
-            _isPaused = true;
+            UpdateConversions();
             StateHasChanged();
-            Snackbar.Add("Queue paused successfully", Severity.Success);
-            Logger.LogInformation("Successfully paused queue");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error pausing queue");
-            Snackbar.Add($"Error pausing queue: {ex.Message}", Severity.Error);
-        }
+        });
     }
 
-    private async Task ResumeQueue()
+    private void UpdateConversions()
     {
-        Logger.LogInformation("User action: Resuming queue");
-        try
-        {
-            await ApiClient.ResumeQueueAsync().ConfigureAwait(false);
-            _isPaused = false;
-            StateHasChanged();
-            Snackbar.Add("Queue resumed successfully", Severity.Success);
-            Logger.LogInformation("Successfully resumed queue");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error resuming queue");
-            Snackbar.Add($"Error resuming queue: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private bool _isStopping = false;
-
-    private async Task StopQueue()
-    {
-        if (_isStopping)
-        {
-            Logger.LogWarning("StopQueue called while already stopping, ignoring");
-            return;
-        }
-
-        Logger.LogInformation("User action: Stopping queue");
-        _isStopping = true;
-        _isRunning = true; // Set to true to prevent StartQueue from being called during stop
-        StateHasChanged(); // Update UI immediately to disable Start button
-        try
-        {
-            await ApiClient.StopQueueAsync().ConfigureAwait(false);
-            _isPaused = false;
-            _isRunning = false; // Explicitly set to false since we just stopped
-            // Clear progress data for running conversions since they've been stopped
-            var runningConversionIds = _conversions.Where(c => c.Status == ConversionItemStatus.Running).Select(c => c.Id).ToList();
-            foreach (var id in runningConversionIds)
-            {
-                _progressData.Remove(id);
-            }
-            // Wait a brief moment to ensure backend status update is committed
-            await Task.Delay(500).ConfigureAwait(false);
-            await LoadConversionsAsync().ConfigureAwait(false);
-            // Ensure _isRunning stays false after reload (in case backend hasn't updated yet)
-            _isRunning = false;
-            StateHasChanged();
-            Snackbar.Add("Queue stopped successfully", Severity.Success);
-            Logger.LogInformation("Successfully stopped queue");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error stopping queue");
-            Snackbar.Add($"Error stopping queue: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            // Keep _isStopping true for longer to prevent race conditions
-            // This ensures StartQueue cannot be called immediately after stop completes
-            await Task.Delay(1000).ConfigureAwait(false);
-            _isStopping = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task OpenCreateConversionDialog()
-    {
-        Logger.LogInformation("User action: Opening create conversion dialog");
-        IDialogReference? dialogRef = null;
-        dialogRef = await DialogService.ShowAsync<CreateConversionDialog>("Create Conversion", new DialogParameters<CreateConversionDialog>
-        {
-            { x => x.InitialModel, null },
-            { x => x.OnSubmit, EventCallback.Factory.Create<ConversionCreateDto>(this, async (request) =>
-            {
-                await CreateConversionOptimisticAsync(request).ConfigureAwait(false);
-                dialogRef?.Close();
-                Logger.LogDebug("Create conversion dialog closed");
-            }) },
-            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
-        }, new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-        }).ConfigureAwait(false);
-        Logger.LogDebug("Create conversion dialog opened");
-    }
-
-    private async Task OpenQueueDirectoryDialog()
-    {
-        Logger.LogInformation("User action: Opening queue directory dialog");
-        IDialogReference? dialogRef = null;
-        dialogRef = await DialogService.ShowAsync<QueueDirectoryDialog>("Queue Directory", new DialogParameters<QueueDirectoryDialog>
-        {
-            { x => x.InitialModel, null },
-            { x => x.OnSubmit, EventCallback.Factory.Create<DirectoryQueueRequestDto>(this, async (request) =>
-            {
-                await QueueDirectoryAsync(request).ConfigureAwait(false);
-                dialogRef?.Close();
-                Logger.LogDebug("Queue directory dialog closed");
-            }) },
-            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
-        }, new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-        }).ConfigureAwait(false);
-        Logger.LogDebug("Queue directory dialog opened");
+        _conversions = _stateService.Conversions;
     }
 
     private async Task OpenEditConversionDialog(ConversionDto conversion)
@@ -544,25 +172,7 @@
         {
             var updated = await ApiClient.UpdateConversionAsync(id, patch).ConfigureAwait(false);
             Logger.LogInformation("Successfully updated conversion {ConversionId}", id);
-
-            // Update the conversion in the list
-            await InvokeAsync(() =>
-            {
-                var index = _conversions.FindIndex(c => c.Id == id);
-                if (index >= 0)
-                {
-                    _conversions[index] = updated;
-                }
-                else
-                {
-                    Logger.LogWarning("Conversion {ConversionId} not found in list after update", id);
-                    _conversions.Insert(0, updated);
-                }
-                ResetPendingQueueFromServer();
-                RecalculateQueueFlags();
-                StateHasChanged();
-            }).ConfigureAwait(false);
-
+            _stateService.UpdateConversion(updated);
             Snackbar.Add("Conversion updated successfully", Severity.Success);
         }
         catch (Exception ex)
@@ -570,232 +180,6 @@
             Logger.LogError(ex, "Error updating conversion {ConversionId}", id);
             Snackbar.Add($"Error updating conversion: {ex.Message}", Severity.Error);
         }
-    }
-
-    private async Task DeleteConversionAsync(ConversionDto conversion)
-    {
-        await ShowDeleteConfirmationAsync(conversion).ConfigureAwait(false);
-    }
-
-    private async Task DeleteConversionAsync(int id)
-    {
-        var conversion = _conversions.FirstOrDefault(c => c.Id == id);
-        if (conversion is null)
-        {
-            Logger.LogWarning("Conversion {ConversionId} not found for delete confirmation", id);
-            Snackbar.Add("Conversion not found", Severity.Error);
-            return;
-        }
-
-        await ShowDeleteConfirmationAsync(conversion).ConfigureAwait(false);
-    }
-
-    private async Task ShowDeleteConfirmationAsync(ConversionDto conversion)
-    {
-        Logger.LogInformation("User action: Opening delete confirmation dialog for conversion {ConversionId}", conversion.Id);
-        var result = await DialogService.ShowMessageBox(
-            "Delete Conversion",
-            $"Are you sure you want to delete conversion '{conversion.InputPath}' (ID: {conversion.Id})? This action cannot be undone.",
-            yesText: "Delete",
-            cancelText: "Cancel").ConfigureAwait(false);
-        if (result == true)
-        {
-            await DeleteConversionAsyncInternal(conversion.Id).ConfigureAwait(false);
-        }
-    }
-
-    private async Task DeleteConversionAsyncInternal(int id)
-    {
-        Logger.LogInformation("Deleting conversion {ConversionId}", id);
-        try
-        {
-            var deleted = await ApiClient.DeleteConversionAsync(id).ConfigureAwait(false);
-            Logger.LogInformation("Successfully deleted conversion {ConversionId}", id);
-
-            // Update the conversion in the list
-            await InvokeAsync(() =>
-            {
-                var index = _conversions.FindIndex(c => c.Id == id);
-                if (index >= 0)
-                {
-                    _conversions[index] = deleted;
-                }
-                else
-                {
-                    Logger.LogWarning("Conversion {ConversionId} not found in list after delete", id);
-                }
-                ResetPendingQueueFromServer();
-                RecalculateQueueFlags();
-                StateHasChanged();
-            }).ConfigureAwait(false);
-
-            Snackbar.Add("Conversion deleted successfully", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error deleting conversion {ConversionId}", id);
-            Snackbar.Add($"Error deleting conversion: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
-    {
-        Logger.LogInformation("Creating conversion with optimistic update. Input: {InputPath}", request.InputPath);
-        // Create a temporary conversion for optimistic update
-        var tempId = GetNextTempId();
-        var tempConversion = new ConversionDto(
-            tempId,
-            request.InputPath,
-            request.OutputDirectory,
-            DateTime.UtcNow,
-            ConversionItemStatus.Pending,
-            request.Crf,
-            request.AudioBitrateKbps,
-            request.AudioChannels,
-            request.Resolution,
-            request.OutputFilenameTemplate,
-            null);
-
-        Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
-        // Add optimistically to the list
-        await InvokeAsync(() =>
-        {
-            _conversions.Insert(0, tempConversion);
-            ResetPendingQueueFromServer();
-            RecalculateQueueFlags();
-            StateHasChanged();
-        }).ConfigureAwait(false);
-
-        try
-        {
-            // Make the actual API call
-            var created = await ApiClient.CreateConversionAsync(request).ConfigureAwait(false);
-
-            Logger.LogInformation("Conversion created successfully with ID {ConversionId}, replacing temporary ID {TempId}", 
-                created.Id, tempId);
-            // Replace the temporary conversion with the real one
-            await InvokeAsync(() =>
-            {
-                var index = _conversions.FindIndex(c => c.Id == tempId);
-                if (index >= 0)
-                {
-                    _conversions[index] = created;
-                }
-                else
-                {
-                    Logger.LogWarning("Temporary conversion {TempId} not found in list, adding created conversion at index 0", tempId);
-                    // If not found, just add it (shouldn't happen, but be safe)
-                    _conversions.Insert(0, created);
-                }
-
-                ResetPendingQueueFromServer();
-                RecalculateQueueFlags();
-                StateHasChanged();
-            }).ConfigureAwait(false);
-
-            Snackbar.Add("Conversion created successfully", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
-            // Remove the temporary conversion on error
-            await InvokeAsync(() =>
-            {
-                _conversions.RemoveAll(c => c.Id == tempId);
-                ResetPendingQueueFromServer();
-                RecalculateQueueFlags();
-                StateHasChanged();
-            }).ConfigureAwait(false);
-
-            Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task QueueDirectoryAsync(DirectoryQueueRequestDto request)
-    {
-        Logger.LogInformation("Queueing directory for conversion. Directory: {DirectoryPath}", request.DirectoryPath);
-        try
-        {
-            var batchId = await ApiClient.QueueDirectoryAsync(request).ConfigureAwait(false);
-            Logger.LogInformation("Successfully queued directory with batch ID {BatchId}", batchId);
-            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
-
-            // Refresh conversions list in case any were created immediately
-            await LoadConversionsAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error queueing directory. Directory: {DirectoryPath}", request.DirectoryPath);
-            Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task SaveQueueOrderAsync()
-    {
-        if (_pendingConversions.Count == 0 || !_pendingOrderDirty || _isSavingQueueOrder)
-        {
-            return;
-        }
-
-        _isSavingQueueOrder = true;
-        StateHasChanged();
-        try
-        {
-            var orderedIds = _pendingConversions.Select(c => c.Id).ToList();
-            await ApiClient.ReorderQueueAsync(orderedIds).ConfigureAwait(false);
-            Snackbar.Add("Queue order updated", Severity.Success);
-            await LoadConversionsAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error saving queue order");
-            Snackbar.Add($"Error saving queue order: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isSavingQueueOrder = false;
-            StateHasChanged();
-        }
-    }
-
-    private void HandleQueueOrderChanged(List<ConversionDto> newOrder)
-    {
-        _pendingConversions.Clear();
-        _pendingConversions.AddRange(newOrder);
-        _pendingOrderDirty = true;
-        StateHasChanged();
-    }
-
-    private int GetNextTempId()
-    {
-        // Use negative IDs for temporary conversions to avoid conflicts
-        var existingTempIds = _conversions.Where(c => c.Id < 0).Select(c => c.Id).ToList();
-        if (existingTempIds.Count == 0)
-        {
-            return -1;
-        }
-
-        return existingTempIds.Min() - 1;
-    }
-
-    private ConversionItemStatus GetEffectiveStatus(ConversionDto conversion)
-    {
-        // For Completed, Failed, and Deleted, use the status as-is
-        if (conversion.Status == ConversionItemStatus.Completed || conversion.Status == ConversionItemStatus.Failed || conversion.Status == ConversionItemStatus.Deleted)
-        {
-            return conversion.Status;
-        }
-
-        // For Running/Pending, check progress data if available
-        if (_progressData.TryGetValue(conversion.Id, out var progress) && progress != null)
-        {
-            return progress.Status == ConversionProgressStatus.Running
-                ? ConversionItemStatus.Running
-                : ConversionItemStatus.Pending;
-        }
-
-        // If no progress data, use the conversion status
-        return conversion.Status;
     }
 
     private static string GetStatusCssClass(ConversionItemStatus status)
@@ -813,9 +197,7 @@
 
     public void Dispose()
     {
-        Logger.LogInformation("Conversions page disposing, stopping progress polling");
-        _pollingCts?.Cancel();
-        _pollingCts?.Dispose();
+        Logger.LogInformation("Conversions page disposing");
+        _stateService.StateChanged -= OnStateChanged;
     }
 }
-

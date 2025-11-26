@@ -245,15 +245,27 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
   - Filters to show only video files
   - Works in all modern browsers (no browser-specific APIs required)
 
-#### Queue Reordering
-- The `Conversions` page shows a dedicated **Pending Queue** card listing all pending conversions in their current processing order.
-- Drag and drop items within the card to preview a new order; unsaved changes are highlighted.
-- Click **Save Queue Order** to persist the arrangement via `PUT /api/conversions/queue/reorder`.
-- Queue controls (start, pause, stop) continue to respect the updated order immediately after saving.
+#### Queue View (`/queue`)
+- Primary view for managing the conversion queue
+- Shows the currently running conversion with live progress updates
+- Lists all pending conversions in a draggable queue
+- Provides controls to start, pause, resume, and stop the queue
+- Allows reordering pending conversions via drag and drop (click **Save Queue Order** to persist)
+- Supports creating new conversions and queueing directories
+- Allows deleting pending conversions
+- Only displays current and pending conversions
+
+#### Conversions View (`/conversions`)
+- Read-only browser of all conversions in the database
+- Shows all conversions (current, pending, finished, deleted, failed)
+- Displays live progress for running conversions
+- Allows editing conversion settings
+- Does not provide queue management controls (start/pause/stop)
+- Does not allow creating new conversions or queueing directories
 
 #### Queue Item Deletion
-- Pending conversions can be deleted from the queue using the delete button in the queue list or the delete action in the conversions table.
-- Deleted items are marked with `Deleted` status and remain visible in the UI but are excluded from queue operations.
+- Pending conversions can be deleted from the queue using the delete button in the queue list (Queue view only).
+- Deleted items are marked with `Deleted` status and remain visible in the Conversions view but are excluded from queue operations.
 - The deletion timestamp is stored in `deletedAtUtc` for audit purposes.
 
 - POST `/api/profiles/{id:int}/conversions`
