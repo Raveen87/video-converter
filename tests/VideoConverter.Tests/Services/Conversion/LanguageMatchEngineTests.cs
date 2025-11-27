@@ -2,6 +2,7 @@ using FluentAssertions;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
+using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
 
@@ -38,7 +39,8 @@ public class LanguageMatchEngineTests
     {
         var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
         var act = () => matcher.MatchAudioStreams(Streams, ["german"]);
-        _ = act.Should().Throw<InvalidOperationException>();
+        _ = act.Should().Throw<ApiErrorException>()
+            .WithMessage("Requested audio language 'german' not found in input file.");
     }
 
     [Fact]
@@ -86,6 +88,7 @@ public class LanguageMatchEngineTests
     {
         var matcher = new AudioLanguageMatcher(NullLogger<AudioLanguageMatcher>.Instance);
         var act = () => matcher.MatchAudioStreams(Streams, ["german", "swe?"]);
-        _ = act.Should().Throw<InvalidOperationException>();
+        _ = act.Should().Throw<ApiErrorException>()
+            .WithMessage("Requested audio language 'german' not found in input file.");
     }
 }
