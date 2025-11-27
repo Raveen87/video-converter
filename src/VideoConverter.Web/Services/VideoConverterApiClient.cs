@@ -55,7 +55,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Create conversion", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize conversion response");
             _logger.LogInformation("Successfully created conversion with ID {ConversionId}", result.Id);
@@ -126,7 +128,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             var response = await _httpClient.DeleteAsync(
                 $"api/conversions/{id}",
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Delete conversion {id}", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize conversion response");
             _logger.LogInformation("Successfully deleted conversion {ConversionId}", id);
@@ -154,7 +158,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Queue directory {request.DirectoryPath}", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<DirectoryQueueResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
             if (result is null || result.BatchId is 0)
             {
@@ -183,7 +189,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 "api/conversions/queue/start",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Start queue", cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully started next conversion in queue");
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
@@ -204,7 +212,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 "api/conversions/queue/pause",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Pause queue", cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully paused queue");
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
@@ -225,7 +235,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 "api/conversions/queue/resume",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Resume queue", cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully resumed queue");
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
@@ -246,7 +258,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 "api/conversions/queue/stop",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Stop queue", cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully stopped queue");
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
@@ -270,7 +284,8 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
 
-            _ = response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response, "Reorder queue", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<IReadOnlyList<ConversionDto>>(
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false) ?? Array.Empty<ConversionDto>();
@@ -373,7 +388,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, "Create profile", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<ProfileDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize profile response");
             _logger.LogInformation("Successfully created profile with ID {ProfileId}", result.Id);
@@ -398,7 +415,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 patch,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Update profile {id}", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<ProfileDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize profile response");
             _logger.LogInformation("Successfully updated profile {ProfileId}", id);
@@ -421,7 +440,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             var response = await _httpClient.DeleteAsync(
                 $"api/profiles/{id}",
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Delete profile {id}", cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully deleted profile {ProfileId}", id);
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
@@ -443,7 +464,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Queue conversion with profile {profileId}", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize conversion response");
             _logger.LogInformation("Successfully queued conversion with profile {ProfileId}. Conversion ID: {ConversionId}", profileId, result.Id);
@@ -472,7 +495,9 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            _ = response.EnsureSuccessStatusCode();
+
+            await EnsureSuccessAsync(response, $"Queue directory with profile {profileId}", cancellationToken).ConfigureAwait(false);
+
             var result = await response.Content.ReadFromJsonAsync<DirectoryQueueResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
             if (result is null || result.BatchId is 0)
             {
@@ -631,6 +656,17 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         catch (Exception ex)
         {
             return $"Error: {response.StatusCode} - {ex.Message}";
+        }
+    }
+
+    private async Task EnsureSuccessAsync(HttpResponseMessage response, string actionDescription, CancellationToken cancellationToken)
+    {
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
+            var statusCode = response.StatusCode;
+            _logger.LogError("{Action} failed with status {StatusCode}: {ErrorMessage}", actionDescription, statusCode, errorMessage);
+            throw new HttpRequestException($"Error: {statusCode} - {errorMessage}");
         }
     }
 

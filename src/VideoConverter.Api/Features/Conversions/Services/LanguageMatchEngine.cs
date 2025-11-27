@@ -1,3 +1,4 @@
+using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
@@ -59,7 +60,9 @@ internal static partial class LanguageMatchEngine
                 }
 
                 logger.LogWarning("{Kind} language '{RequestedLanguage}' not found in available streams", kind, language);
-                throw new InvalidOperationException($"Requested {kind} language '{language}' not found in input file.");
+                throw ApiErrorException.ValidationError(
+                    errorMessage: $"Requested {kind} language '{language}' not found in input file.",
+                    userFriendlyMessage: $"The requested {kind} language '{language}' was not found in the input file.");
             }
 
             logger.LogDebug(
