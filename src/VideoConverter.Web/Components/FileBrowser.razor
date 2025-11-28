@@ -8,12 +8,7 @@
         <MudText Typo="Typo.h6">@Title</MudText>
     </TitleContent>
     <DialogContent>
-        @if (_isLoading)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
-            <MudText>Loading directory contents...</MudText>
-        }
-        else if (_errorMessage is not null)
+        @if (_errorMessage is not null)
         {
             <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => LoadDirectoryAsync())">Retry</MudButton>
@@ -26,7 +21,7 @@
                     <div class="mb-3">
                         <MudBreadcrumbs Items="@_mudBreadcrumbs" MaxItems="5" Separator="/">
                             <ItemTemplate>
-                                <MudLink Href="#" OnClick="@(() => NavigateToPath(context.Href ?? string.Empty))">@context.Text</MudLink>
+                                <MudLink OnClick="@(() => NavigateToPath(context.Href ?? string.Empty))" Underline="Underline.Hover" Style="cursor: pointer;">@context.Text</MudLink>
                             </ItemTemplate>
                         </MudBreadcrumbs>
                     </div>
@@ -39,45 +34,53 @@
                     </MudButton>
                 }
 
-                <MudPaper Class="pa-2" Style="max-height: 400px; overflow-y: auto;">
-                    @if (_directories.Count > 0)
-                    {
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Directories</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var dir in _directories)
-                            {
-                                <MudListItem T="string" Value="@dir.Path" OnClick="@(() => HandleDirectoryClick(dir.Path))" Class="@(Mode == FileBrowserMode.Directory && _selectedPath == dir.Path ? "selected-file" : "")">
-                                    <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" />
-                                    <MudText>@dir.Name</MudText>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    }
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+                    <MudText>Loading directory contents...</MudText>
+                }
+                else
+                {
+                    <MudPaper Class="pa-2" Style="max-height: 400px; overflow-y: auto;">
+                        @if (_directories.Count > 0)
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Directories</MudText>
+                            <MudList T="string" Dense="true">
+                                @foreach (var dir in _directories)
+                                {
+                                    <MudListItem T="string" Value="@dir.Path" OnClick="@(() => HandleDirectoryClick(dir.Path))" Class="@(Mode == FileBrowserMode.Directory && _selectedPath == dir.Path ? "selected-file" : "")">
+                                        <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" />
+                                        <MudText>@dir.Name</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
 
-                    @if (_files.Count > 0)
-                    {
-                        <MudText Typo="Typo.subtitle2" Class="mb-2 mt-4">Files</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var file in _files)
-                            {
-                                <MudListItem T="string" Value="@file.Path" OnClick="@(() => SelectFile(file.Path))" Class="@(Mode == FileBrowserMode.File && _selectedPath == file.Path ? "selected-file" : "")">
-                                    <MudIcon Icon="@Icons.Material.Filled.VideoFile" Class="mr-2" />
-                                    <div class="d-flex flex-column">
-                                        <MudText>@file.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            @FormatFileSize(file.Size) • @file.LastModified.ToString("yyyy-MM-dd HH:mm")
-                                        </MudText>
-                                    </div>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    }
+                        @if (_files.Count > 0)
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mb-2 mt-4">Files</MudText>
+                            <MudList T="string" Dense="true">
+                                @foreach (var file in _files)
+                                {
+                                    <MudListItem T="string" Value="@file.Path" OnClick="@(() => SelectFile(file.Path))" Class="@(Mode == FileBrowserMode.File && _selectedPath == file.Path ? "selected-file" : "")">
+                                        <MudIcon Icon="@Icons.Material.Filled.VideoFile" Class="mr-2" />
+                                        <div class="d-flex flex-column">
+                                            <MudText>@file.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @FormatFileSize(file.Size) • @file.LastModified.ToString("yyyy-MM-dd HH:mm")
+                                            </MudText>
+                                        </div>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
 
-                    @if (_directories.Count == 0 && _files.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No items found</MudText>
-                    }
-                </MudPaper>
+                        @if (_directories.Count == 0 && _files.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No items found</MudText>
+                        }
+                    </MudPaper>
+                }
 
                 @if (_selectedPath is not null)
                 {
@@ -95,7 +98,6 @@
 </MudDialog>
 
 @code {
-
     [Parameter]
     public string Title { get; set; } = "Select File or Directory";
 
@@ -225,28 +227,62 @@
             return breadcrumbs;
         }
 
-        var parts = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        // Handle both forward and backward slashes for splitting
+        var parts = path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Check if path looks like a Windows path (starts with drive letter)
+        // e.g., "C:", "C:\", "C:/", etc.
+        var isWindowsPath = parts.Length > 0 && parts[0].Length == 2 && parts[0][1] == ':';
 
-        if (OperatingSystem.IsWindows())
+        string currentPath;
+
+        if (isWindowsPath)
         {
-            if (path.Length >= 2 && path[1] == ':')
+            // Windows path logic (regardless of OS)
+            // The first part is the drive letter (e.g. "C:")
+            var drive = parts[0];
+            
+            // On Windows backend, the root is "C:\". 
+            // If we just use "C:", Path.Combine might produce "C:Users" (relative) depending on implementation.
+            // We want "C:\" or "C:/" as the base.
+            // However, we must be careful not to introduce double separators.
+            
+            // For the first breadcrumb (the drive), the path should be the drive root.
+            var driveRoot = drive + Path.DirectorySeparatorChar; 
+            if (!driveRoot.EndsWith('\\') && !driveRoot.EndsWith('/'))
             {
-                breadcrumbs.Add(new BreadcrumbItem(path.Substring(0, 2), path.Substring(0, 2), disabled: false));
-                parts = parts.Skip(1).ToArray();
+                 driveRoot += "\\"; // Default to backslash for Windows paths if separator is weird
             }
+            
+            breadcrumbs.Add(new BreadcrumbItem(drive, driveRoot, disabled: false));
+            
+            currentPath = driveRoot;
+            parts = parts.Skip(1).ToArray();
         }
         else
         {
+            // Unix/Rooted path logic
             breadcrumbs.Add(new BreadcrumbItem("Root", "/", disabled: false));
+            currentPath = "/";
         }
-
-        var currentPath = OperatingSystem.IsWindows() && path.Length >= 2 && path[1] == ':'
-            ? path.Substring(0, 2)
-            : "/";
 
         foreach (var part in parts)
         {
-            currentPath = Path.Combine(currentPath, part);
+            // Use Path.Combine, but ensure we don't double up if currentPath already ends with separator
+            // Or just manually join to be safe and consistent.
+            if (isWindowsPath)
+            {
+                // For Windows paths, prefer backslash
+                var separator = '\\';
+                currentPath = currentPath.TrimEnd(separator) + separator + part;
+            }
+            else
+            {
+                // For Unix paths, prefer forward slash
+                var separator = '/';
+                currentPath = currentPath.TrimEnd(separator) + separator + part;
+            }
+            
             breadcrumbs.Add(new BreadcrumbItem(part, currentPath, disabled: false));
         }
 
