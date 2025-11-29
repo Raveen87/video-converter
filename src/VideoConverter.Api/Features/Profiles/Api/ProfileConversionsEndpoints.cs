@@ -1,5 +1,6 @@
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
@@ -14,6 +15,7 @@ public sealed class ProfileConversionsEndpoints(
     IRequestValidator<ConversionCreateDto> conversionValidator,
     IConversionService conversionService,
     IDirectoryBatchService directoryBatchService,
+    INotificationService notificationService,
     ILogger<ProfileConversionsEndpoints> logger)
 {
     public async Task<IResult> QueueConversionAsync(int id, ProfileConversionCreateDto request, CancellationToken ct)
@@ -48,6 +50,9 @@ public sealed class ProfileConversionsEndpoints(
             var conversion = await conversionService.CreateConversionAsync(effective, ct).ConfigureAwait(false);
             _ = db.Conversions.Add(conversion);
             _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            await AddNotificationForConversionAddedAsync(conversion, ct).ConfigureAwait(false);
+
             return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
         }
         catch (InvalidOperationException ex)
@@ -96,5 +101,19 @@ public sealed class ProfileConversionsEndpoints(
             c.Resolution,
             c.MetadataBasedFilename,
             c.DeletedAtUtc);
+    }
+
+    private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
+    {
+        try
+        {
+            var title = "Conversion Added";
+            var message = $"Conversion {conversion.Id} has been added to the queue. Input: {Path.GetFileName(conversion.InputPath)}";
+            _ = await notificationService.AddAsync(title, message, NotificationType.Info, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Silently fail - notification is not critical
+        }
     }
 }

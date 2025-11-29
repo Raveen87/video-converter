@@ -14,12 +14,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<DirectoryQueueBatchItem> DirectoryQueueBatchItems => Set<DirectoryQueueBatchItem>();
 
+    public DbSet<Notification> Notifications => Set<Notification>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureConversion(modelBuilder);
         ConfigureProfile(modelBuilder);
         ConfigureMetadataResolutionQueue(modelBuilder);
         ConfigureDirectoryQueueBatch(modelBuilder);
+        ConfigureNotification(modelBuilder);
     }
 
     private static void ConfigureConversion(ModelBuilder modelBuilder)
@@ -163,5 +166,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(i => i.BatchId)
             .OnDelete(DeleteBehavior.Cascade);
         _ = item.HasIndex(i => new { i.BatchId, i.Status, i.Id });
+    }
+
+    private static void ConfigureNotification(ModelBuilder modelBuilder)
+    {
+        var notification = modelBuilder.Entity<Notification>();
+        _ = notification.HasKey(n => n.Id);
+        _ = notification.Property(n => n.Title)
+            .IsRequired()
+            .HasMaxLength(256);
+        _ = notification.Property(n => n.Message)
+            .IsRequired()
+            .HasMaxLength(2048);
+        _ = notification.Property(n => n.Type)
+            .IsRequired()
+            .HasConversion(Converters.CreateNotificationTypeString())
+            .HasMaxLength(32);
+        _ = notification.Property(n => n.CreatedAtUtc)
+            .IsRequired();
+        _ = notification.Property(n => n.IsRead)
+            .IsRequired();
+        _ = notification.HasIndex(n => n.CreatedAtUtc);
     }
 }

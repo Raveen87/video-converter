@@ -39,4 +39,8 @@ public interface IVideoConverterApiClient
     Task<ConversionDto> QueueConversionWithProfileAsync(int profileId, ProfileConversionCreateDto request, CancellationToken cancellationToken = default);
 
     Task<int> QueueDirectoryWithProfileAsync(int profileId, ProfileDirectoryQueueRequestDto request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(CancellationToken cancellationToken = default);
+
+    Task ClearNotificationsAsync(CancellationToken cancellationToken = default);
 }

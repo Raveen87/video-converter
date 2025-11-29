@@ -67,6 +67,7 @@ public sealed class ConversionsApi : ControllerBase
         [FromServices] AppDbContext db,
         [FromServices] IRequestValidator<ConversionCreateDto> validator,
         [FromServices] IConversionService conversionService,
+        [FromServices] Notifications.Services.INotificationService notificationService,
         [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -91,6 +92,9 @@ public sealed class ConversionsApi : ControllerBase
             _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
+
+            await AddNotificationForConversionAddedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
+
             return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
         }
         catch (InvalidOperationException ex)
@@ -525,6 +529,7 @@ public sealed class ConversionsApi : ControllerBase
     public async Task<IResult> DeleteConversionAsync(
         int id,
         [FromServices] AppDbContext db,
+        [FromServices] Notifications.Services.INotificationService notificationService,
         [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -555,6 +560,9 @@ public sealed class ConversionsApi : ControllerBase
         _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Conversion {ConversionId} marked as deleted", id);
+
+        await AddNotificationForConversionDeletedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
+
         return Results.Ok(ToDto(conversion));
     }
 
@@ -761,5 +769,33 @@ public sealed class ConversionsApi : ControllerBase
             "Failed to start the conversion process. Please try again later.",
             innerException: null,
             result.ErrorDetails);
+    }
+
+    private static async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, Notifications.Services.INotificationService notificationService, CancellationToken ct)
+    {
+        try
+        {
+            var title = "Conversion Added";
+            var message = $"Conversion {conversion.Id} has been added to the queue. Input: {Path.GetFileName(conversion.InputPath)}";
+            _ = await notificationService.AddAsync(title, message, NotificationType.Info, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Silently fail - notification is not critical
+        }
+    }
+
+    private static async Task AddNotificationForConversionDeletedAsync(Shared.Domain.Entities.Conversion conversion, Notifications.Services.INotificationService notificationService, CancellationToken ct)
+    {
+        try
+        {
+            var title = "Conversion Deleted";
+            var message = $"Conversion {conversion.Id} has been deleted from the queue. Input: {Path.GetFileName(conversion.InputPath)}";
+            _ = await notificationService.AddAsync(title, message, NotificationType.Info, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Silently fail - notification is not critical
+        }
     }
 }

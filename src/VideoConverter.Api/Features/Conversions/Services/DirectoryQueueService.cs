@@ -1,4 +1,5 @@
 using VideoConverter.Api.Features.Conversions.Dtos;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
@@ -10,6 +11,7 @@ public sealed class DirectoryQueueService(
     IConversionService conversionService,
     IRequestValidator<ConversionCreateDto> conversionValidator,
     IFileSystemValidator fileSystemValidator,
+    INotificationService notificationService,
     ILogger<DirectoryQueueService> logger) : IDirectoryQueueService
 {
     public async Task<DirectoryQueueResultDto> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken ct)
@@ -145,10 +147,26 @@ public sealed class DirectoryQueueService(
         {
             queued++;
             outcomes.Add(new FileQueueOutcome(InputPath: c.InputPath ?? string.Empty, Status: "queued", Reason: null, ConversionId: c.Id));
+
+            await AddNotificationForConversionAddedAsync(c, ct).ConfigureAwait(false);
         }
 
         var orderedOutcomes = outcomes.OrderBy(static o => o.InputPath, comparer: StringComparer.OrdinalIgnoreCase).ToList();
         return new DirectoryQueueResultDto(total, queued, skipped, invalid, orderedOutcomes);
+    }
+
+    private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
+    {
+        try
+        {
+            var title = "Conversion Added";
+            var message = $"Conversion {conversion.Id} has been added to the queue. Input: {Path.GetFileName(conversion.InputPath)}";
+            _ = await notificationService.AddAsync(title, message, NotificationType.Info, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Silently fail - notification is not critical
+        }
     }
 
     private async Task<HashSet<string>> GetExistingInputSetAsync(string outputDirectory, CancellationToken ct)

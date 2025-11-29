@@ -111,6 +111,7 @@ public static class Program
         _ = Features.Conversions.DependencyInjection.ServiceCollectionExtensions.AddConversionsFeature(services);
         _ = Features.Profiles.DependencyInjection.ServiceCollectionExtensions.AddProfilesFeature(services);
         _ = Features.FileBrowser.DependencyInjection.ServiceCollectionExtensions.AddFileBrowserFeature(services);
+        _ = Features.Notifications.DependencyInjection.ServiceCollectionExtensions.AddNotificationsFeature(services);
         RegisterValidation(services);
         RegisterHosted(services);
         _ = services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
