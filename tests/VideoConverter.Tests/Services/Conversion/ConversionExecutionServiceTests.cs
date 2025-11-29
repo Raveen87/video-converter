@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Common.Models;
@@ -27,8 +28,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FakeConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -53,8 +55,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FailingConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -80,8 +83,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FailingConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -106,8 +110,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FailingConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var (result, conversionId) = await svc.RunNextPendingAsync(CancellationToken.None);
 
@@ -141,8 +146,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FakeConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var (result, conversionId) = await svc.RunNextPendingAsync(CancellationToken.None);
 
@@ -183,8 +189,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FakeConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var result = await svc.RunByIdAsync(targetConversion.Id, CancellationToken.None);
 
@@ -215,8 +222,9 @@ public sealed class ConversionExecutionServiceTests
         _ = await db.SaveChangesAsync();
 
         var runner = new FakeConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, logger);
+        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 

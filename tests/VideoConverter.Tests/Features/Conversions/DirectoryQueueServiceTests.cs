@@ -8,6 +8,7 @@ using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
+using VideoConverter.Tests.Fakes;
 using VideoConverter.Tests.TestUtils;
 
 namespace VideoConverter.Tests.Features.Conversions;
@@ -90,7 +91,8 @@ public class DirectoryQueueServiceTests
         var requestPropertyValidator = new RequestPropertyValidator();
         var fileSystemValidator = new FileSystemValidator();
         var conversionValidator = new ConversionCreateValidator(NullLogger<ConversionCreateValidator>.Instance, fileSystemValidator, requestPropertyValidator);
-        var svc = new DirectoryQueueService(db, conversionService, conversionValidator, fileSystemValidator, NullLogger<DirectoryQueueService>.Instance);
+        var notificationService = new FakeNotificationService();
+        var svc = new DirectoryQueueService(db, conversionService, conversionValidator, fileSystemValidator, notificationService, NullLogger<DirectoryQueueService>.Instance);
         return (db, svc);
     }
 }

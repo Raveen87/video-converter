@@ -517,6 +517,50 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting notifications from API");
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<NotificationDto>>(
+                "api/notifications",
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            var result = response ?? Array.Empty<NotificationDto>();
+            _logger.LogInformation("Successfully retrieved {Count} notifications", result.Count);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting notifications from API");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task ClearNotificationsAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Clearing all notifications");
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                "api/notifications",
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Clear notifications", cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Successfully cleared all notifications");
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing notifications");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     private static List<JsonPatchOperation> CreateJsonPatchOperations(ConversionPatchDto patch)
     {
         var patchOperations = new List<JsonPatchOperation>();

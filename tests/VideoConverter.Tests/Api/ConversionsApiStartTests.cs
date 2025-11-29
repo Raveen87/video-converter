@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
@@ -150,7 +151,8 @@ public sealed class ConversionsApiStartTests
     private static IConversionExecutionService CreateExecutionService(AppDbContext db)
     {
         var runner = new FakeConversionRunner();
+        var notificationService = new FakeNotificationService();
         var logger = NullLogger<ConversionExecutionService>.Instance;
-        return new ConversionExecutionService(db, runner, logger);
+        return new ConversionExecutionService(db, runner, notificationService, logger);
     }
 }

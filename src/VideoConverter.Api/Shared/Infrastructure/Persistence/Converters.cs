@@ -36,4 +36,11 @@ public static class Converters
             v => v == null ? null : v.ToString(),
             v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<AudioChannels>(v));
     }
+
+    public static ValueConverter<NotificationType, string> CreateNotificationTypeString()
+    {
+        return new ValueConverter<NotificationType, string>(
+            v => v.ToString(),
+            v => Enum.Parse<NotificationType>(v));
+    }
 }

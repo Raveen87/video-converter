@@ -1,10 +1,11 @@
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Services.Conversion;
 
-public sealed class ConversionExecutionService(AppDbContext db, IConversionRunner runner, ILogger<ConversionExecutionService> logger)
+public sealed class ConversionExecutionService(AppDbContext db, IConversionRunner runner, INotificationService notificationService, ILogger<ConversionExecutionService> logger)
     : IConversionExecutionService
 {
     public async Task<ConversionStartResult> RunByIdAsync(int id, CancellationToken ct)
@@ -52,6 +53,9 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         var result = await ExecuteConversionAsync(conversion, CancellationToken.None).ConfigureAwait(false);
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
         _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+        await AddNotificationForConversionAsync(conversion, result, CancellationToken.None).ConfigureAwait(false);
+
         return result;
     }
 
@@ -106,6 +110,8 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
         _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
+        await AddNotificationForConversionAsync(conversion, result, CancellationToken.None).ConfigureAwait(false);
+
         return (result, conversion.Id);
     }
 
@@ -149,5 +155,28 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         }
 
         return result;
+    }
+
+    private async Task AddNotificationForConversionAsync(Shared.Domain.Entities.Conversion conversion, ConversionStartResult result, CancellationToken ct)
+    {
+        try
+        {
+            if (result.IsSuccess)
+            {
+                var title = "Conversion Completed";
+                var message = $"Conversion {conversion.Id} completed successfully. Input: {Path.GetFileName(conversion.InputPath)}";
+                _ = await notificationService.AddAsync(title, message, NotificationType.Success, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                var title = "Conversion Failed";
+                var message = $"Conversion {conversion.Id} failed. Input: {Path.GetFileName(conversion.InputPath)}. Error: {result.ErrorMessage ?? "Unknown error"}";
+                _ = await notificationService.AddAsync(title, message, NotificationType.Error, ct).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to add notification for conversion {ConversionId}", conversion.Id);
+        }
     }
 }
