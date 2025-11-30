@@ -98,12 +98,29 @@
 
     private async Task OpenResolveDialog(MetadataResolutionQueueItemDto item)
     {
-        var parameters = new DialogParameters<ResolveMetadataDialog> { { x => x.Item, item } };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Metadata", parameters, options);
-        var result = await dialog.Result;
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<ResolveMetadataDialog>
+        {
+            { x => x.Item, item },
+            { x => x.OnClose, EventCallback.Factory.Create<bool>(this, (success) =>
+                {
+                    if (success)
+                    {
+                        dialogRef?.Close(DialogResult.Ok(true));
+                    }
+                    else
+                    {
+                        dialogRef?.Close(DialogResult.Cancel());
+                    }
+                })
+            }
+        };
 
-        if (result is not null && !result.Canceled && result.Data is bool success && success)
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Metadata", parameters, options);
+        var result = await dialogRef.Result;
+
+        if (result is not null && !result.Canceled && result.Data is bool successResult && successResult)
         {
             Snackbar.Add("Item resolved and conversion created.", Severity.Success);
             await LoadQueueAsync();

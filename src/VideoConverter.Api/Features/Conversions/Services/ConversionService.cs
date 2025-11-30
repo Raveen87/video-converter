@@ -1,6 +1,8 @@
+using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
 
@@ -18,10 +20,12 @@ public sealed class ConversionService(
     IOptions<FilenameTemplateOptions> filenameTemplateOptions,
     ILogger<ConversionService> logger,
     IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
-    Shared.Infrastructure.Persistence.AppDbContext? db = null) : IConversionService
+    Shared.Infrastructure.Persistence.AppDbContext? db = null,
+    INotificationService? notificationService = null) : IConversionService
 {
     private readonly IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
     private readonly Shared.Infrastructure.Persistence.AppDbContext? _db = db;
+    private readonly INotificationService? _notificationService = notificationService;
 
     public async Task<Conversion> CreateConversionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
@@ -222,6 +226,11 @@ public sealed class ConversionService(
             // Propagate explicit skip/queue signals
             throw;
         }
+        catch (ApiErrorException)
+        {
+            // Propagate API errors (e.g. queue/skip signals mapped to business errors)
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", request.InputPath);
@@ -274,7 +283,19 @@ public sealed class ConversionService(
 
             case FetchFailureBehavior.QueueForManualResolution:
                 await QueueForManualResolutionAsync(request, filename, parsedFilename, cancellationToken).ConfigureAwait(false);
-                throw new InvalidOperationException("Metadata fetch failed and item queued for manual resolution.");
+                if (_notificationService is not null)
+                {
+                    _ = await _notificationService.AddAsync(
+                        "Metadata Lookup Failed",
+                        $"Input: {filename}. Item added to Metadata Resolution Queue.",
+                        NotificationType.Warning,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                throw ApiErrorException.BusinessError(
+                    ErrorCode.InvalidConversionState,
+                    "Metadata fetch failed and item queued for manual resolution.",
+                    "Metadata fetch failed and item queued for manual resolution.");
 
             case FetchFailureBehavior.SkipItem:
                 {

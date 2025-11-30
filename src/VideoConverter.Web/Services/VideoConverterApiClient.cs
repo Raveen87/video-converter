@@ -66,7 +66,15 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating conversion. Input: {InputPath}", request.InputPath);
+            if (ex.Message.Contains("queued for manual resolution", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Conversion queued for manual resolution (handled as exception). Input: {InputPath}", request.InputPath);
+            }
+            else
+            {
+                _logger.LogError(ex, "Error creating conversion. Input: {InputPath}", request.InputPath);
+            }
+
             throw;
         }
 #pragma warning restore S2139

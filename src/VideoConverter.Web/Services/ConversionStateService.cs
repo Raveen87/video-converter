@@ -306,15 +306,28 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
 
         try
         {
-            _logger.LogDebug("Polling progress for {Count} conversions", _conversions.Count);
-            var tasks = _conversions.Select(c => _apiClient.GetConversionProgressAsync(c.Id, cancellationToken));
+            // Snapshot only real conversions (ID > 0) to poll to avoid race conditions and 404s on temp items
+            var conversionsToPoll = _conversions.Where(c => c.Id > 0).ToList();
+
+            if (conversionsToPoll.Count is 0)
+            {
+                return;
+            }
+
+            _logger.LogDebug("Polling progress for {Count} conversions", conversionsToPoll.Count);
+
+            // Create tasks that return the ID with the result to map back safely
+            var tasks = conversionsToPoll.Select(async c =>
+            {
+                var progress = await _apiClient.GetConversionProgressAsync(c.Id, cancellationToken).ConfigureAwait(false);
+                return (c.Id, Progress: progress);
+            });
+
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            for (var i = 0; i < _conversions.Count; i++)
+            foreach (var result in results.Where(r => r.Progress is not null))
             {
-                var conversion = _conversions[i];
-                var progress = results[i];
-                _progressData[conversion.Id] = progress;
+                _progressData[result.Id] = result.Progress;
             }
 
             RecalculateQueueFlags();

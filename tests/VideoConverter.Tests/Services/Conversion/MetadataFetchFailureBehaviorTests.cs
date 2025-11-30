@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
+using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils.Builders;
@@ -71,8 +73,45 @@ public class MetadataFetchFailureBehaviorTests
             .Build();
         dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
+        await Assert.ThrowsAsync<ApiErrorException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
         Assert.Equal(1, await db.MetadataResolutionQueue.CountAsync());
+    }
+
+    [Fact]
+    public async Task QueueForManualResolution_AddsNotification()
+    {
+        var mockMetadata = new Mock<IMetadataService>();
+        _ = mockMetadata.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MovieMetadata?)null);
+
+        var mockParser = new Mock<IFilenameParser>();
+        _ = mockParser.Setup(x => x.ParseFilename("Unknown.Movie.2020.mp4"))
+            .Returns(new ParsedFilename("Unknown.Movie.2020.mp4", MediaType.Movie, "Unknown Movie", 2020));
+
+        var mockTemplate = new Mock<IFilenameTemplateEngine>();
+        var mockGenerator = new Mock<IFilenameGenerator>();
+        var mockNotifications = new Mock<INotificationService>();
+
+        using var dbWrapper = TestUtils.DbContextTestFactory.CreateSqliteInMemory();
+        var db = dbWrapper.Context;
+
+        var behavior = Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.QueueForManualResolution });
+        var svc = CreateService(mockMetadata.Object, mockParser.Object, mockTemplate.Object, mockGenerator.Object, behavior, db, mockNotifications.Object);
+
+        var dto = new ConversionCreateDtoBuilder()
+            .WithInputPath("Unknown.Movie.2020.mp4")
+            .WithOutputDirectory("out")
+            .Build();
+
+        await Assert.ThrowsAsync<ApiErrorException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
+
+        mockNotifications.Verify(
+            x => x.AddAsync(
+                It.Is<string>(s => s == "Metadata Lookup Failed"),
+                It.Is<string>(s => s.Contains("Item added to Metadata Resolution Queue")),
+                NotificationType.Warning,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -111,7 +150,8 @@ public class MetadataFetchFailureBehaviorTests
         IFilenameTemplateEngine templateEngine,
         IFilenameGenerator filenameGenerator,
         IOptions<MetadataFetchOptions> behaviorOptions,
-        AppDbContext? db = null)
+        AppDbContext? db = null,
+        INotificationService? notificationService = null)
     {
         var mockProber = new Mock<IMediaProber>();
         var mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
@@ -131,6 +171,7 @@ public class MetadataFetchFailureBehaviorTests
             Options.Create(new FilenameTemplateOptions { DefaultTemplate = null }),
             logger.Object,
             behaviorOptions,
-            db);
+            db,
+            notificationService);
     }
 }

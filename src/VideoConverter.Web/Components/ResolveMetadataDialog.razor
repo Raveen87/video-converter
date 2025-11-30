@@ -70,7 +70,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
         <MudButton Color="Color.Primary" OnClick="ResolveAsync" Disabled="@(_selectedResult == null || _isResolving)">
              @if (_isResolving)
             {
@@ -87,10 +87,11 @@
 
 @using VideoConverter.Common.Models
 @using VideoConverter.Web.Services
+@using MudBlazor
 
 @code {
-    [CascadingParameter]
-    public IDialogReference MudDialog { get; set; } = default!;
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
 
     [Parameter]
     public MetadataResolutionQueueItemDto Item { get; set; } = default!;
@@ -173,18 +174,18 @@
             };
 
             await ApiClient.ResolveMetadataQueueItemAsync(Item.Id, request);
-            MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error resolving item: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
             _isResolving = false;
+            return;
         }
+
+        // Operation succeeded, signal close
+        await OnClose.InvokeAsync(true);
     }
 
-    private void Cancel() => MudDialog.Close(DialogResult.Cancel());
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
 }
 

@@ -95,6 +95,11 @@ public static class Program
     private static void RegisterAppServices(IServiceCollection services)
     {
         RegisterFeatureServices(services);
+        _ = services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+        {
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        });
+
         _ = services.AddControllers()
             .AddJsonOptions(options =>
             {

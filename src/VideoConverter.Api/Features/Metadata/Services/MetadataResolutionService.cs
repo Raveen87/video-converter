@@ -42,13 +42,16 @@ public class MetadataResolutionService(
         }
 
         // Create conversion
-        _ = await conversionService.CreateConversionWithMetadataAsync(conversionRequest, metadata, cancellationToken).ConfigureAwait(false);
+        var conversion = await conversionService.CreateConversionWithMetadataAsync(conversionRequest, metadata, cancellationToken).ConfigureAwait(false);
+
+        // Add to DB
+        _ = db.Conversions.Add(conversion);
 
         // Remove from queue
         _ = db.MetadataResolutionQueue.Remove(item);
         _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        logger.LogInformation("Successfully resolved queue item {QueueId} and created conversion.", queueId);
+        logger.LogInformation("Successfully resolved queue item {QueueId} and created conversion {ConversionId}.", queueId, conversion.Id);
     }
 
     public async Task DeleteQueueItemAsync(int queueId, CancellationToken cancellationToken)
