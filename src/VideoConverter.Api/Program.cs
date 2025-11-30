@@ -7,11 +7,11 @@ using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Common.Middleware;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Metadata.Api;
 using VideoConverter.Api.Features.Metadata.Services;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api;
 
@@ -235,6 +235,8 @@ public static class Program
     {
         // API endpoints
         _ = app.MapControllers();
+
+        app.MapMetadataEndpoints();
 
         // Health check endpoint (before SPA fallback)
         _ = app.MapGet("/api/health", () => Results.Ok(new { status = "OK" }));

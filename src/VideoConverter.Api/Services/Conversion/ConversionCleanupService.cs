@@ -1,5 +1,4 @@
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Services.Conversion;
 

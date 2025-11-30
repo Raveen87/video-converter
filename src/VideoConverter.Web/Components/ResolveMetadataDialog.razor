@@ -1,0 +1,190 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Resolve Metadata</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Search for the correct metadata for: <strong>@Item.SourceFileName</strong>
+                </MudText>
+                @if (Item.InputKind != "Unknown")
+                {
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mb-2">@Item.InputKind</MudChip>
+                }
+            </MudItem>
+            <MudItem xs="8">
+                <MudTextField @bind-Value="_searchQuery" Label="Search Query" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="SearchAsync" />
+            </MudItem>
+            <MudItem xs="4">
+                <MudNumericField @bind-Value="_searchYear" Label="Year (Optional)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SearchAsync" Disabled="@_isSearching" FullWidth="true">
+                    @if (_isSearching)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <text>Searching...</text>
+                    }
+                    else
+                    {
+                        <text>Search</text>
+                    }
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        @if (_searchResults != null)
+        {
+            <MudList T="MetadataSearchResultDto" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_selectedResult" SelectedValueChanged="OnResultSelected" Class="mt-4" Style="max-height: 400px; overflow-y: auto;">
+                @if (!_searchResults.Any())
+                {
+                    <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">No results found.</MudText>
+                }
+                @foreach (var result in _searchResults)
+                {
+                    <MudListItem Value="@result">
+                        <div class="d-flex gap-4">
+                            @if (!string.IsNullOrEmpty(result.PosterUrl))
+                            {
+                                <MudImage Src="@result.PosterUrl" Height="100" Width="67" ObjectFit="ObjectFit.Cover" Elevation="2" Class="rounded" />
+                            }
+                            else
+                            {
+                                <div class="d-flex justify-center align-center rounded bg-dark" style="height: 100px; width: 67px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.ImageNotSupported" />
+                                </div>
+                            }
+                            <div>
+                                <MudText Typo="Typo.subtitle1"><b>@result.Title</b> (@(result.Year?.ToString() ?? "N/A"))</MudText>
+                                <MudText Typo="Typo.caption">@result.Type</MudText>
+                                <MudText Typo="Typo.body2" Class="mt-1" Style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                    @result.Overview
+                                </MudText>
+                            </div>
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="ResolveAsync" Disabled="@(_selectedResult == null || _isResolving)">
+             @if (_isResolving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <text>Resolving...</text>
+            }
+            else
+            {
+                <text>Resolve & Create</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@using VideoConverter.Common.Models
+@using VideoConverter.Web.Services
+
+@code {
+    [CascadingParameter]
+    public IDialogReference MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public MetadataResolutionQueueItemDto Item { get; set; } = default!;
+
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    private string _searchQuery = string.Empty;
+    private int? _searchYear;
+    private bool _isSearching;
+    private bool _isResolving;
+    private List<MetadataSearchResultDto>? _searchResults;
+    private MetadataSearchResultDto? _selectedResult;
+
+    protected override void OnInitialized()
+    {
+        _searchQuery = Item.ParsedTitle ?? Path.GetFileNameWithoutExtension(Item.SourceFileName) ?? string.Empty;
+        _searchYear = Item.ParsedYear;
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return;
+        }
+
+        _isSearching = true;
+        _searchResults = null;
+        _selectedResult = null;
+
+        try
+        {
+            // Determine type based on input kind or default
+            MediaType? type = null;
+            if (Enum.TryParse<MediaType>(Item.InputKind, out var parsedType))
+            {
+                type = parsedType;
+            }
+
+            var request = new MetadataSearchRequestDto
+            {
+                Query = _searchQuery,
+                Year = _searchYear,
+                Type = type
+            };
+
+            var results = await ApiClient.SearchMetadataAsync(request);
+            _searchResults = results.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error searching metadata: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+
+    private void OnResultSelected(MetadataSearchResultDto? result)
+    {
+        _selectedResult = result;
+    }
+
+    private async Task ResolveAsync()
+    {
+        if (_selectedResult == null) return;
+
+        _isResolving = true;
+        try
+        {
+            var request = new ResolveMetadataRequestDto
+            {
+                TmdbId = _selectedResult.Id,
+                MediaType = _selectedResult.Type
+            };
+
+            await ApiClient.ResolveMetadataQueueItemAsync(Item.Id, request);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error resolving item: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isResolving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Close(DialogResult.Cancel());
+}
+

@@ -1,5 +1,3 @@
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Shared.Domain.Entities;
 
 public class Conversion

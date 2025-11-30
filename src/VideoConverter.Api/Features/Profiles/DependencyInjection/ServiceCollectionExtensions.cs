@@ -1,7 +1,6 @@
 using VideoConverter.Api.Features.Profiles.Api;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Validation;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Profiles.DependencyInjection;
 

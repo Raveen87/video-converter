@@ -5,7 +5,6 @@ using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
 

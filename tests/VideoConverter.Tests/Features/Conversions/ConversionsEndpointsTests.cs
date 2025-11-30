@@ -5,6 +5,7 @@ using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
+using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
@@ -184,6 +185,12 @@ public class ConversionsEndpointsTests
                 Resolution = request.Resolution,
             };
             return Task.FromResult(c);
+        }
+
+        public Task<Conversion> CreateConversionWithMetadataAsync(ConversionCreateDto request, MediaMetadata metadata, CancellationToken cancellationToken)
+        {
+            // For testing, update doesn't trigger new creation flow usually, but we implement for interface
+            return CreateConversionAsync(request, cancellationToken);
         }
 
         public Task<LanguageProcessingResult> ProcessLanguagesAsync(string inputPath, IEnumerable<string>? audioLanguages, IEnumerable<string>? subtitleLanguages, CancellationToken cancellationToken)

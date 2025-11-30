@@ -89,6 +89,149 @@ public class TmdbMetadataService(
         }
     }
 
+    public async Task<IEnumerable<MetadataSearchResultDto>> SearchMovieAsync(string query, int? year = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var escapedQuery = Uri.EscapeDataString(query);
+            var yearParam = year is not null ? $"&year={year.Value}" : string.Empty;
+            var url = $"https://api.themoviedb.org/3/search/movie?query={escapedQuery}{yearParam}";
+
+            Logger.LogDebug("Searching candidates for movie: {Query} (Year: {Year})", query, year);
+
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var searchResult = TmdbJson.DeserializeMovieSearchResult(responseString);
+
+            if (searchResult?.Results is null)
+            {
+                return [];
+            }
+
+            return searchResult.Results.Select(m => new MetadataSearchResultDto
+            {
+                Id = m.Id,
+                Title = m.Title,
+                Year = ExtractYear(m.ReleaseDate),
+                Overview = m.Overview,
+                PosterUrl = GetPosterUrl(m.PosterPath),
+                Type = MediaType.Movie,
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error searching movie candidates for: {Query}", query);
+            return [];
+        }
+    }
+
+    public async Task<IEnumerable<MetadataSearchResultDto>> SearchTvShowAsync(string query, int? firstAiredYear = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var escapedQuery = Uri.EscapeDataString(query);
+            var yearParam = firstAiredYear is not null ? $"&first_air_date_year={firstAiredYear.Value}" : string.Empty;
+            var url = $"https://api.themoviedb.org/3/search/tv?query={escapedQuery}{yearParam}";
+
+            Logger.LogDebug("Searching candidates for TV show: {Query} (Year: {Year})", query, firstAiredYear);
+
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+            var searchResult = TmdbJson.DeserializeTvSearchResult(responseString);
+
+            if (searchResult?.Results is null)
+            {
+                return [];
+            }
+
+            return searchResult.Results.Select(s => new MetadataSearchResultDto
+            {
+                Id = s.Id,
+                Title = s.Name,
+                Year = ExtractYear(s.FirstAirDate),
+                Overview = s.Overview,
+                PosterUrl = GetPosterUrl(s.PosterPath),
+                Type = MediaType.TvShow,
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error searching TV show candidates for: {Query}", query);
+            return [];
+        }
+    }
+
+    public async Task<MovieMetadata?> GetMovieMetadataByIdAsync(int tmdbId, string? source = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/movie/{tmdbId}";
+            Logger.LogDebug("Fetching movie metadata by ID: {TmdbId}", tmdbId);
+
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+
+            // We can reuse DeserializeMovieSearchResult if we wrap the single result, but the structure matches "results" item mostly.
+            // Actually, the detail endpoint returns the object directly.
+            // Let's rely on TmdbJson helper or manual parsing if needed.
+            // Since we don't have a specific deserializer for movie details yet, let's use JsonDocument to be safe or add one.
+            // For now, let's parse minimally.
+            using var doc = JsonDocument.Parse(responseString);
+            var root = doc.RootElement;
+
+            var title = root.GetProperty("title").GetString() ?? string.Empty;
+            var releaseDate = root.TryGetProperty("release_date", out var rd) ? rd.GetString() : null;
+            var overview = root.TryGetProperty("overview", out var ov) ? ov.GetString() : null;
+            var posterPath = root.TryGetProperty("poster_path", out var pp) ? pp.GetString() : null;
+
+            return new MovieMetadata(
+                title,
+                ExtractYear(releaseDate),
+                source,
+                overview,
+                GetPosterUrl(posterPath));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching movie metadata by ID: {TmdbId}", tmdbId);
+            return null;
+        }
+    }
+
+    public async Task<TvShowMetadata?> GetTvShowMetadataByIdAsync(int tmdbId, int season, int episode, string? source = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/tv/{tmdbId}";
+            Logger.LogDebug("Fetching TV show metadata by ID: {TmdbId}", tmdbId);
+
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+
+            using var doc = JsonDocument.Parse(responseString);
+            var root = doc.RootElement;
+
+            var name = root.GetProperty("name").GetString() ?? string.Empty;
+            var firstAirDate = root.TryGetProperty("first_air_date", out var fad) ? fad.GetString() : null;
+            var showOverview = root.TryGetProperty("overview", out var ov) ? ov.GetString() : null;
+            var posterPath = root.TryGetProperty("poster_path", out var pp) ? pp.GetString() : null;
+
+            // Get episode details
+            var episodeDetails = await GetEpisodeDetailsAsync(tmdbId, season, episode, cancellationToken).ConfigureAwait(false);
+
+            return new TvShowMetadata(
+                name,
+                ExtractYear(firstAirDate),
+                season,
+                episode,
+                episodeDetails?.Name,
+                source,
+                episodeDetails?.Overview ?? showOverview,
+                GetPosterUrl(posterPath));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching TV show metadata by ID: {TmdbId}", tmdbId);
+            return null;
+        }
+    }
+
     public async Task<TmdbTvShowDetailsResponse?> GetTvShowDetailsAsync(int showId, CancellationToken cancellationToken = default)
     {
         try

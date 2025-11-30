@@ -201,6 +201,10 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ParsedYear")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SerializedRequest")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SourceFileName")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");

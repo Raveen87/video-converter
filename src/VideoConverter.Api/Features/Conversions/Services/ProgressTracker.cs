@@ -1,5 +1,3 @@
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Features.Conversions.Services;
 
 public sealed class ProgressTracker(ILogger<ProgressTracker> logger) : IProgressTracker

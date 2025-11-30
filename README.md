@@ -268,6 +268,12 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Deleted items are marked with `Deleted` status and remain visible in the Conversions view but are excluded from queue operations.
 - The deletion timestamp is stored in `deletedAtUtc` for audit purposes.
 
+#### Manual Metadata Resolution
+- When automatic metadata lookup fails (and configuration is set to `QueueForManualResolution`), items are added to a "Metadata Resolution Queue".
+- **Metadata Queue View (`/metadata-queue`)**: Lists all items pending manual resolution.
+- **Resolution Dialog**: Allows searching TMDb manually by title/year, selecting the correct match, and creating the conversion with the selected metadata.
+- **Queue Actions**: Items can be resolved or deleted (skipped).
+
 - POST `/api/profiles/{id:int}/conversions`
   - Body:
     ```json
@@ -770,4 +776,3 @@ The codebase has been refactored to improve maintainability and reduce complexit
 - Warnings-as-errors enforced; code style and analyzers enabled.
 - Target code coverage ≥ 85% overall; new/changed code should meet ≥ 85%.
 - Static analysis runs automatically in CI/CD pipelines.
-
