@@ -3,7 +3,6 @@ using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 
@@ -44,8 +43,7 @@ public sealed class ConversionService(
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
-        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request.InputPath, request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate, cancellationToken)
-            .ConfigureAwait(false);
+        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Determine audio bitrate based on audio channels
         var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
@@ -76,6 +74,57 @@ public sealed class ConversionService(
             subtitleProcessing.SubtitleIndicesCsv ?? "none",
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
             detectedCrop ?? "none");
+
+        return conversion;
+    }
+
+    public async Task<Conversion> CreateConversionWithMetadataAsync(ConversionCreateDto request, MediaMetadata metadata, CancellationToken cancellationToken)
+    {
+        logger.LogInformation(
+            "Creating conversion with forced metadata for input: {InputPath}, output: {OutputDirectory}",
+            request.InputPath,
+            request.OutputDirectory);
+
+        // Process audio language requirements
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Process subtitle language requirements
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Validate resolution against source
+        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Perform crop detection
+        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Generate filename using provided metadata
+        var extension = Path.GetExtension(request.InputPath) ?? string.Empty;
+        var template = request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate;
+        var metadataBasedFilename = template is not null
+            ? filenameTemplateEngine.Render(metadata, extension, template)
+            : filenameGenerator.GenerateFilename(metadata, extension);
+
+        logger.LogInformation("Generated metadata-based filename (forced): {GeneratedFilename}", metadataBasedFilename);
+
+        // Determine audio bitrate based on audio channels
+        var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
+
+        var conversion = new Conversion
+        {
+            InputPath = request.InputPath,
+            OutputDirectory = request.OutputDirectory,
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Pending,
+            Crf = request.Crf,
+            AudioBitrateKbps = audioBitrate,
+            AudioChannels = request.AudioChannels ?? AudioChannels.Stereo20, // Default to 2.0
+            Resolution = request.Resolution,
+            SelectedAudioStreamIndicesCsv = audioProcessing.AudioIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
+            SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
+            DetectedCrop = detectedCrop,
+            MetadataBasedFilename = metadataBasedFilename,
+        };
 
         return conversion;
     }
@@ -143,16 +192,17 @@ public sealed class ConversionService(
         return aliases;
     }
 
-    private async Task<string?> GenerateMetadataBasedFilenameAsync(string inputPath, string? template, CancellationToken cancellationToken)
+    private async Task<string?> GenerateMetadataBasedFilenameAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
         try
         {
-            logger.LogDebug("Generating metadata-based filename for: {InputPath}", inputPath);
+            logger.LogDebug("Generating metadata-based filename for: {InputPath}", request.InputPath);
 
             // Parse the filename to extract media information
-            var filename = Path.GetFileName(inputPath);
+            var filename = Path.GetFileName(request.InputPath);
             var parsedFilename = filenameParser.ParseFilename(filename);
-            var extension = Path.GetExtension(inputPath) ?? string.Empty;
+            var extension = Path.GetExtension(request.InputPath) ?? string.Empty;
+            var template = request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate;
 
             var metadata = await GetMetadataAsync(parsedFilename, cancellationToken).ConfigureAwait(false);
 
@@ -165,7 +215,7 @@ public sealed class ConversionService(
                 return generatedFilename;
             }
 
-            return await HandleFetchFailureAsync(inputPath, filename, parsedFilename, extension, template, cancellationToken).ConfigureAwait(false);
+            return await HandleFetchFailureAsync(request, filename, parsedFilename, extension, template, cancellationToken).ConfigureAwait(false);
         }
         catch (InvalidOperationException)
         {
@@ -174,8 +224,8 @@ public sealed class ConversionService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", inputPath);
-            return Path.GetFileName(inputPath);
+            logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", request.InputPath);
+            return Path.GetFileName(request.InputPath);
         }
     }
 
@@ -215,7 +265,7 @@ public sealed class ConversionService(
         return null;
     }
 
-    private async Task<string?> HandleFetchFailureAsync(string inputPath, string filename, ParsedFilename parsedFilename, string extension, string? template, CancellationToken cancellationToken)
+    private async Task<string?> HandleFetchFailureAsync(ConversionCreateDto request, string filename, ParsedFilename parsedFilename, string extension, string? template, CancellationToken cancellationToken)
     {
         switch (_metadataFetchOptions.Value.OnFailureBehavior)
         {
@@ -223,17 +273,17 @@ public sealed class ConversionService(
                 return RenderDefaultToInputNameFilename(filename, parsedFilename, extension, template);
 
             case FetchFailureBehavior.QueueForManualResolution:
-                await QueueForManualResolutionAsync(inputPath, filename, parsedFilename, cancellationToken).ConfigureAwait(false);
+                await QueueForManualResolutionAsync(request, filename, parsedFilename, cancellationToken).ConfigureAwait(false);
                 throw new InvalidOperationException("Metadata fetch failed and item queued for manual resolution.");
 
             case FetchFailureBehavior.SkipItem:
                 {
-                    logger.LogWarning("No metadata found for: {InputPath}, skipping item as per configuration", inputPath);
+                    logger.LogWarning("No metadata found for: {InputPath}, skipping item as per configuration", request.InputPath);
                     throw new InvalidOperationException("Metadata fetch failed and item skipped by configuration.");
                 }
 
             default:
-                logger.LogError("Unknown fetch-failure behavior: {Behavior}. Failing for: {InputPath}", _metadataFetchOptions.Value.OnFailureBehavior, inputPath);
+                logger.LogError("Unknown fetch-failure behavior: {Behavior}. Failing for: {InputPath}", _metadataFetchOptions.Value.OnFailureBehavior, request.InputPath);
                 throw new InvalidOperationException("Unknown fetch-failure behavior encountered in HandleFetchFailureAsync.");
         }
     }
@@ -261,9 +311,9 @@ public sealed class ConversionService(
             : filename;
     }
 
-    private async Task QueueForManualResolutionAsync(string inputPath, string filename, ParsedFilename parsedFilename, CancellationToken cancellationToken)
+    private async Task QueueForManualResolutionAsync(ConversionCreateDto request, string filename, ParsedFilename parsedFilename, CancellationToken cancellationToken)
     {
-        logger.LogWarning("No metadata found for: {InputPath}, queuing for manual resolution and skipping item", inputPath);
+        logger.LogWarning("No metadata found for: {InputPath}, queuing for manual resolution and skipping item", request.InputPath);
         if (_db is null)
         {
             throw new InvalidOperationException("Cannot queue for manual resolution because the database context (_db) is not available.");
@@ -272,7 +322,7 @@ public sealed class ConversionService(
         var now = DateTime.UtcNow;
         var item = new MetadataResolutionQueueItem
         {
-            SourcePath = inputPath,
+            SourcePath = request.InputPath,
             SourceFileName = filename,
             InputKind = parsedFilename.DetectedType.ToString(),
             ParsedTitle = parsedFilename.Title,
@@ -284,6 +334,7 @@ public sealed class ConversionService(
             Status = "Pending",
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
+            SerializedRequest = JsonSerializer.Serialize(request),
         };
         _ = _db.MetadataResolutionQueue.Add(item);
         try
@@ -292,7 +343,7 @@ public sealed class ConversionService(
         }
         catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
         {
-            logger.LogDebug(ex, "Item already queued for manual resolution: {InputPath}", inputPath);
+            logger.LogDebug(ex, "Item already queued for manual resolution: {InputPath}", request.InputPath);
         }
     }
 

@@ -1,5 +1,3 @@
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Features.Conversions.Services;
 
 public interface IProgressTracker

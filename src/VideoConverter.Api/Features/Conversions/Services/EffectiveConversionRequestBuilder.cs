@@ -1,5 +1,4 @@
 using VideoConverter.Api.Shared.Domain.Entities;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 

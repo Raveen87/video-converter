@@ -1,5 +1,3 @@
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Features.FileBrowser;
 
 public sealed class FileBrowserService(ILogger<FileBrowserService> logger) : IFileBrowserService

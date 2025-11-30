@@ -1,0 +1,135 @@
+@page "/metadata-queue"
+@using VideoConverter.Common.Models
+@using VideoConverter.Web.Components
+@using VideoConverter.Web.Services
+@inject IVideoConverterApiClient ApiClient
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">Metadata Resolution Queue</MudText>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadQueueAsync">Refresh</MudButton>
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_items.Count == 0)
+    {
+        <MudAlert Severity="Severity.Success" Variant="Variant.Filled">No items pending manual resolution.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="@_items" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>File</MudTh>
+                <MudTh>Parsed Info</MudTh>
+                <MudTh>Reason</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="File">
+                    <MudText Typo="Typo.body2">@context.SourceFileName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.SourcePath</MudText>
+                </MudTd>
+                <MudTd DataLabel="Parsed Info">
+                    @if (context.InputKind != "Unknown")
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">@context.InputKind</MudChip>
+                    }
+                    <MudText Typo="Typo.body2" Class="d-inline">
+                        @(context.ParsedTitle ?? "Unknown Title")
+                        @if (context.ParsedYear.HasValue)
+                        {
+                            <span class="ml-1">(@context.ParsedYear)</span>
+                        }
+                        @if (context.ParsedSeason.HasValue)
+                        {
+                            <span class="ml-1">S@(context.ParsedSeason)E@(context.ParsedEpisode)</span>
+                        }
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Reason">
+                    <MudTooltip Text="@context.FailureDetails">
+                        <MudText Typo="Typo.body2">@context.FailureReason</MudText>
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToLocalTime().ToString("g")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenResolveDialog(context))">Resolve</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteItem(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<MetadataResolutionQueueItemDto> _items = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQueueAsync();
+    }
+
+    private async Task LoadQueueAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var items = await ApiClient.GetMetadataQueueItemsAsync();
+            _items = items.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading queue: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenResolveDialog(MetadataResolutionQueueItemDto item)
+    {
+        var parameters = new DialogParameters<ResolveMetadataDialog> { { x => x.Item, item } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Metadata", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is bool success && success)
+        {
+            Snackbar.Add("Item resolved and conversion created.", Severity.Success);
+            await LoadQueueAsync();
+        }
+    }
+
+    private async Task DeleteItem(MetadataResolutionQueueItemDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Item",
+            "Are you sure you want to remove this item from the queue? It will be skipped.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await ApiClient.DeleteMetadataQueueItemAsync(item.Id);
+                Snackbar.Add("Item removed from queue.", Severity.Success);
+                await LoadQueueAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting item: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}
+

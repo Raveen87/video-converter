@@ -11,3 +11,5 @@ global using System.Text.RegularExpressions;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Options;
+
+global using VideoConverter.Common.Models;

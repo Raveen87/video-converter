@@ -68,6 +68,59 @@ public class FakeMetadataService : IMetadataService
         return Task.FromResult<TvShowMetadata?>(null);
     }
 
+    public Task<IEnumerable<MetadataSearchResultDto>> SearchMovieAsync(string query, int? year = null, CancellationToken cancellationToken = default)
+    {
+        var results = _movieData.Values
+            .Where(m => m.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Select(m => new MetadataSearchResultDto
+            {
+                Id = 12345, // Dummy ID
+                Title = m.Title,
+                Year = m.Year,
+                Overview = m.Overview,
+                PosterUrl = m.PosterUrl,
+                Type = MediaType.Movie,
+            });
+
+        return Task.FromResult(results);
+    }
+
+    public Task<IEnumerable<MetadataSearchResultDto>> SearchTvShowAsync(string query, int? firstAiredYear = null, CancellationToken cancellationToken = default)
+    {
+        var results = _tvShowData.Values
+            .Where(s => s.ShowName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Select(s => new MetadataSearchResultDto
+            {
+                Id = 67890, // Dummy ID
+                Title = s.ShowName,
+                Year = s.FirstAiredYear,
+                Overview = s.Overview,
+                PosterUrl = s.PosterUrl,
+                Type = MediaType.TvShow,
+            });
+
+        return Task.FromResult(results);
+    }
+
+    public Task<MovieMetadata?> GetMovieMetadataByIdAsync(int tmdbId, string? source = null, CancellationToken cancellationToken = default)
+    {
+        // For fake service, just return the first movie for now
+        var movie = _movieData.Values.FirstOrDefault();
+        return Task.FromResult(movie);
+    }
+
+    public Task<TvShowMetadata?> GetTvShowMetadataByIdAsync(int tmdbId, int season, int episode, string? source = null, CancellationToken cancellationToken = default)
+    {
+        // For fake service, just return the first show for now
+        var show = _tvShowData.Values.FirstOrDefault();
+        if (show != null)
+        {
+            show = show with { Season = season, Episode = episode };
+        }
+
+        return Task.FromResult(show);
+    }
+
     private static Dictionary<string, MovieMetadata> LoadMovieTestData()
     {
         return new Dictionary<string, MovieMetadata>(StringComparer.Ordinal)

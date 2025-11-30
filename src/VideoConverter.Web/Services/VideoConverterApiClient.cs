@@ -561,6 +561,100 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<IReadOnlyList<MetadataResolutionQueueItemDto>> GetMetadataQueueItemsAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting metadata queue items from API");
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<MetadataResolutionQueueItemDto>>(
+                "api/metadata-queue",
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            var result = response ?? Array.Empty<MetadataResolutionQueueItemDto>();
+            _logger.LogInformation("Successfully retrieved {Count} metadata queue items", result.Count);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting metadata queue items from API");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task ResolveMetadataQueueItemAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resolving metadata queue item {Id} with TmdbId {TmdbId}", id, request.TmdbId);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/metadata-queue/{id}/resolve",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Resolve metadata queue item", cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully resolved metadata queue item {Id}", id);
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving metadata queue item {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task DeleteMetadataQueueItemAsync(int id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Deleting metadata queue item {Id}", id);
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"api/metadata-queue/{id}",
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Delete metadata queue item", cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully deleted metadata queue item {Id}", id);
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting metadata queue item {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<IEnumerable<MetadataSearchResultDto>> SearchMetadataAsync(MetadataSearchRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Searching metadata for: {Query}", request.Query);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                "api/metadata/search",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Search metadata", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<MetadataSearchResultDto>>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? [];
+
+            _logger.LogInformation("Successfully searched metadata");
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching metadata for: {Query}", request.Query);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     private static List<JsonPatchOperation> CreateJsonPatchOperations(ConversionPatchDto patch)
     {
         var patchOperations = new List<JsonPatchOperation>();

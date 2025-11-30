@@ -1,5 +1,4 @@
 using VideoConverter.Api.Features.Notifications.Services;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Notifications.Api;
 

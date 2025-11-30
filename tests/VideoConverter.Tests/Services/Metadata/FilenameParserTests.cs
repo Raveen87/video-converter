@@ -1,5 +1,6 @@
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
+using VideoConverter.Common.Models;
 
 namespace VideoConverter.Tests.Services.Metadata;
 

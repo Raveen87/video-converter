@@ -3,7 +3,6 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Validation;
-using VideoConverter.Common.Models;
 
 namespace VideoConverter.Api.Features.Conversions.DependencyInjection;
 

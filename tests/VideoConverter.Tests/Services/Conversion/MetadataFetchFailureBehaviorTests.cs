@@ -7,6 +7,7 @@ using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils.Builders;
 
 namespace VideoConverter.Tests.Services.Conversion;

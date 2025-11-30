@@ -1,5 +1,3 @@
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Features.Notifications.Services;
 
 public interface INotificationService

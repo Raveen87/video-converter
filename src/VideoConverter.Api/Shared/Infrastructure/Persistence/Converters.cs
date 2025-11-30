@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-using VideoConverter.Common.Models;
-
 namespace VideoConverter.Api.Shared.Infrastructure.Persistence;
 
 public static class Converters
