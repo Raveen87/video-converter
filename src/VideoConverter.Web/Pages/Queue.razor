@@ -306,10 +306,19 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
             _stateService.RemoveConversion(tempId);
             UpdatePendingConversions();
-            Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
+
+            if (ex.Message.Contains("queued for manual resolution", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogInformation("Conversion queued for manual metadata resolution");
+                Snackbar.Add("Metadata lookup failed. Item added to Metadata Resolution Queue.", Severity.Warning);
+            }
+            else
+            {
+                Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
+                Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
+            }
         }
     }
 
