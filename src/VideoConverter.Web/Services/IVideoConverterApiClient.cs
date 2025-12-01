@@ -52,6 +52,8 @@ public interface IVideoConverterApiClient
 
     Task ResolveMetadataQueueItemAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default);
 
+    Task<ConversionDto> ResolveConversionMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default);
+
     Task DeleteMetadataQueueItemAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<MetadataSearchResultDto>> SearchMetadataAsync(MetadataSearchRequestDto request, CancellationToken cancellationToken = default);

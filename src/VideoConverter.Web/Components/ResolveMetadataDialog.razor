@@ -6,11 +6,11 @@
         <MudGrid>
             <MudItem xs="12">
                 <MudText Typo="Typo.body2" Class="mb-2">
-                    Search for the correct metadata for: <strong>@Item.SourceFileName</strong>
+                    Search for the correct metadata for: <strong>@GetSourceFileName()</strong>
                 </MudText>
-                @if (Item.InputKind != "Unknown")
+                @if (GetInputKind() != "Unknown")
                 {
-                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mb-2">@Item.InputKind</MudChip>
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mb-2">@GetInputKind()</MudChip>
                 }
             </MudItem>
             <MudItem xs="8">
@@ -79,7 +79,7 @@
             }
             else
             {
-                <text>Resolve & Create</text>
+                <text>@(Item != null ? "Resolve & Create" : "Update Metadata")</text>
             }
         </MudButton>
     </DialogActions>
@@ -94,7 +94,10 @@
     public EventCallback<bool> OnClose { get; set; }
 
     [Parameter]
-    public MetadataResolutionQueueItemDto Item { get; set; } = default!;
+    public MetadataResolutionQueueItemDto? Item { get; set; }
+
+    [Parameter]
+    public ConversionDto? Conversion { get; set; }
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -111,8 +114,29 @@
 
     protected override void OnInitialized()
     {
-        _searchQuery = Item.ParsedTitle ?? Path.GetFileNameWithoutExtension(Item.SourceFileName) ?? string.Empty;
-        _searchYear = Item.ParsedYear;
+        if (Item != null)
+        {
+            _searchQuery = Item.ParsedTitle ?? Path.GetFileNameWithoutExtension(Item.SourceFileName) ?? string.Empty;
+            _searchYear = Item.ParsedYear;
+        }
+        else if (Conversion != null)
+        {
+            _searchQuery = Conversion.MatchedTitle ?? Path.GetFileNameWithoutExtension(Conversion.InputPath) ?? string.Empty;
+            _searchYear = Conversion.MatchedYear;
+        }
+    }
+
+    private string GetSourceFileName()
+    {
+        if (Item != null) return Item.SourceFileName ?? string.Empty;
+        if (Conversion != null) return Path.GetFileName(Conversion.InputPath) ?? string.Empty;
+        return string.Empty;
+    }
+
+    private string GetInputKind()
+    {
+         if (Item != null) return Item.InputKind;
+         return "Unknown";
     }
 
     private async Task SearchAsync()
@@ -130,7 +154,8 @@
         {
             // Determine type based on input kind or default
             MediaType? type = null;
-            if (Enum.TryParse<MediaType>(Item.InputKind, out var parsedType))
+            var inputKind = GetInputKind();
+            if (Enum.TryParse<MediaType>(inputKind, out var parsedType))
             {
                 type = parsedType;
             }
@@ -173,7 +198,14 @@
                 MediaType = _selectedResult.Type
             };
 
-            await ApiClient.ResolveMetadataQueueItemAsync(Item.Id, request);
+            if (Item != null)
+            {
+                await ApiClient.ResolveMetadataQueueItemAsync(Item.Id, request);
+            }
+            else if (Conversion != null)
+            {
+                await ApiClient.ResolveConversionMetadataAsync(Conversion.Id, request);
+            }
         }
         catch (Exception ex)
         {

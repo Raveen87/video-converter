@@ -27,6 +27,7 @@ public enum ErrorCode
     ProcessStartFailed,
     MediaProbeFailed,
     CropDetectionFailed,
+    MetadataResolutionFailed,
 
     // Server errors (500)
     DatabaseError,

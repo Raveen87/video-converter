@@ -202,5 +202,10 @@ public class ConversionsEndpointsTests
                 ExternalSubtitlePathsCsv = null,
             });
         }
+
+        public Task<Conversion> UpdateMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used in this test");
+        }
     }
 }
