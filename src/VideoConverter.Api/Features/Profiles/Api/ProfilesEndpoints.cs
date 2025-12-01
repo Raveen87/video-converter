@@ -46,7 +46,6 @@ public sealed class ProfilesEndpoints(
             AudioBitrateKbps = request.AudioBitrateKbps,
             AudioChannels = request.AudioChannels,
             Resolution = request.Resolution,
-            MetadataBasedFilename = request.MetadataBasedFilename,
             OutputFilenameTemplate = request.OutputFilenameTemplate,
             AudioLanguages = request.AudioLanguages?.ToList(),
             SubtitleLanguages = request.SubtitleLanguages?.ToList(),
@@ -129,7 +128,6 @@ public sealed class ProfilesEndpoints(
             AudioBitrateKbps = profile.AudioBitrateKbps,
             AudioChannels = profile.AudioChannels,
             Resolution = profile.Resolution,
-            MetadataBasedFilename = profile.MetadataBasedFilename,
             OutputFilenameTemplate = profile.OutputFilenameTemplate,
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
@@ -146,7 +144,6 @@ public sealed class ProfilesEndpoints(
             profile.AudioBitrateKbps,
             profile.AudioChannels,
             profile.Resolution,
-            profile.MetadataBasedFilename,
             profile.OutputFilenameTemplate,
             profile.AudioLanguages,
             profile.SubtitleLanguages);
@@ -164,7 +161,6 @@ public sealed class ProfilesEndpoints(
         profile.AudioBitrateKbps = patchModel.AudioBitrateKbps;
         profile.AudioChannels = patchModel.AudioChannels;
         profile.Resolution = patchModel.Resolution;
-        profile.MetadataBasedFilename = patchModel.MetadataBasedFilename;
         profile.OutputFilenameTemplate = patchModel.OutputFilenameTemplate;
         profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
         profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();

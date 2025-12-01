@@ -11,7 +11,6 @@ public sealed class ProfileBuilder
     private int? _audioBitrateKbps;
     private AudioChannels? _audioChannels;
     private int? _resolution;
-    private string? _metadataBasedFilename;
     private IReadOnlyList<string>? _audioLanguages;
     private IReadOnlyList<string>? _subtitleLanguages;
 
@@ -45,12 +44,6 @@ public sealed class ProfileBuilder
         return this;
     }
 
-    public ProfileBuilder WithMetadataBasedFilename(string? template)
-    {
-        _metadataBasedFilename = template;
-        return this;
-    }
-
     public ProfileBuilder WithAudioLanguages(params string[] langs)
     {
         _audioLanguages = langs;
@@ -79,7 +72,6 @@ public sealed class ProfileBuilder
             AudioBitrateKbps = _audioBitrateKbps,
             AudioChannels = _audioChannels,
             Resolution = _resolution,
-            MetadataBasedFilename = _metadataBasedFilename,
             AudioLanguages = _audioLanguages is null ? null : _audioLanguages.ToList(),
             SubtitleLanguages = _subtitleLanguages is null ? null : _subtitleLanguages.ToList(),
         };

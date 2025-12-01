@@ -31,7 +31,6 @@ public sealed class ProfileCreateValidator(ILogger<ProfileCreateValidator> logge
             request.AudioBitrateKbps,
             request.AudioChannels,
             request.Resolution,
-            request.MetadataBasedFilename,
             request.AudioLanguages,
             request.SubtitleLanguages,
             fileSystemValidator,

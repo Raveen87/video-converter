@@ -7,7 +7,6 @@ public record ProfileCreateDto(
     int? AudioBitrateKbps,
     AudioChannels? AudioChannels,
     int? Resolution,
-    string? MetadataBasedFilename,
     IReadOnlyList<string>? AudioLanguages,
     IReadOnlyList<string>? SubtitleLanguages,
     string? OutputFilenameTemplate = null);

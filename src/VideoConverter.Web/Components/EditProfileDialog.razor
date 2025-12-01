@@ -20,7 +20,6 @@
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
-            <MudTextField @bind-Value="_formModel.MetadataBasedFilename" Label="Metadata Based Filename" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
@@ -90,7 +89,6 @@
         }
 
         _formModel.Resolution = Profile.Resolution;
-        _formModel.MetadataBasedFilename = Profile.MetadataBasedFilename;
         _formModel.OutputFilenameTemplate = Profile.OutputFilenameTemplate;
         _formModel.AudioLanguagesString = Profile.AudioLanguages is not null ? string.Join(", ", Profile.AudioLanguages) : null;
         _formModel.SubtitleLanguagesString = Profile.SubtitleLanguages is not null ? string.Join(", ", Profile.SubtitleLanguages) : null;
@@ -127,7 +125,6 @@
                 AudioBitrateKbps = _formModel.AudioBitrateKbps,
                 AudioChannels = _formModel.AudioChannels,
                 Resolution = _formModel.Resolution,
-                MetadataBasedFilename = _formModel.MetadataBasedFilename,
                 OutputFilenameTemplate = _formModel.OutputFilenameTemplate,
                 AudioLanguages = audioLanguages,
                 SubtitleLanguages = subtitleLanguages,
@@ -200,8 +197,6 @@
         public AudioChannels? AudioChannels { get; set; }
 
         public int? Resolution { get; set; }
-
-        public string? MetadataBasedFilename { get; set; }
 
         public string? OutputFilenameTemplate { get; set; }
 

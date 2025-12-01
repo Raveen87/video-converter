@@ -20,7 +20,6 @@
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
-            <MudTextField @bind-Value="_formModel.MetadataBasedFilename" Label="Metadata Based Filename" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
@@ -76,7 +75,6 @@
             _formModel.AudioBitrateKbps = InitialModel.AudioBitrateKbps;
             _formModel.AudioChannels = InitialModel.AudioChannels;
             _formModel.Resolution = InitialModel.Resolution;
-            _formModel.MetadataBasedFilename = InitialModel.MetadataBasedFilename;
             _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
             _formModel.SubtitleLanguagesString = InitialModel.SubtitleLanguages is not null ? string.Join(", ", InitialModel.SubtitleLanguages) : null;
@@ -111,7 +109,6 @@
                 _formModel.AudioBitrateKbps,
                 _formModel.AudioChannels,
                 _formModel.Resolution,
-                _formModel.MetadataBasedFilename,
                 audioLanguages,
                 subtitleLanguages,
                 _formModel.OutputFilenameTemplate);
@@ -183,8 +180,6 @@
         public AudioChannels? AudioChannels { get; set; }
 
         public int? Resolution { get; set; }
-
-        public string? MetadataBasedFilename { get; set; }
 
         public string? OutputFilenameTemplate { get; set; }
 

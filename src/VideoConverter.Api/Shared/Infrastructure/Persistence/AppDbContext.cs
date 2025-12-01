@@ -79,8 +79,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = profileEntity.Property(p => p.AudioChannels)
             .HasConversion(Converters.CreateAudioChannelsString())
             .HasMaxLength(32);
-        _ = profileEntity.Property(p => p.MetadataBasedFilename)
-            .HasMaxLength(1024);
         _ = profileEntity.Property(p => p.OutputFilenameTemplate)
             .HasMaxLength(1024);
 

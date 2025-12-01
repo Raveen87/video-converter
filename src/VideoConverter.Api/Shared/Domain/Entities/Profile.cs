@@ -16,8 +16,6 @@ public class Profile
 
     public int? Resolution { get; set; }
 
-    public string? MetadataBasedFilename { get; set; }
-
     public string? OutputFilenameTemplate { get; set; }
 
     public IEnumerable<string>? AudioLanguages { get; set; }

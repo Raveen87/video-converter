@@ -74,33 +74,6 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
         return true;
     }
 
-    public bool IsValidMetadataBasedFilename(string? metadataBasedFilename, out string? errorMessage)
-    {
-        errorMessage = null;
-
-        if (string.IsNullOrWhiteSpace(metadataBasedFilename))
-        {
-            return true; // Optional field, null/empty is valid
-        }
-
-        // Check for invalid characters that could cause issues in filenames
-        var invalidChars = Path.GetInvalidFileNameChars();
-        if (metadataBasedFilename.IndexOfAny(invalidChars) >= 0)
-        {
-            errorMessage = "MetadataBasedFilename contains invalid characters for filenames.";
-            return false;
-        }
-
-        // Check for reasonable length
-        if (metadataBasedFilename.Length > 200)
-        {
-            errorMessage = "MetadataBasedFilename is too long (maximum 200 characters).";
-            return false;
-        }
-
-        return true;
-    }
-
     public bool IsValidFilenameTemplate(string? template, out string? errorMessage)
     {
         errorMessage = null;
