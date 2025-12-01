@@ -22,7 +22,6 @@ public class ProfileCreateValidatorTests
             192,
             AudioChannels: null,
             1080,
-            MetadataBasedFilename: "bla",
             AudioLanguages: null,
             SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
@@ -42,7 +41,7 @@ public class ProfileCreateValidatorTests
     [Fact]
     public async Task ValidateAsync_WithInvalidValues_ReturnsErrors()
     {
-        var dto = new ProfileCreateDto("Test Profile", "C:/invalid<>dir", 100, 0, (AudioChannels)99, 1440, "|invalid|", AudioLanguages: null, SubtitleLanguages: null);
+        var dto = new ProfileCreateDto("Test Profile", "C:/invalid<>dir", 100, 0, (AudioChannels)99, 1440, AudioLanguages: null, SubtitleLanguages: null);
         var result = await _validator.ValidateAsync(dto, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();
     }

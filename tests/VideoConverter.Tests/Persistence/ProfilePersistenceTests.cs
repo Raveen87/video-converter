@@ -21,7 +21,6 @@ public class ProfilePersistenceTests
             AudioBitrateKbps = 192,
             AudioChannels = AudioChannels.Surround51,
             Resolution = 2160,
-            MetadataBasedFilename = "Movie.Title.2160p.mkv",
             AudioLanguages = ["en", "sv"],
             SubtitleLanguages = ["sv"],
         };
@@ -37,7 +36,6 @@ public class ProfilePersistenceTests
         _ = storedProfile.AudioBitrateKbps.Should().Be(192);
         _ = storedProfile.AudioChannels.Should().Be(AudioChannels.Surround51);
         _ = storedProfile.Resolution.Should().Be(2160);
-        _ = storedProfile.MetadataBasedFilename.Should().Be("Movie.Title.2160p.mkv");
         _ = storedProfile.AudioLanguages.Should().BeEquivalentTo("en", "sv");
         _ = storedProfile.SubtitleLanguages.Should().BeEquivalentTo("sv");
     }
@@ -54,7 +52,6 @@ public class ProfilePersistenceTests
             AudioBitrateKbps = null,
             AudioChannels = null,
             Resolution = null,
-            MetadataBasedFilename = null,
             AudioLanguages = null,
             SubtitleLanguages = null,
         };
@@ -70,7 +67,6 @@ public class ProfilePersistenceTests
         _ = storedProfile.AudioBitrateKbps.Should().BeNull();
         _ = storedProfile.AudioChannels.Should().BeNull();
         _ = storedProfile.Resolution.Should().BeNull();
-        _ = storedProfile.MetadataBasedFilename.Should().BeNull();
         _ = storedProfile.AudioLanguages.Should().BeNull();
         _ = storedProfile.SubtitleLanguages.Should().BeNull();
     }

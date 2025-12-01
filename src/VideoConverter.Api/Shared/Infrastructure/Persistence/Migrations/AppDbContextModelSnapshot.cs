@@ -299,10 +299,6 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Crf")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("MetadataBasedFilename")
-                        .HasMaxLength(1024)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)

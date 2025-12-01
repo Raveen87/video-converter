@@ -10,7 +10,6 @@ internal static class ProfileValidationHelper
         int? audioBitrateKbps,
         AudioChannels? audioChannels,
         int? resolution,
-        string? metadataBasedFilename,
         IEnumerable<string>? audioLanguages,
         IEnumerable<string>? subtitleLanguages,
         IFileSystemValidator fileSystemValidator,
@@ -34,9 +33,6 @@ internal static class ProfileValidationHelper
 
         _ = requestPropertyValidator.IsValidAudioChannels(audioChannels, out var acErr);
         result.AddIfInvalid(acErr is null, nameof(audioChannels), acErr, logger);
-
-        _ = requestPropertyValidator.IsValidMetadataBasedFilename(metadataBasedFilename, out var mbfErr);
-        result.AddIfInvalid(mbfErr is null, nameof(metadataBasedFilename), mbfErr, logger);
 
         _ = requestPropertyValidator.IsValidLanguageList(audioLanguages, out var alErr);
         result.AddIfInvalid(alErr is null, nameof(audioLanguages), alErr, logger);
