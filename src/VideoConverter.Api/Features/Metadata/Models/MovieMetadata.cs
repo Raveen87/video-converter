@@ -5,5 +5,6 @@ public record MovieMetadata(
     int Year,
     string? Source = null,
     string? Overview = null,
-    string? PosterUrl = null
-) : MediaMetadata(MediaType.Movie);
+    string? PosterUrl = null,
+    int? TmdbId = null
+) : MediaMetadata(MediaType.Movie, TmdbId);

@@ -48,6 +48,18 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("MatchedEpisode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MatchedSeason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MatchedTitle")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MatchedYear")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MetadataBasedFilename")
                         .HasColumnType("TEXT");
 
@@ -79,6 +91,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("TmdbId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

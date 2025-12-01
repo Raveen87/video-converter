@@ -98,7 +98,12 @@ public sealed class AudioChannelsConverterTests
             AudioChannels: AudioChannels.Stereo20,
             Resolution: null,
             MetadataBasedFilename: null,
-            DeletedAtUtc: null);
+            DeletedAtUtc: null,
+            TmdbId: null,
+            MatchedTitle: null,
+            MatchedYear: null,
+            MatchedSeason: null,
+            MatchedEpisode: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -127,7 +132,12 @@ public sealed class AudioChannelsConverterTests
             AudioChannels: null,
             Resolution: null,
             MetadataBasedFilename: null,
-            DeletedAtUtc: null);
+            DeletedAtUtc: null,
+            TmdbId: null,
+            MatchedTitle: null,
+            MatchedYear: null,
+            MatchedSeason: null,
+            MatchedEpisode: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

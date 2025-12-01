@@ -8,5 +8,6 @@ public record TvShowMetadata(
     string? EpisodeTitle = null,
     string? Source = null,
     string? Overview = null,
-    string? PosterUrl = null
-) : MediaMetadata(MediaType.TvShow);
+    string? PosterUrl = null,
+    int? TmdbId = null
+) : MediaMetadata(MediaType.TvShow, TmdbId);

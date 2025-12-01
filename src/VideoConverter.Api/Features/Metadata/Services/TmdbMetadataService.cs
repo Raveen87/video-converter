@@ -29,7 +29,8 @@ public class TmdbMetadataService(
                     ExtractYear(movie.ReleaseDate),
                     source,
                     movie.Overview,
-                    GetPosterUrl(movie.PosterPath));
+                    GetPosterUrl(movie.PosterPath),
+                    movie.Id);
             }
 
             Logger.LogWarning("No movie found for: {Title} (Year: {Year})", title, year);
@@ -70,7 +71,8 @@ public class TmdbMetadataService(
                     episodeDetails?.Name,
                     source,
                     episodeDetails?.Overview ?? show.Overview,
-                    GetPosterUrl(show.PosterPath));
+                    GetPosterUrl(show.PosterPath),
+                    show.Id);
             }
 
             var fallback = await TryBuildTvShowMetadataFromSearchJsonAsync(responseString, showName, season, episode, source, cancellationToken).ConfigureAwait(false);
@@ -186,7 +188,8 @@ public class TmdbMetadataService(
                 ExtractYear(releaseDate),
                 source,
                 overview,
-                GetPosterUrl(posterPath));
+                GetPosterUrl(posterPath),
+                tmdbId);
         }
         catch (Exception ex)
         {
@@ -223,7 +226,8 @@ public class TmdbMetadataService(
                 episodeDetails?.Name,
                 source,
                 episodeDetails?.Overview ?? showOverview,
-                GetPosterUrl(posterPath));
+                GetPosterUrl(posterPath),
+                tmdbId);
         }
         catch (Exception ex)
         {
@@ -301,7 +305,8 @@ public class TmdbMetadataService(
                         episodeDetails?.Name,
                         source,
                         episodeDetails?.Overview ?? overview,
-                        GetPosterUrl(poster));
+                        GetPosterUrl(poster),
+                        id);
                 }
             }
         }

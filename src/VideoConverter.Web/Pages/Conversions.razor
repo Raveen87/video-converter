@@ -32,9 +32,35 @@
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.Id</MudTd>
                 <MudTd DataLabel="Input Path">
-                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
+                    @if (!string.IsNullOrEmpty(context.MatchedTitle))
+                    {
+                        <div class="d-flex align-center gap-1 flex-wrap">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                @context.MatchedTitle
+                                @if (context.MatchedYear.HasValue)
+                                {
+                                    <span class="ml-1">(@context.MatchedYear)</span>
+                                }
+                            </MudText>
+                            @if (context.MatchedSeason.HasValue)
+                            {
+                                <MudText Typo="Typo.caption">S@(context.MatchedSeason)E@(context.MatchedEpisode)</MudText>
+                            }
+                            @if (context.TmdbId.HasValue)
+                            {
+                                <MudLink Href="@GetTmdbLink(context)" Target="_blank" Typo="Typo.caption" Class="ml-2">TMDb</MudLink>
+                            }
+                        </div>
+                    }
+                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;" Color="@(string.IsNullOrEmpty(context.MatchedTitle) ? Color.Default : Color.Secondary)">
                         @context.InputPath
                     </MudText>
+                    @if (!string.IsNullOrEmpty(context.MetadataBasedFilename))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Primary">
+                            Output: @context.MetadataBasedFilename
+                        </MudText>
+                    }
                 </MudTd>
                 <MudTd DataLabel="Output Directory">
                     <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
@@ -193,6 +219,15 @@
             ConversionStatus.Deleted => "status-deleted",
             _ => "",
         };
+    }
+
+    private static string GetTmdbLink(ConversionDto item)
+    {
+        if (item.MatchedSeason.HasValue)
+        {
+            return $"https://www.themoviedb.org/tv/{item.TmdbId}";
+        }
+        return $"https://www.themoviedb.org/movie/{item.TmdbId}";
     }
 
     public void Dispose()

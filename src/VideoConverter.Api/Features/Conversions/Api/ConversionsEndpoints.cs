@@ -75,7 +75,12 @@ public sealed class ConversionsEndpoints(
             conversion.AudioChannels,
             conversion.Resolution,
             conversion.MetadataBasedFilename,
-            conversion.DeletedAtUtc);
+            conversion.DeletedAtUtc,
+            conversion.TmdbId,
+            conversion.MatchedTitle,
+            conversion.MatchedYear,
+            conversion.MatchedSeason,
+            conversion.MatchedEpisode);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)

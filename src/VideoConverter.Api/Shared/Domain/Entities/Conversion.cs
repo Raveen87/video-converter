@@ -33,4 +33,14 @@ public class Conversion
     public string? DetectedCrop { get; set; } // format: "w:h:x:y"
 
     public string? MetadataBasedFilename { get; set; } // filename based on metadata lookup
+
+    public int? TmdbId { get; set; }
+
+    public string? MatchedTitle { get; set; }
+
+    public int? MatchedYear { get; set; }
+
+    public int? MatchedSeason { get; set; }
+
+    public int? MatchedEpisode { get; set; }
 }

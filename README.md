@@ -57,7 +57,10 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "audioChannels": "Stereo20",
         "resolution": 720,
         "metadataBasedFilename": "Inception.2010.mp4",
-        "deletedAtUtc": null
+        "deletedAtUtc": null,
+        "tmdbId": 27205,
+        "matchedTitle": "Inception",
+        "matchedYear": 2010
       }
     ]
     ```
@@ -249,6 +252,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Primary view for managing the conversion queue
 - Shows the currently running conversion with live progress updates
 - Lists all pending conversions in a draggable queue
+- **Rich Metadata Display**: Shows matched movie/TV show titles, release years, season/episode numbers, and provides direct links to TMDb.
 - Provides controls to start, pause, resume, and stop the queue
 - Allows reordering pending conversions via drag and drop (click **Save Queue Order** to persist)
 - Supports creating new conversions and queueing directories
@@ -259,6 +263,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Read-only browser of all conversions in the database
 - Shows all conversions (current, pending, finished, deleted, failed)
 - Displays live progress for running conversions
+- **Rich Metadata Display**: Shows matched movie/TV show titles, release years, season/episode numbers, and provides direct links to TMDb.
 - Allows editing conversion settings
 - Does not provide queue management controls (start/pause/stop)
 - Does not allow creating new conversions or queueing directories
@@ -614,7 +619,7 @@ The API includes a global exception handler middleware that automatically conver
 - `UnauthorizedAccessException` → Forbidden error
 - `TimeoutException` → Server error
 - `ApiError` → Used directly (already structured)
-- Other exceptions → Generic server error
+- `Other exceptions` → Generic server error
 
 ### Notes
 - Compiler/analyzer warnings are treated as errors via `Directory.Build.props`.
