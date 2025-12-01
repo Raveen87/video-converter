@@ -547,6 +547,52 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task MarkNotificationAsReadAsync(int id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Marking notification {Id} as read", id);
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                $"api/notifications/{id}/read",
+                content: null,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, $"Mark notification {id} as read", cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Successfully marked notification {Id} as read", id);
+        }
+#pragma warning disable S2139
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking notification {Id} as read", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task MarkAllNotificationsAsReadAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Marking all notifications as read");
+        try
+        {
+            var response = await _httpClient.PostAsync(
+                "api/notifications/read-all",
+                content: null,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Mark all notifications as read", cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Successfully marked all notifications as read");
+        }
+#pragma warning disable S2139
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking all notifications as read");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task ClearNotificationsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Clearing all notifications");

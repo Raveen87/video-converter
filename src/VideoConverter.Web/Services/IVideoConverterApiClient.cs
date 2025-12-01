@@ -42,6 +42,10 @@ public interface IVideoConverterApiClient
 
     Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(CancellationToken cancellationToken = default);
 
+    Task MarkNotificationAsReadAsync(int id, CancellationToken cancellationToken = default);
+
+    Task MarkAllNotificationsAsReadAsync(CancellationToken cancellationToken = default);
+
     Task ClearNotificationsAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<MetadataResolutionQueueItemDto>> GetMetadataQueueItemsAsync(CancellationToken cancellationToken = default);

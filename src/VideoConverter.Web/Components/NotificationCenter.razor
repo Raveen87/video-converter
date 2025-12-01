@@ -3,23 +3,25 @@
 
 <MudMenu>
     <ActivatorContent>
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit">
-            @if (_unreadCount > 0)
-            {
-                <MudBadge Content="@_unreadCount" Color="Color.Error" Overlap="true">
-                </MudBadge>
-            }
-        </MudIconButton>
+        <MudBadge Content="@_unreadCount" Color="Color.Error" Overlap="true" Visible="@(_unreadCount > 0)">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        </MudBadge>
     </ActivatorContent>
     <ChildContent>
         <MudPaper Elevation="4" Style="max-height: 500px; overflow-y: auto; width: 400px;">
             <MudStack Spacing="2" Style="padding: 16px;">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.h6">Notifications</MudText>
-                    @if (_notifications.Count > 0)
-                    {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ClearAllAsync">Clear All</MudButton>
-                    }
+                    <MudStack Row="true" Spacing="1">
+                        @if (_unreadCount > 0)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="MarkAllAsReadAsync" Color="Color.Primary">Mark Read</MudButton>
+                        }
+                        @if (_notifications.Count > 0)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ClearAllAsync">Clear All</MudButton>
+                        }
+                    </MudStack>
                 </MudStack>
                 @if (_isLoading)
                 {
@@ -33,7 +35,7 @@
                 {
                     @foreach (var notification in _notifications)
                     {
-                        <MudCard Elevation="1">
+                        <MudCard Elevation="@(notification.IsRead ? 1 : 3)" Class="@(notification.IsRead ? "" : "mud-alert-text-info")">
                             <MudCardContent>
                                 <MudStack Spacing="1">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -96,6 +98,26 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error clearing notifications");
+        }
+    }
+
+    private async Task MarkAllAsReadAsync()
+    {
+        try
+        {
+            await ApiClient.MarkAllNotificationsAsReadAsync().ConfigureAwait(false);
+            foreach (var notification in _notifications)
+            {
+                // Assuming NotificationDto is a record (immutable), we might need to replace the list or use a class.
+                // Looking at NotificationDto definition, it's a record. So we can't mutate IsRead.
+                // We need to reload notifications or create new list with updated status.
+            }
+            // For now, let's just reload. It's simpler.
+            await LoadNotificationsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error marking notifications as read");
         }
     }
 

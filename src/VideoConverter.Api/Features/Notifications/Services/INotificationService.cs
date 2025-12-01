@@ -6,5 +6,9 @@ public interface INotificationService
 
     Task<IReadOnlyList<NotificationDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    Task MarkAsReadAsync(int id, CancellationToken cancellationToken = default);
+
+    Task MarkAllAsReadAsync(CancellationToken cancellationToken = default);
+
     Task ClearAllAsync(CancellationToken cancellationToken = default);
 }

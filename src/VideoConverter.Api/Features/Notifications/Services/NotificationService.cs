@@ -52,6 +52,47 @@ public sealed class NotificationService(AppDbContext db, ILogger<NotificationSer
         return notifications;
     }
 
+    public async Task MarkAsReadAsync(int id, CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Marking notification {Id} as read", id);
+
+        var notification = await db.Notifications.FindAsync([id], cancellationToken).ConfigureAwait(false);
+        if (notification is null)
+        {
+            logger.LogWarning("Notification {Id} not found", id);
+            return;
+        }
+
+        notification.IsRead = true;
+        _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation("Marked notification {Id} as read", id);
+    }
+
+    public async Task MarkAllAsReadAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Marking all notifications as read");
+
+        var notifications = await db.Notifications
+            .Where(n => !n.IsRead)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (notifications.Count is 0)
+        {
+            return;
+        }
+
+        foreach (var notification in notifications)
+        {
+            notification.IsRead = true;
+        }
+
+        _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation("Marked {Count} notifications as read", notifications.Count);
+    }
+
     public async Task ClearAllAsync(CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Clearing all notifications");

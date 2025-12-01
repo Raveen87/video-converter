@@ -15,6 +15,16 @@ public sealed class FakeNotificationService : INotificationService
         return Task.FromResult<IReadOnlyList<NotificationDto>>(Array.Empty<NotificationDto>());
     }
 
+    public Task MarkAsReadAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task MarkAllAsReadAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task ClearAllAsync(CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;

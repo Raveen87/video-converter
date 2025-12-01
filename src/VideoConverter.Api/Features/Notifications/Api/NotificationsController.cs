@@ -14,6 +14,22 @@ public sealed class NotificationsController(INotificationService notificationSer
         return Ok(notifications);
     }
 
+    [HttpPost("{id}/read")]
+    public async Task<ActionResult> MarkAsRead(int id, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Marking notification {Id} as read", id);
+        await notificationService.MarkAsReadAsync(id, cancellationToken).ConfigureAwait(false);
+        return NoContent();
+    }
+
+    [HttpPost("read-all")]
+    public async Task<ActionResult> MarkAllAsRead(CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Marking all notifications as read");
+        await notificationService.MarkAllAsReadAsync(cancellationToken).ConfigureAwait(false);
+        return NoContent();
+    }
+
     [HttpDelete]
     public async Task<ActionResult> ClearNotifications(CancellationToken cancellationToken)
     {
