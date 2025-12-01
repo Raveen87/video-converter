@@ -99,7 +99,12 @@ public sealed class ProfileConversionsEndpoints(
             c.AudioChannels,
             c.Resolution,
             c.MetadataBasedFilename,
-            c.DeletedAtUtc);
+            c.DeletedAtUtc,
+            c.TmdbId,
+            c.MatchedTitle,
+            c.MatchedYear,
+            c.MatchedSeason,
+            c.MatchedEpisode);
     }
 
     private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)

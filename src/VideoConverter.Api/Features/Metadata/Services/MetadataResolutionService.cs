@@ -41,6 +41,12 @@ public class MetadataResolutionService(
             throw new InvalidOperationException($"Could not fetch metadata for TmdbId {request.TmdbId} ({request.MediaType}).");
         }
 
+        logger.LogInformation(
+            "Fetched metadata for resolution: Type={Type}, TmdbId={TmdbId}, Title={Title}",
+            metadata.Type,
+            metadata.TmdbId,
+            metadata is MovieMetadata m ? m.Title : (metadata as TvShowMetadata)?.ShowName);
+
         // Create conversion
         var conversion = await conversionService.CreateConversionWithMetadataAsync(conversionRequest, metadata, cancellationToken).ConfigureAwait(false);
 

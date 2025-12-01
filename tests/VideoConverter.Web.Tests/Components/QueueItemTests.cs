@@ -30,6 +30,11 @@ public sealed class QueueItemTests : BunitContext
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null);
 
         // Act
@@ -165,6 +170,11 @@ public sealed class QueueItemTests : BunitContext
             $"output-{id}",
             DateTime.UtcNow,
             ConversionStatus.Pending,
+            null,
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,

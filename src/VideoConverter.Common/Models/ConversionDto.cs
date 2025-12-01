@@ -11,4 +11,9 @@ public record ConversionDto(
     AudioChannels? AudioChannels,
     int? Resolution,
     string? MetadataBasedFilename,
-    DateTime? DeletedAtUtc);
+    DateTime? DeletedAtUtc,
+    int? TmdbId,
+    string? MatchedTitle,
+    int? MatchedYear,
+    int? MatchedSeason,
+    int? MatchedEpisode);

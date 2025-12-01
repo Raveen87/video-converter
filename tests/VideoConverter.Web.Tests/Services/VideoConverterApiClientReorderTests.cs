@@ -18,9 +18,9 @@ public sealed class VideoConverterApiClientReorderTests
         var orderedIds = new[] { 1, 2, 3 };
         var expectedResponse = new[]
         {
-            new ConversionDto(1, "a.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null),
-            new ConversionDto(2, "b.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null),
-            new ConversionDto(3, "c.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null),
+            new ConversionDto(1, "a.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null),
+            new ConversionDto(2, "b.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null),
+            new ConversionDto(3, "c.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null),
         };
 
         var handler = new Mock<HttpMessageHandler>();

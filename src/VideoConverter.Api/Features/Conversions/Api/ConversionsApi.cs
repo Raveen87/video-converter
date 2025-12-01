@@ -747,7 +747,12 @@ public sealed class ConversionsApi : ControllerBase
             c.AudioChannels,
             c.Resolution,
             c.MetadataBasedFilename,
-            c.DeletedAtUtc);
+            c.DeletedAtUtc,
+            c.TmdbId,
+            c.MatchedTitle,
+            c.MatchedYear,
+            c.MatchedSeason,
+            c.MatchedEpisode);
     }
 
     private static void ThrowConversionStartError(ConversionStartResult result)

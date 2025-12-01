@@ -47,7 +47,7 @@ public sealed class ConversionService(
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
-        var metadataBasedFilename = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
+        var (metadataBasedFilename, metadata) = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Determine audio bitrate based on audio channels
         var audioBitrate = DetermineAudioBitrate(request.AudioBitrateKbps, request.AudioChannels);
@@ -67,17 +67,23 @@ public sealed class ConversionService(
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
             MetadataBasedFilename = metadataBasedFilename,
+            TmdbId = metadata?.TmdbId,
         };
 
-        logger.LogInformation(
-            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
-            conversion.Crf,
-            conversion.AudioBitrateKbps,
-            conversion.Resolution,
-            audioProcessing.AudioIndicesCsv ?? "none",
-            subtitleProcessing.SubtitleIndicesCsv ?? "none",
-            subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
-            detectedCrop ?? "none");
+        if (metadata is MovieMetadata movie)
+        {
+            conversion.MatchedTitle = movie.Title;
+            conversion.MatchedYear = movie.Year;
+        }
+        else if (metadata is TvShowMetadata tv)
+        {
+            conversion.MatchedTitle = tv.ShowName;
+            conversion.MatchedYear = tv.FirstAiredYear;
+            conversion.MatchedSeason = tv.Season;
+            conversion.MatchedEpisode = tv.Episode;
+        }
+
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
 
         return conversion;
     }
@@ -85,9 +91,10 @@ public sealed class ConversionService(
     public async Task<Conversion> CreateConversionWithMetadataAsync(ConversionCreateDto request, MediaMetadata metadata, CancellationToken cancellationToken)
     {
         logger.LogInformation(
-            "Creating conversion with forced metadata for input: {InputPath}, output: {OutputDirectory}",
+            "Creating conversion with forced metadata for input: {InputPath}, output: {OutputDirectory}, MetadataTmdbId={TmdbId}",
             request.InputPath,
-            request.OutputDirectory);
+            request.OutputDirectory,
+            metadata.TmdbId);
 
         // Process audio language requirements
         var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
@@ -102,12 +109,7 @@ public sealed class ConversionService(
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Generate filename using provided metadata
-        var extension = Path.GetExtension(request.InputPath) ?? string.Empty;
-        var template = request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate;
-        var metadataBasedFilename = template is not null
-            ? filenameTemplateEngine.Render(metadata, extension, template)
-            : filenameGenerator.GenerateFilename(metadata, extension);
-
+        var metadataBasedFilename = GenerateFilenameFromMetadata(request, metadata);
         logger.LogInformation("Generated metadata-based filename (forced): {GeneratedFilename}", metadataBasedFilename);
 
         // Determine audio bitrate based on audio channels
@@ -128,7 +130,23 @@ public sealed class ConversionService(
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
             MetadataBasedFilename = metadataBasedFilename,
+            TmdbId = metadata.TmdbId,
         };
+
+        if (metadata is MovieMetadata movie)
+        {
+            conversion.MatchedTitle = movie.Title;
+            conversion.MatchedYear = movie.Year;
+        }
+        else if (metadata is TvShowMetadata tv)
+        {
+            conversion.MatchedTitle = tv.ShowName;
+            conversion.MatchedYear = tv.FirstAiredYear;
+            conversion.MatchedSeason = tv.Season;
+            conversion.MatchedEpisode = tv.Episode;
+        }
+
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
 
         return conversion;
     }
@@ -196,7 +214,16 @@ public sealed class ConversionService(
         return aliases;
     }
 
-    private async Task<string?> GenerateMetadataBasedFilenameAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private string GenerateFilenameFromMetadata(ConversionCreateDto request, MediaMetadata metadata)
+    {
+        var extension = Path.GetExtension(request.InputPath) ?? string.Empty;
+        var template = request.OutputFilenameTemplate ?? filenameTemplateOptions.Value.DefaultTemplate;
+        return template is not null
+            ? filenameTemplateEngine.Render(metadata, extension, template)
+            : filenameGenerator.GenerateFilename(metadata, extension);
+    }
+
+    private async Task<(string? Filename, MediaMetadata? Metadata)> GenerateMetadataBasedFilenameAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
         try
         {
@@ -216,7 +243,7 @@ public sealed class ConversionService(
                     ? filenameTemplateEngine.Render(metadata, extension, template)
                     : filenameGenerator.GenerateFilename(metadata, extension);
                 logger.LogInformation("Generated metadata-based filename: {GeneratedFilename}", generatedFilename);
-                return generatedFilename;
+                return (generatedFilename, metadata);
             }
 
             return await HandleFetchFailureAsync(request, filename, parsedFilename, extension, template, cancellationToken).ConfigureAwait(false);
@@ -234,7 +261,7 @@ public sealed class ConversionService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to generate metadata-based filename for: {InputPath}, using original filename", request.InputPath);
-            return Path.GetFileName(request.InputPath);
+            return (Path.GetFileName(request.InputPath), null);
         }
     }
 
@@ -274,7 +301,7 @@ public sealed class ConversionService(
         return null;
     }
 
-    private async Task<string?> HandleFetchFailureAsync(ConversionCreateDto request, string filename, ParsedFilename parsedFilename, string extension, string? template, CancellationToken cancellationToken)
+    private async Task<(string? Filename, MediaMetadata? Metadata)> HandleFetchFailureAsync(ConversionCreateDto request, string filename, ParsedFilename parsedFilename, string extension, string? template, CancellationToken cancellationToken)
     {
         switch (_metadataFetchOptions.Value.OnFailureBehavior)
         {
@@ -309,15 +336,16 @@ public sealed class ConversionService(
         }
     }
 
-    private string RenderDefaultToInputNameFilename(string filename, ParsedFilename parsedFilename, string extension, string? template)
+    private (string Filename, MediaMetadata Metadata) RenderDefaultToInputNameFilename(string filename, ParsedFilename parsedFilename, string extension, string? template)
     {
         logger.LogWarning("No metadata found for: {Filename}, defaulting to input name/template", filename);
         if (parsedFilename.DetectedType is MediaType.Movie)
         {
             var movie = new MovieMetadata(parsedFilename.Title ?? Path.GetFileNameWithoutExtension(filename), parsedFilename.Year ?? 0, parsedFilename.Source);
-            return template is not null
+            var result = template is not null
                 ? filenameTemplateEngine.Render(movie, extension, template)
                 : filename;
+            return (result, movie);
         }
 
         var tv = new TvShowMetadata(
@@ -327,9 +355,10 @@ public sealed class ConversionService(
             parsedFilename.Episode ?? 1,
             parsedFilename.EpisodeTitle,
             parsedFilename.Source);
-        return template is not null
+        var resultTv = template is not null
             ? filenameTemplateEngine.Render(tv, extension, template)
             : filename;
+        return (resultTv, tv);
     }
 
     private async Task QueueForManualResolutionAsync(ConversionCreateDto request, string filename, ParsedFilename parsedFilename, CancellationToken cancellationToken)
@@ -633,6 +662,19 @@ public sealed class ConversionService(
             SubtitleIndicesCsv = indicesCsv,
             ExternalSubtitlePathsCsv = null,
         };
+    }
+
+    private void LogConversionCreated(Conversion conversion, AudioProcessingResult audioProcessing, SubtitleProcessingResult subtitleProcessing, string? detectedCrop)
+    {
+        logger.LogInformation(
+            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
+            conversion.Crf,
+            conversion.AudioBitrateKbps,
+            conversion.Resolution,
+            audioProcessing.AudioIndicesCsv ?? "none",
+            subtitleProcessing.SubtitleIndicesCsv ?? "none",
+            subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
+            detectedCrop ?? "none");
     }
 
     private sealed record AudioProcessingResult
