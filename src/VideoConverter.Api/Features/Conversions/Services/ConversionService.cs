@@ -151,6 +151,50 @@ public sealed class ConversionService(
         return conversion;
     }
 
+    public async Task<Conversion> UpdateMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken)
+    {
+        if (_db is null)
+        {
+            throw new InvalidOperationException("Database context is not available.");
+        }
+
+        var conversion = await _db.Conversions.FindAsync([id], cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Conversion with ID {id} not found.");
+
+        if (conversion.Status is not ConversionStatus.Pending)
+        {
+            throw ApiErrorException.BusinessError(
+                ErrorCode.InvalidConversionState,
+                "Can only update metadata for pending conversions.",
+                $"Conversion {id} is in status {conversion.Status} and cannot be modified.");
+        }
+
+        logger.LogInformation("Updating metadata for conversion {ConversionId} to TmdbId {TmdbId} ({MediaType})", id, request.TmdbId, request.MediaType);
+
+        // Re-parse filename to get S/E info if needed
+        var filename = Path.GetFileName(conversion.InputPath);
+        var parsedFilename = filenameParser.ParseFilename(filename);
+
+        var metadata = await FetchMetadataForUpdateAsync(request, parsedFilename, conversion, cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException($"Could not fetch metadata for TmdbId {request.TmdbId} ({request.MediaType}).");
+
+        // Update conversion fields
+        conversion.TmdbId = metadata.TmdbId;
+        UpdateConversionWithMetadata(conversion, metadata);
+
+        // Regenerate filename using default template
+        var extension = Path.GetExtension(conversion.InputPath) ?? string.Empty;
+        var template = filenameTemplateOptions.Value.DefaultTemplate;
+
+        conversion.MetadataBasedFilename = template is not null
+            ? filenameTemplateEngine.Render(metadata, extension, template)
+            : filenameGenerator.GenerateFilename(metadata, extension);
+
+        _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation("Successfully updated metadata for conversion {ConversionId}.", id);
+        return conversion;
+    }
+
     public async Task<LanguageProcessingResult> ProcessLanguagesAsync(
         string inputPath,
         IEnumerable<string>? audioLanguages,
@@ -174,15 +218,22 @@ public sealed class ConversionService(
         };
     }
 
-    private static (string Language, bool IsOptional) ParseLanguageRequest(string request)
+    private static void UpdateConversionWithMetadata(Conversion conversion, MediaMetadata metadata)
     {
-        var trimmed = request.Trim();
-        if (trimmed.EndsWith('?'))
+        if (metadata is MovieMetadata movie)
         {
-            return (trimmed[..^1].TrimEnd(), true);
+            conversion.MatchedTitle = movie.Title;
+            conversion.MatchedYear = movie.Year;
+            conversion.MatchedSeason = null;
+            conversion.MatchedEpisode = null;
         }
-
-        return (trimmed, false);
+        else if (metadata is TvShowMetadata tv)
+        {
+            conversion.MatchedTitle = tv.ShowName;
+            conversion.MatchedYear = tv.FirstAiredYear;
+            conversion.MatchedSeason = tv.Season;
+            conversion.MatchedEpisode = tv.Episode;
+        }
     }
 
     private static int DetermineAudioBitrate(int? requestedBitrate, AudioChannels? audioChannels)
@@ -212,6 +263,36 @@ public sealed class ConversionService(
     {
         var aliases = LanguageMatchEngine.GetAliasesForLanguage(language);
         return aliases;
+    }
+
+    private static (string Language, bool IsOptional) ParseLanguageRequest(string request)
+    {
+        var trimmed = request.Trim();
+        if (trimmed.EndsWith('?'))
+        {
+            return (trimmed[..^1].TrimEnd(), true);
+        }
+
+        return (trimmed, false);
+    }
+
+    private async Task<MediaMetadata?> FetchMetadataForUpdateAsync(ResolveMetadataRequestDto request, ParsedFilename parsedFilename, Conversion conversion, CancellationToken cancellationToken)
+    {
+        if (request.MediaType is MediaType.Movie)
+        {
+            return await metadataService.GetMovieMetadataByIdAsync(request.TmdbId, parsedFilename.Source, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (request.MediaType is MediaType.TvShow)
+        {
+            // Use existing match S/E if available, otherwise parse from filename, otherwise default to 1
+            var season = conversion.MatchedSeason ?? parsedFilename.Season ?? 1;
+            var episode = conversion.MatchedEpisode ?? parsedFilename.Episode ?? 1;
+
+            return await metadataService.GetTvShowMetadataByIdAsync(request.TmdbId, season, episode, parsedFilename.Source, cancellationToken).ConfigureAwait(false);
+        }
+
+        return null;
     }
 
     private string GenerateFilenameFromMetadata(ConversionCreateDto request, MediaMetadata metadata)

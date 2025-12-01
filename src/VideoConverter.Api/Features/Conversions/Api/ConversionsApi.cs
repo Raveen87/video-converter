@@ -524,6 +524,40 @@ public sealed class ConversionsApi : ControllerBase
         return await handlers.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
     }
 
+    [HttpPost("{id:int}/resolve-metadata")]
+    public async Task<IResult> ResolveMetadataAsync(
+        int id,
+        [FromBody] ResolveMetadataRequestDto request,
+        [FromServices] IConversionService conversionService,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+        logger.LogDebug("Resolving metadata for conversion {ConversionId}", id);
+
+        try
+        {
+            var updated = await conversionService.UpdateMetadataAsync(id, request, ct).ConfigureAwait(false);
+            return Results.Ok(ToDto(updated));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            logger.LogWarning(ex, "Conversion not found: {Message}", ex.Message);
+            throw ApiErrorException.NotFound(
+                ErrorCode.ConversionNotFound,
+                ex.Message,
+                "The requested conversion was not found.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning(ex, "Metadata resolution failed: {Message}", ex.Message);
+            throw ApiErrorException.BusinessError(
+                ErrorCode.MetadataResolutionFailed,
+                ex.Message,
+                "Failed to resolve metadata for the conversion.");
+        }
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IResult> DeleteConversionAsync(
         int id,

@@ -660,6 +660,34 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<ConversionDto> ResolveConversionMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resolving metadata for conversion {Id} with TmdbId {TmdbId}", id, request.TmdbId);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/conversions/{id}/resolve-metadata",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Resolve conversion metadata", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Failed to deserialize conversion response");
+
+            _logger.LogInformation("Successfully resolved metadata for conversion {Id}", id);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving metadata for conversion {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task DeleteMetadataQueueItemAsync(int id, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Deleting metadata queue item {Id}", id);
