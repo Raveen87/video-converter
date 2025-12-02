@@ -660,6 +660,29 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resolving {Count} metadata queue items with TmdbId {TmdbId}", request.QueueItemIds.Count(), request.TmdbId);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                "api/metadata-queue/resolve-batch",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Resolve batch metadata queue items", cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully resolved {Count} metadata queue items", request.QueueItemIds.Count());
+        }
+#pragma warning disable S2139
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving batch metadata queue items for TmdbId {TmdbId}", request.TmdbId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<ConversionDto> ResolveConversionMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Resolving metadata for conversion {Id} with TmdbId {TmdbId}", id, request.TmdbId);
@@ -683,6 +706,34 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resolving metadata for conversion {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<IReadOnlyList<ConversionDto>> ResolveBatchConversionMetadataAsync(ResolveBatchMetadataRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resolving metadata for {Count} conversions with TmdbId {TmdbId}", request.ConversionIds.Count(), request.TmdbId);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                "api/conversions/resolve-metadata-batch",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Resolve batch metadata", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<IReadOnlyList<ConversionDto>>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? Array.Empty<ConversionDto>();
+
+            _logger.LogInformation("Successfully resolved metadata for {Count} conversions", result.Count);
+            return result;
+        }
+#pragma warning disable S2139
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving batch metadata for TmdbId {TmdbId}", request.TmdbId);
             throw;
         }
 #pragma warning restore S2139

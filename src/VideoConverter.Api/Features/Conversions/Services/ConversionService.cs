@@ -218,6 +218,23 @@ public sealed class ConversionService(
         };
     }
 
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        // Recursively check for SqliteException with ErrorCode 19
+        var current = ex.InnerException;
+        while (current is not null)
+        {
+            if (current is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
+            {
+                return true;
+            }
+
+            current = current.InnerException;
+        }
+
+        return false;
+    }
+
     private static void UpdateConversionWithMetadata(Conversion conversion, MediaMetadata metadata)
     {
         if (metadata is MovieMetadata movie)
@@ -450,6 +467,18 @@ public sealed class ConversionService(
             throw new InvalidOperationException("Cannot queue for manual resolution because the database context (_db) is not available.");
         }
 
+        // Check if item is already in the queue to avoid unique constraint violation
+        var existing = await _db.MetadataResolutionQueue
+            .AsNoTracking()
+            .FirstOrDefaultAsync(q => q.SourcePath == request.InputPath && q.Status == "Pending", cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existing is not null)
+        {
+            logger.LogInformation("Item is already in metadata resolution queue: {InputPath}", request.InputPath);
+            return;
+        }
+
         var now = DateTime.UtcNow;
         var item = new MetadataResolutionQueueItem
         {
@@ -468,13 +497,22 @@ public sealed class ConversionService(
             SerializedRequest = JsonSerializer.Serialize(request),
         };
         _ = _db.MetadataResolutionQueue.Add(item);
+
         try
         {
             _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
+        catch (DbUpdateException ex)
         {
-            logger.LogDebug(ex, "Item already queued for manual resolution: {InputPath}", request.InputPath);
+            // Fallback: If race condition occurred and item was added between check and save, swallow the error
+            if (IsUniqueConstraintViolation(ex))
+            {
+                logger.LogDebug(ex, "Item already queued for manual resolution (caught race condition): {InputPath}", request.InputPath);
+            }
+            else
+            {
+                throw;
+            }
         }
     }
 

@@ -11,6 +11,7 @@ public static class MetadataQueueEndpoints
 
         _ = group.MapGet("/", GetQueueItems);
         _ = group.MapPost("/{id}/resolve", ResolveQueueItem);
+        _ = group.MapPost("/resolve-batch", ResolveBatchQueueItems);
         _ = group.MapDelete("/{id}", DeleteQueueItem);
     }
 
@@ -44,6 +45,23 @@ public static class MetadataQueueEndpoints
         try
         {
             await service.ResolveQueueItemAsync(id, request, cancellationToken).ConfigureAwait(false);
+            return Results.Ok();
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> ResolveBatchQueueItems([FromBody] ResolveBatchMetadataQueueRequestDto request, IMetadataResolutionService service, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await service.ResolveBatchQueueItemsAsync(request, cancellationToken).ConfigureAwait(false);
             return Results.Ok();
         }
         catch (KeyNotFoundException)

@@ -22,7 +22,21 @@
     }
     else
     {
-        <MudTable Items="@_items" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <MudTable Items="@_items" MultiSelection="true" @bind-SelectedItems="_selectedItems" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Metadata Resolution Queue</MudText>
+                <MudSpacer />
+                @if (_selectedItems.Count > 0)
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.CheckCircle" 
+                              Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              OnClick="OpenBatchResolveDialog"
+                              Class="ml-2">
+                        Resolve (@_selectedItems.Count)
+                    </MudButton>
+                }
+            </ToolBarContent>
             <HeaderContent>
                 <MudTh>File</MudTh>
                 <MudTh>Parsed Info</MudTh>
@@ -71,6 +85,7 @@
 
 @code {
     private List<MetadataResolutionQueueItemDto> _items = new();
+    private HashSet<MetadataResolutionQueueItemDto> _selectedItems = new();
     private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -125,6 +140,36 @@
             Snackbar.Add("Item resolved and conversion created.", Severity.Success);
             await LoadQueueAsync();
         }
+    }
+
+    private async Task OpenBatchResolveDialog()
+    {
+        if (_selectedItems.Count == 0) return;
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<ResolveMetadataDialog>
+        {
+            { x => x.QueueItems, _selectedItems.ToList() },
+            { x => x.OnClose, EventCallback.Factory.Create<bool>(this, async (success) =>
+                {
+                    if (success)
+                    {
+                        var count = _selectedItems.Count;
+                        dialogRef?.Close(DialogResult.Ok(true));
+                        _selectedItems.Clear();
+                        await LoadQueueAsync();
+                        Snackbar.Add($"{count} items resolved and conversions created.", Severity.Success);
+                    }
+                    else
+                    {
+                        dialogRef?.Close(DialogResult.Cancel());
+                    }
+                })
+            }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Batch Metadata", parameters, options);
     }
 
     private async Task DeleteItem(MetadataResolutionQueueItemDto item)
