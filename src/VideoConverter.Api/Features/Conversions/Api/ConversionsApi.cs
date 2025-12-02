@@ -566,6 +566,14 @@ public sealed class ConversionsApi : ControllerBase
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
+
+        if (request.ConversionIds is null || !request.ConversionIds.Any())
+        {
+            throw ApiErrorException.ValidationError(
+                "ConversionIds must be provided and cannot be empty.",
+                "At least one conversion ID is required for batch metadata resolution.");
+        }
+
         logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
 
         var results = new List<ConversionDto>();
