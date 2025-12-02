@@ -566,7 +566,8 @@ public sealed class ConversionsApi : ControllerBase
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
+        var count = request.ConversionIds.Count();
+        logger.LogDebug("Resolving metadata for {Count} conversions", count);
 
         var results = new List<ConversionDto>();
         var errors = new List<string>();
@@ -601,7 +602,7 @@ public sealed class ConversionsApi : ControllerBase
             throw ApiErrorException.BusinessError(
                 ErrorCode.MetadataResolutionFailed,
                 "All batch items failed to resolve.",
-                $"Failed to resolve metadata for all {request.ConversionIds.Count()} items.");
+                $"Failed to resolve metadata for all {count} items.");
         }
 
         return Results.Ok(results);
