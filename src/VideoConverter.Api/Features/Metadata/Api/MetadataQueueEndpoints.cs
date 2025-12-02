@@ -59,6 +59,11 @@ public static class MetadataQueueEndpoints
 
     private static async Task<IResult> ResolveBatchQueueItems([FromBody] ResolveBatchMetadataQueueRequestDto request, IMetadataResolutionService service, CancellationToken cancellationToken)
     {
+        if (request.QueueItemIds is null || !request.QueueItemIds.Any())
+        {
+            return Results.BadRequest("At least one queue item ID is required.");
+        }
+
         try
         {
             await service.ResolveBatchQueueItemsAsync(request, cancellationToken).ConfigureAwait(false);
