@@ -662,7 +662,8 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 
     public async Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Resolving {Count} metadata queue items with TmdbId {TmdbId}", request.QueueItemIds.Count(), request.TmdbId);
+        var count = request.QueueItemIds.Count();
+        _logger.LogDebug("Resolving {Count} metadata queue items with TmdbId {TmdbId}", count, request.TmdbId);
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
@@ -672,7 +673,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 cancellationToken).ConfigureAwait(false);
 
             await EnsureSuccessAsync(response, "Resolve batch metadata queue items", cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Successfully resolved {Count} metadata queue items", request.QueueItemIds.Count());
+            _logger.LogInformation("Successfully resolved {Count} metadata queue items", count);
         }
 #pragma warning disable S2139
         catch (Exception ex)
