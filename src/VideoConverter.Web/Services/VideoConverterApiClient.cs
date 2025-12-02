@@ -713,7 +713,8 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 
     public async Task<IReadOnlyList<ConversionDto>> ResolveBatchConversionMetadataAsync(ResolveBatchMetadataRequestDto request, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Resolving metadata for {Count} conversions with TmdbId {TmdbId}", request.ConversionIds.Count(), request.TmdbId);
+        var conversionCount = request.ConversionIds.Count();
+        _logger.LogDebug("Resolving metadata for {Count} conversions with TmdbId {TmdbId}", conversionCount, request.TmdbId);
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
