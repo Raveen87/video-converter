@@ -21,7 +21,20 @@
     }
     else
     {
-        <MudTable Items="@_conversions" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <MudTable Items="@_conversions" MultiSelection="true" @bind-SelectedItems="_selectedItems" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <ToolBarContent>
+                <MudSpacer />
+                @if (_selectedItems.Count > 0)
+                {
+                     <MudButton StartIcon="@Icons.Material.Filled.EditLocation" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               OnClick="OpenBatchResolveMetadataDialog"
+                               Class="ml-2">
+                        Fix Match (@_selectedItems.Count)
+                    </MudButton>
+                }
+            </ToolBarContent>
             <HeaderContent>
                 <MudTh>ID</MudTh>
                 <MudTh>Input Path</MudTh>
@@ -145,6 +158,7 @@
 
 @code {
     private IReadOnlyList<ConversionDto> _conversions = Array.Empty<ConversionDto>();
+    private HashSet<ConversionDto> _selectedItems = new();
 
     [Inject]
     private ConversionStateService _stateService { get; set; } = null!;
@@ -232,6 +246,49 @@
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Metadata", parameters, options);
+    }
+
+    private async Task OpenBatchResolveMetadataDialog()
+    {
+        if (_selectedItems.Count == 0) return;
+
+        var pendingItems = _selectedItems.Where(x => x.Status == ConversionStatus.Pending).ToList();
+
+        if (pendingItems.Count == 0)
+        {
+            Snackbar.Add("Only pending conversions can be resolved. Please select pending items.", Severity.Warning);
+            return;
+        }
+
+        if (pendingItems.Count < _selectedItems.Count)
+        {
+            Snackbar.Add($"Skipped {_selectedItems.Count - pendingItems.Count} non-pending items.", Severity.Info);
+        }
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<ResolveMetadataDialog>
+        {
+            { x => x.Conversions, pendingItems },
+            { x => x.OnClose, EventCallback.Factory.Create<bool>(this, async (success) =>
+                {
+                    if (success)
+                    {
+                        var count = pendingItems.Count;
+                        dialogRef?.Close(DialogResult.Ok(true));
+                        await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+                        _selectedItems.Clear();
+                        Snackbar.Add($"Metadata resolved successfully for {count} items", Severity.Success);
+                    }
+                    else
+                    {
+                        dialogRef?.Close(DialogResult.Cancel());
+                    }
+                })
+            }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Batch Metadata", parameters, options);
     }
 
     private async Task UpdateConversionAsync(int id, ConversionPatchDto patch)

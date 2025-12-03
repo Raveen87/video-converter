@@ -1,6 +1,6 @@
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">Resolve Metadata</MudText>
+        <MudText Typo="Typo.h6">@GetTitle()</MudText>
     </TitleContent>
     <DialogContent>
         <MudGrid>
@@ -79,7 +79,7 @@
             }
             else
             {
-                <text>@(Item != null ? "Resolve & Create" : "Update Metadata")</text>
+                <text>@GetButtonText()</text>
             }
         </MudButton>
     </DialogActions>
@@ -98,6 +98,12 @@
 
     [Parameter]
     public ConversionDto? Conversion { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ConversionDto>? Conversions { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MetadataResolutionQueueItemDto>? QueueItems { get; set; }
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -124,19 +130,57 @@
             _searchQuery = Conversion.MatchedTitle ?? Path.GetFileNameWithoutExtension(Conversion.InputPath) ?? string.Empty;
             _searchYear = Conversion.MatchedYear;
         }
+        else if (Conversions is { Count: > 0 })
+        {
+            var first = Conversions[0];
+            _searchQuery = first.MatchedTitle ?? Path.GetFileNameWithoutExtension(first.InputPath) ?? string.Empty;
+            _searchYear = first.MatchedYear;
+        }
+        else if (QueueItems is { Count: > 0 })
+        {
+            var first = QueueItems[0];
+            _searchQuery = first.ParsedTitle ?? Path.GetFileNameWithoutExtension(first.SourceFileName) ?? string.Empty;
+            _searchYear = first.ParsedYear;
+        }
+    }
+
+    private string GetTitle()
+    {
+        if (Conversions is { Count: > 1 }) return $"Resolve Metadata ({Conversions.Count} items)";
+        if (QueueItems is { Count: > 1 }) return $"Resolve Metadata ({QueueItems.Count} items)";
+        return "Resolve Metadata";
     }
 
     private string GetSourceFileName()
     {
         if (Item != null) return Item.SourceFileName ?? string.Empty;
         if (Conversion != null) return Path.GetFileName(Conversion.InputPath) ?? string.Empty;
+        if (Conversions is { Count: > 0 }) 
+        {
+            if (Conversions.Count == 1) return Path.GetFileName(Conversions[0].InputPath) ?? string.Empty;
+            return $"{Conversions.Count} items";
+        }
+        if (QueueItems is { Count: > 0 })
+        {
+            if (QueueItems.Count == 1) return QueueItems[0].SourceFileName ?? string.Empty;
+            return $"{QueueItems.Count} items";
+        }
         return string.Empty;
     }
 
     private string GetInputKind()
     {
          if (Item != null) return Item.InputKind;
+         if (QueueItems is { Count: > 0 }) return QueueItems[0].InputKind;
          return "Unknown";
+    }
+
+    private string GetButtonText()
+    {
+        if (Item != null) return "Resolve & Create";
+        if (Conversions is { Count: > 1 }) return "Update All";
+        if (QueueItems is { Count: > 1 }) return "Resolve All";
+        return "Update Metadata";
     }
 
     private async Task SearchAsync()
@@ -206,6 +250,26 @@
             {
                 await ApiClient.ResolveConversionMetadataAsync(Conversion.Id, request);
             }
+            else if (Conversions is { Count: > 0 })
+            {
+                 var batchRequest = new ResolveBatchMetadataRequestDto
+                 {
+                     ConversionIds = Conversions.Select(c => c.Id).ToList(),
+                     TmdbId = _selectedResult.Id,
+                     MediaType = _selectedResult.Type
+                 };
+                 await ApiClient.ResolveBatchConversionMetadataAsync(batchRequest);
+            }
+            else if (QueueItems is { Count: > 0 })
+            {
+                var batchRequest = new ResolveBatchMetadataQueueRequestDto
+                {
+                    QueueItemIds = QueueItems.Select(q => q.Id).ToList(),
+                    TmdbId = _selectedResult.Id,
+                    MediaType = _selectedResult.Type
+                };
+                await ApiClient.ResolveBatchMetadataQueueItemsAsync(batchRequest);
+            }
         }
         catch (Exception ex)
         {
@@ -220,4 +284,3 @@
 
     private async Task Cancel() => await OnClose.InvokeAsync(false);
 }
-

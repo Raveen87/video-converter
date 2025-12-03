@@ -60,6 +60,46 @@ public class MetadataResolutionService(
         logger.LogInformation("Successfully resolved queue item {QueueId} and created conversion {ConversionId}.", queueId, conversion.Id);
     }
 
+    public async Task ResolveBatchQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Resolving {Count} metadata queue items with TmdbId {TmdbId} ({Type})", request.QueueItemIds.Count(), request.TmdbId, request.MediaType);
+
+        var results = new List<int>();
+        var errors = new List<string>();
+
+        foreach (var queueId in request.QueueItemIds)
+        {
+            try
+            {
+                var resolveRequest = new ResolveMetadataRequestDto
+                {
+                    TmdbId = request.TmdbId,
+                    MediaType = request.MediaType,
+                };
+
+                await ResolveQueueItemAsync(queueId, resolveRequest, cancellationToken).ConfigureAwait(false);
+                results.Add(queueId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to resolve metadata queue item {QueueId}", queueId);
+                errors.Add($"ID {queueId}: {ex.Message}");
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            logger.LogWarning("Batch metadata queue resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
+        }
+
+        if (errors.Count > 0 && results.Count is 0)
+        {
+            throw new InvalidOperationException($"All batch items failed to resolve. Errors: {string.Join("; ", errors)}");
+        }
+
+        logger.LogInformation("Successfully resolved {Count} metadata queue items", results.Count);
+    }
+
     public async Task DeleteQueueItemAsync(int queueId, CancellationToken cancellationToken)
     {
         var item = await db.MetadataResolutionQueue.FindAsync([queueId], cancellationToken).ConfigureAwait(false);

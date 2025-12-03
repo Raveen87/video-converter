@@ -558,6 +558,63 @@ public sealed class ConversionsApi : ControllerBase
         }
     }
 
+    [HttpPost("resolve-metadata-batch")]
+    public async Task<IResult> ResolveMetadataBatchAsync(
+        [FromBody] ResolveBatchMetadataRequestDto request,
+        [FromServices] IConversionService conversionService,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var logger = loggerFactory.CreateLogger("ConversionsApi");
+
+        if (request.ConversionIds is null || !request.ConversionIds.Any())
+        {
+            throw ApiErrorException.ValidationError(
+                "ConversionIds must be provided and cannot be empty.",
+                "At least one conversion ID is required for batch metadata resolution.");
+        }
+
+        logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
+
+        var results = new List<ConversionDto>();
+        var errors = new List<string>();
+
+        foreach (var id in request.ConversionIds)
+        {
+            try
+            {
+                var resolveRequest = new ResolveMetadataRequestDto
+                {
+                    TmdbId = request.TmdbId,
+                    MediaType = request.MediaType,
+                };
+
+                var updated = await conversionService.UpdateMetadataAsync(id, resolveRequest, ct).ConfigureAwait(false);
+                results.Add(ToDto(updated));
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to resolve metadata for conversion {Id}", id);
+                errors.Add($"ID {id}: {ex.Message}");
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            logger.LogWarning("Batch metadata resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
+        }
+
+        if (errors.Count > 0 && results.Count is 0)
+        {
+            throw ApiErrorException.BusinessError(
+                ErrorCode.MetadataResolutionFailed,
+                "All batch items failed to resolve.",
+                $"Failed to resolve metadata for all {request.ConversionIds.Count()} items.");
+        }
+
+        return Results.Ok(results);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IResult> DeleteConversionAsync(
         int id,
