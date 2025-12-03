@@ -339,6 +339,63 @@ public sealed class ConversionQueueReorderTests
         reordered[2].Id.Should().Be(pendingB.Id);
     }
 
+    [Fact]
+    public async Task ListConversionsAsync_WithDeletedConversions_PlacesDeletedAtBottom()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var pendingA = CreatePendingConversion("a.mp4", rank: "00001000");
+        var pendingB = CreatePendingConversion("b.mp4", rank: "00002000");
+        var completed = new Conversion
+        {
+            InputPath = "done.mp4",
+            OutputDirectory = "out",
+            CreatedAtUtc = DateTime.UtcNow.AddHours(-1),
+            Status = ConversionStatus.Completed,
+            Rank = null,
+        };
+        var deletedEarly = new Conversion
+        {
+            InputPath = "deleted1.mp4",
+            OutputDirectory = "out",
+            CreatedAtUtc = DateTime.UtcNow.AddHours(-2),
+            Status = ConversionStatus.Deleted,
+            Rank = null,
+            DeletedAtUtc = DateTime.UtcNow.AddHours(-2),
+        };
+        var deletedLate = new Conversion
+        {
+            InputPath = "deleted2.mp4",
+            OutputDirectory = "out",
+            CreatedAtUtc = DateTime.UtcNow.AddHours(-3),
+            Status = ConversionStatus.Deleted,
+            Rank = null,
+            DeletedAtUtc = DateTime.UtcNow.AddHours(-1),
+        };
+        db.Conversions.AddRange(pendingA, pendingB, completed, deletedEarly, deletedLate);
+        _ = await db.SaveChangesAsync();
+
+        var api = new ConversionsApi();
+        var loggerFactory = NullLoggerFactory.Instance;
+
+        var listResult = await api.ListConversionsAsync(db, loggerFactory, CancellationToken.None);
+        var ok = listResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
+        ok.Value.Should().NotBeNull();
+
+        var allItems = ok.Value!.ToList();
+        allItems.Should().HaveCount(5);
+
+        var nonDeletedItems = allItems.Where(c => c.Status != ConversionStatus.Deleted).ToList();
+        var deletedItems = allItems.Where(c => c.Status == ConversionStatus.Deleted).ToList();
+
+        nonDeletedItems.Should().HaveCount(3);
+        deletedItems.Should().HaveCount(2);
+
+        var allIds = allItems.Select(c => c.Id).ToList();
+        var deletedIds = deletedItems.Select(c => c.Id).ToList();
+
+        allIds.Should().EndWith(deletedIds);
+    }
+
     private static Conversion CreatePendingConversion(string inputPath, string rank)
     {
         return new Conversion

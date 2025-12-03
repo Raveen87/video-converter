@@ -114,7 +114,8 @@ public sealed class ConversionsApi : ControllerBase
 
         var items = await db.Conversions
             .AsNoTracking()
-            .OrderBy(c => c.Status)
+            .OrderBy(c => c.Status == ConversionStatus.Deleted)
+            .ThenBy(c => c.Status)
             .ThenBy(c => c.Rank)
             .ThenBy(c => c.CreatedAtUtc)
             .ThenBy(c => c.Id)
