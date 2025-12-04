@@ -43,7 +43,7 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = CreateConversionsApi(db, executor);
+        var api = CreateConversionsQueueApi(db, executor);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
             api.StartNextConversionAsync(CancellationToken.None));
@@ -75,7 +75,7 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = CreateConversionsApi(db, executor);
+        var api = CreateConversionsQueueApi(db, executor);
 
         var result = await api.StartNextConversionAsync(CancellationToken.None);
 
@@ -108,7 +108,7 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = CreateConversionsApi(db, executor);
+        var api = CreateConversionsQueueApi(db, executor);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
             api.StartQueueAsync(CancellationToken.None));
@@ -140,7 +140,7 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = CreateConversionsApi(db, executor);
+        var api = CreateConversionsQueueApi(db, executor);
 
         var result = await api.StartQueueAsync(CancellationToken.None);
 
@@ -156,41 +156,17 @@ public sealed class ConversionsApiStartTests
         return new ConversionExecutionService(db, runner, notificationService, logger);
     }
 
-    private static ConversionsApi CreateConversionsApi(AppDbContext db, IConversionExecutionService executor)
+    private static ConversionsQueueApi CreateConversionsQueueApi(AppDbContext db, IConversionExecutionService executor)
     {
         var loggerFactory = NullLoggerFactory.Instance;
-        var validator = new ConversionCreateValidator(
-            NullLogger<ConversionCreateValidator>.Instance,
-            new FileSystemValidator(),
-            new RequestPropertyValidator());
-        var conversionService = new StubConversionService();
-        var notificationService = new FakeNotificationService();
-        var cleanupService = new ConversionCleanupService(db, loggerFactory.CreateLogger<ConversionCleanupService>());
-        var directoryBatchCleanupService = new DirectoryBatchCleanupService(db, loggerFactory.CreateLogger<DirectoryBatchCleanupService>());
         var registry = new RunningProcessRegistry();
         var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
-        var progressTracker = new ProgressTracker(loggerFactory.CreateLogger<ProgressTracker>());
-        var batchService = new DirectoryBatchService(db, new FileSystemValidator(), loggerFactory.CreateLogger<DirectoryBatchService>());
-        var patchValidator = new ConversionPatchValidator(
-            NullLogger<ConversionPatchValidator>.Instance,
-            new FileSystemValidator(),
-            new RequestPropertyValidator());
-        var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
-        var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
 
-        return new ConversionsApi(
+        return new ConversionsQueueApi(
             db,
-            validator,
-            conversionService,
-            notificationService,
-            loggerFactory,
-            cleanupService,
-            directoryBatchCleanupService,
             executor,
             registry,
             processController,
-            progressTracker,
-            batchService,
-            conversionsEndpoints);
+            loggerFactory);
     }
 }
