@@ -38,7 +38,7 @@ public static class DbContextTestFactory
         return ctx;
     }
 
-    public sealed class TestDbContextWithConnection : IDisposable
+    public sealed class TestDbContextWithConnection : IAsyncDisposable, IDisposable
     {
         private readonly SqliteConnection _connection;
 
@@ -49,6 +49,12 @@ public static class DbContextTestFactory
         }
 
         public AppDbContext Context { get; }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Context.DisposeAsync().ConfigureAwait(false);
+            await _connection.DisposeAsync().ConfigureAwait(false);
+        }
 
         public void Dispose()
         {
