@@ -1,4 +1,3 @@
-using FluentAssertions;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 namespace VideoConverter.Tests.Integrations;

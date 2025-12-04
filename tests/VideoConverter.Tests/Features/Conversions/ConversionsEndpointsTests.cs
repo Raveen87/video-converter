@@ -1,6 +1,4 @@
-using FluentAssertions;
 using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Features.Conversions.Services;
@@ -45,7 +43,7 @@ public class ConversionsEndpointsTests
 
         var updated = await db.Conversions.FindAsync(conversion.Id);
         _ = updated.Should().NotBeNull();
-        _ = updated!.OutputDirectory.Should().Be("new-output");
+        _ = updated.OutputDirectory.Should().Be("new-output");
         _ = updated.Crf.Should().Be(28);
     }
 
@@ -154,7 +152,7 @@ public class ConversionsEndpointsTests
 
         var updated = await db.Conversions.FindAsync(conversion.Id);
         _ = updated.Should().NotBeNull();
-        _ = updated!.Crf.Should().Be(28);
+        _ = updated.Crf.Should().Be(28);
         _ = updated.OutputDirectory.Should().Be("output"); // Unchanged
         _ = updated.Resolution.Should().Be(1080); // Unchanged
     }

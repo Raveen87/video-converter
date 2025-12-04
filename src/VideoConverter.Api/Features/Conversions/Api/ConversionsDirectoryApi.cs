@@ -14,22 +14,18 @@ public sealed class ConversionsDirectoryApi(
     AppDbContext db,
     ILoggerFactory loggerFactory) : ControllerBase
 {
-    private readonly IDirectoryBatchService _batchService = batchService;
-    private readonly AppDbContext _db = db;
-    private readonly ILogger<ConversionsDirectoryApi> _logger = loggerFactory.CreateLogger<ConversionsDirectoryApi>();
-
     [HttpPost("queue-directory")]
     public async Task<IResult> QueueDirectoryAsync(
         [FromBody] DirectoryQueueRequestDto request,
         CancellationToken ct)
     {
-        _logger.LogInformation(
+        loggerFactory.CreateLogger<ConversionsDirectoryApi>().LogInformation(
             "Queueing directory request for {DirectoryPath} -> {OutputDirectory}",
             request.DirectoryPath,
             request.OutputDirectory);
 
-        var batchId = await _batchService.CreateBatchAsync(request, profileId: null, ct).ConfigureAwait(false);
-        _logger.LogInformation("Created directory batch {BatchId}", batchId);
+        var batchId = await batchService.CreateBatchAsync(request, profileId: null, ct).ConfigureAwait(false);
+        loggerFactory.CreateLogger<ConversionsDirectoryApi>().LogInformation("Created directory batch {BatchId}", batchId);
         return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
     }
 
@@ -38,7 +34,7 @@ public sealed class ConversionsDirectoryApi(
         int id,
         CancellationToken ct)
     {
-        var batch = await _db.DirectoryQueueBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct).ConfigureAwait(false)
+        var batch = await db.DirectoryQueueBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct).ConfigureAwait(false)
             ?? throw ApiErrorException.NotFound(
                 ErrorCode.InvalidInput,
                 $"Batch {id} not found",
@@ -52,7 +48,7 @@ public sealed class ConversionsDirectoryApi(
             batch.ProcessedItems,
             unprocessed,
             batch.CurrentItemPath);
-        _logger.LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
+        loggerFactory.CreateLogger<ConversionsDirectoryApi>().LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
         return Results.Ok(dto);
     }
 }
