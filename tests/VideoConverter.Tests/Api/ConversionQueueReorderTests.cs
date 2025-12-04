@@ -3,9 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Conversions.Validation;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
+using VideoConverter.Api.Features.Notifications.Services;
+using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
+using VideoConverter.Tests.Fakes;
 using VideoConverter.Tests.TestUtils;
 
 namespace VideoConverter.Tests.Api;
@@ -31,11 +38,10 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, pendingC, completed);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingC.Id, pendingA.Id });
 
-        var result = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var result = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ok = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -57,11 +63,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(CreatePendingConversion("only.mp4", rank: "00001000"));
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { 999 });
 
-        var act = () => api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ConversionNotFound);
@@ -75,11 +80,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(pendingA);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingA.Id, pendingA.Id });
 
-        var act = () => api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ValidationFailed);
@@ -93,11 +97,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(CreatePendingConversion("a.mp4", rank: "00001000"));
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(Array.Empty<int>());
 
-        var act = () => api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ValidationFailed);
@@ -108,10 +111,9 @@ public sealed class ConversionQueueReorderTests
     public async Task ReorderQueueAsync_WithNullRequest_ThrowsValidationError()
     {
         await using var db = DbContextTestFactory.CreateInMemory();
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
 
-        var act = () => api.ReorderQueueAsync(null!, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(null!, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ValidationFailed);
@@ -133,11 +135,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(running);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { running.Id });
 
-        var act = () => api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ConversionNotFound);
@@ -159,11 +160,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(completed);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { completed.Id });
 
-        var act = () => api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var act = () => api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(act);
         ex.ErrorCode.Should().Be(ErrorCode.ConversionNotFound);
@@ -180,11 +180,10 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, pendingC, pendingD);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingD.Id, pendingC.Id, pendingB.Id, pendingA.Id });
 
-        var result = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var result = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ok = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -207,11 +206,10 @@ public sealed class ConversionQueueReorderTests
         _ = db.Conversions.Add(pendingA);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingA.Id });
 
-        var result = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var result = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ok = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -224,11 +222,10 @@ public sealed class ConversionQueueReorderTests
     {
         await using var db = DbContextTestFactory.CreateInMemory();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(Array.Empty<int>());
 
-        var result = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        var result = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var ok = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -253,12 +250,11 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, pendingC, running);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var reorderRequest = new QueueReorderRequestDto(new[] { pendingC.Id, pendingA.Id });
-        _ = await api.ReorderQueueAsync(reorderRequest, db, loggerFactory, CancellationToken.None);
+        _ = await api.ReorderQueueAsync(reorderRequest, CancellationToken.None);
 
-        var listResult = await api.ListConversionsAsync(db, loggerFactory, CancellationToken.None);
+        var listResult = await api.ListConversionsAsync(CancellationToken.None);
         var ok = listResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
 
@@ -295,11 +291,10 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, completed, failed);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingB.Id, pendingA.Id });
 
-        _ = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        _ = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var completedAfter = await db.Conversions.FindAsync(completed.Id);
         var failedAfter = await db.Conversions.FindAsync(failed.Id);
@@ -320,11 +315,10 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, pendingC);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
         var request = new QueueReorderRequestDto(new[] { pendingC.Id, pendingA.Id, pendingB.Id });
 
-        _ = await api.ReorderQueueAsync(request, db, loggerFactory, CancellationToken.None);
+        _ = await api.ReorderQueueAsync(request, CancellationToken.None);
 
         var reordered = await db.Conversions
             .Where(c => c.Status == ConversionStatus.Pending)
@@ -374,10 +368,9 @@ public sealed class ConversionQueueReorderTests
         db.Conversions.AddRange(pendingA, pendingB, completed, deletedEarly, deletedLate);
         _ = await db.SaveChangesAsync();
 
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db);
 
-        var listResult = await api.ListConversionsAsync(db, loggerFactory, CancellationToken.None);
+        var listResult = await api.ListConversionsAsync(CancellationToken.None);
         var ok = listResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<ConversionDto>>>().Subject;
         ok.Value.Should().NotBeNull();
 
@@ -406,5 +399,45 @@ public sealed class ConversionQueueReorderTests
             Status = ConversionStatus.Pending,
             Rank = rank,
         };
+    }
+
+    private static ConversionsApi CreateConversionsApi(AppDbContext db)
+    {
+        var loggerFactory = NullLoggerFactory.Instance;
+        var validator = new ConversionCreateValidator(
+            NullLogger<ConversionCreateValidator>.Instance,
+            new FileSystemValidator(),
+            new RequestPropertyValidator());
+        var conversionService = new StubConversionService();
+        var notificationService = new FakeNotificationService();
+        var cleanupService = new ConversionCleanupService(db, loggerFactory.CreateLogger<ConversionCleanupService>());
+        var directoryBatchCleanupService = new DirectoryBatchCleanupService(db, loggerFactory.CreateLogger<DirectoryBatchCleanupService>());
+        var runner = new FakeConversionRunner();
+        var executor = new ConversionExecutionService(db, runner, notificationService, NullLogger<ConversionExecutionService>.Instance);
+        var registry = new RunningProcessRegistry();
+        var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
+        var progressTracker = new ProgressTracker(loggerFactory.CreateLogger<ProgressTracker>());
+        var batchService = new DirectoryBatchService(db, new FileSystemValidator(), loggerFactory.CreateLogger<DirectoryBatchService>());
+        var patchValidator = new ConversionPatchValidator(
+            NullLogger<ConversionPatchValidator>.Instance,
+            new FileSystemValidator(),
+            new RequestPropertyValidator());
+        var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
+        var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
+
+        return new ConversionsApi(
+            db,
+            validator,
+            conversionService,
+            notificationService,
+            loggerFactory,
+            cleanupService,
+            directoryBatchCleanupService,
+            executor,
+            registry,
+            processController,
+            progressTracker,
+            batchService,
+            conversionsEndpoints);
     }
 }
