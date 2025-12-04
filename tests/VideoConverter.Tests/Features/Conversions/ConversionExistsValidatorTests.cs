@@ -1,10 +1,6 @@
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
-using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils;
 

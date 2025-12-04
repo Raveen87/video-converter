@@ -1,7 +1,5 @@
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
-using VideoConverter.Api.Features.Integrations.Ffmpeg;
-using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
 
@@ -20,33 +18,6 @@ public sealed class ConversionsApi(
     IProgressTracker progressTracker,
     ConversionsEndpoints conversionsEndpoints) : ControllerBase
 {
-    // Back-compat for tests that invoked the previous static endpoint method directly
-#pragma warning disable IDE0060 // Unused parameters - kept for backward compatibility with tests
-    public static Task<IResult> ClearFinishedConversionsAsync(
-        int? olderThanDays,
-        AppDbContext db,
-        IRequestValidator<ConversionCreateDto> validator,
-        IConversionService conversionService,
-        Notifications.Services.INotificationService notificationService,
-        ILoggerFactory loggerFactory,
-        IConversionCleanupService cleanupService,
-        IDirectoryBatchCleanupService directoryBatchCleanupService,
-        IConversionExecutionService executor,
-        IRunningProcessRegistry registry,
-        IProcessController processController,
-        IProgressTracker progressTracker,
-        IDirectoryBatchService batchService,
-        ConversionsEndpoints conversionsEndpoints,
-        CancellationToken ct)
-#pragma warning restore IDE0060
-    {
-        var controller = new ConversionsCleanupApi(
-            cleanupService,
-            directoryBatchCleanupService,
-            loggerFactory);
-        return controller.ClearFinishedConversionsActionAsync(olderThanDays, ct);
-    }
-
     [HttpPost]
     public async Task<IResult> CreateConversionAsync(
         [FromBody] ConversionCreateDto request,

@@ -1,5 +1,3 @@
-using FluentAssertions;
-
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Features.Metadata.Services;
 

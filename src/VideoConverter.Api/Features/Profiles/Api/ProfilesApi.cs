@@ -8,13 +8,10 @@ namespace VideoConverter.Api.Features.Profiles.Api;
 public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConversionsEndpoints profileConversionsEndpoints) : ControllerBase
 #pragma warning restore S6960
 {
-    private readonly ProfilesEndpoints _profilesEndpoints = profilesEndpoints;
-    private readonly ProfileConversionsEndpoints _profileConversionsEndpoints = profileConversionsEndpoints;
-
     [HttpGet]
     public Task<IResult> GetAllProfilesAsync(CancellationToken ct)
     {
-        return _profilesEndpoints.GetAllProfilesAsync(ct);
+        return profilesEndpoints.GetAllProfilesAsync(ct);
     }
 
     [HttpPost]
@@ -22,7 +19,7 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         [FromBody] ProfileCreateDto request,
         CancellationToken ct)
     {
-        return _profilesEndpoints.CreateProfileAsync(request, ct);
+        return profilesEndpoints.CreateProfileAsync(request, ct);
     }
 
     [HttpGet("{id:int}")]
@@ -30,7 +27,7 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         int id,
         CancellationToken ct)
     {
-        return _profilesEndpoints.GetProfileByIdAsync(id, ct);
+        return profilesEndpoints.GetProfileByIdAsync(id, ct);
     }
 
     [HttpPatch("{id:int}")]
@@ -39,7 +36,7 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         [FromBody] JsonPatchDocument<ProfilePatchDto>? patchDocument,
         CancellationToken ct)
     {
-        return _profilesEndpoints.UpdateProfileAsync(id, patchDocument, ct);
+        return profilesEndpoints.UpdateProfileAsync(id, patchDocument, ct);
     }
 
     [HttpDelete("{id:int}")]
@@ -47,7 +44,7 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         int id,
         CancellationToken ct)
     {
-        return _profilesEndpoints.DeleteProfileAsync(id, ct);
+        return profilesEndpoints.DeleteProfileAsync(id, ct);
     }
 
     [HttpPost("{id:int}/conversions")]
@@ -56,7 +53,7 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         [FromBody] ProfileConversionCreateDto request,
         CancellationToken ct)
     {
-        return _profileConversionsEndpoints.QueueConversionAsync(id, request, ct);
+        return profileConversionsEndpoints.QueueConversionAsync(id, request, ct);
     }
 
     [HttpPost("{id:int}/conversions/queue-directory")]
@@ -65,6 +62,6 @@ public sealed class ProfilesApi(ProfilesEndpoints profilesEndpoints, ProfileConv
         [FromBody] ProfileDirectoryQueueRequestDto request,
         CancellationToken ct)
     {
-        return _profileConversionsEndpoints.QueueDirectoryAsync(id, request, ct);
+        return profileConversionsEndpoints.QueueDirectoryAsync(id, request, ct);
     }
 }

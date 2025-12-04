@@ -9,25 +9,22 @@ public sealed class ConversionsMetadataApi(
     IConversionService conversionService,
     ILoggerFactory loggerFactory) : ControllerBase
 {
-    private readonly IConversionService _conversionService = conversionService;
-    private readonly ILogger<ConversionsMetadataApi> _logger = loggerFactory.CreateLogger<ConversionsMetadataApi>();
-
     [HttpPost("{id:int}/resolve-metadata")]
     public async Task<IResult> ResolveMetadataAsync(
         int id,
         [FromBody] ResolveMetadataRequestDto request,
         CancellationToken ct)
     {
-        _logger.LogDebug("Resolving metadata for conversion {ConversionId}", id);
+        loggerFactory.CreateLogger<ConversionsMetadataApi>().LogDebug("Resolving metadata for conversion {ConversionId}", id);
 
         try
         {
-            var updated = await _conversionService.UpdateMetadataAsync(id, request, ct).ConfigureAwait(false);
+            var updated = await conversionService.UpdateMetadataAsync(id, request, ct).ConfigureAwait(false);
             return Results.Ok(ConversionsApiHelpers.ToDto(updated));
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning(ex, "Conversion not found: {Message}", ex.Message);
+            loggerFactory.CreateLogger<ConversionsMetadataApi>().LogWarning(ex, "Conversion not found: {Message}", ex.Message);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 ex.Message,
@@ -35,7 +32,7 @@ public sealed class ConversionsMetadataApi(
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Metadata resolution failed: {Message}", ex.Message);
+            loggerFactory.CreateLogger<ConversionsMetadataApi>().LogWarning(ex, "Metadata resolution failed: {Message}", ex.Message);
             throw ApiErrorException.BusinessError(
                 ErrorCode.MetadataResolutionFailed,
                 ex.Message,
@@ -55,7 +52,7 @@ public sealed class ConversionsMetadataApi(
                 "At least one conversion ID is required for batch metadata resolution.");
         }
 
-        _logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
+        loggerFactory.CreateLogger<ConversionsMetadataApi>().LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
 
         var results = new List<ConversionDto>();
         var errors = new List<string>();
@@ -70,19 +67,19 @@ public sealed class ConversionsMetadataApi(
                     MediaType = request.MediaType,
                 };
 
-                var updated = await _conversionService.UpdateMetadataAsync(id, resolveRequest, ct).ConfigureAwait(false);
+                var updated = await conversionService.UpdateMetadataAsync(id, resolveRequest, ct).ConfigureAwait(false);
                 results.Add(ConversionsApiHelpers.ToDto(updated));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to resolve metadata for conversion {Id}", id);
+                loggerFactory.CreateLogger<ConversionsMetadataApi>().LogWarning(ex, "Failed to resolve metadata for conversion {Id}", id);
                 errors.Add($"ID {id}: {ex.Message}");
             }
         }
 
         if (errors.Count > 0)
         {
-            _logger.LogWarning("Batch metadata resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
+            loggerFactory.CreateLogger<ConversionsMetadataApi>().LogWarning("Batch metadata resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
         }
 
         if (errors.Count > 0 && results.Count is 0)

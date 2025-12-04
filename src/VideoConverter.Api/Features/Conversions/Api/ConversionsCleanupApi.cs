@@ -11,14 +11,12 @@ public sealed class ConversionsCleanupApi(
     IDirectoryBatchCleanupService directoryBatchCleanupService,
     ILoggerFactory loggerFactory) : ControllerBase
 {
-    private readonly ILogger<ConversionsCleanupApi> _logger = loggerFactory.CreateLogger<ConversionsCleanupApi>();
-
     [HttpDelete("conversions/finished")]
     public async Task<IResult> ClearFinishedConversionsActionAsync(
         int? olderThanDays,
         CancellationToken ct)
     {
-        _logger.LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
+        loggerFactory.CreateLogger<ConversionsCleanupApi>().LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
         var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
         return Results.Ok(new { deleted });
     }
@@ -28,7 +26,7 @@ public sealed class ConversionsCleanupApi(
         int? olderThanDays,
         CancellationToken ct)
     {
-        _logger.LogInformation("Clearing finished directory batches olderThanDays={Older}", olderThanDays);
+        loggerFactory.CreateLogger<ConversionsCleanupApi>().LogInformation("Clearing finished directory batches olderThanDays={Older}", olderThanDays);
         var deleted = await directoryBatchCleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
         return Results.Ok(new { deleted });
     }
