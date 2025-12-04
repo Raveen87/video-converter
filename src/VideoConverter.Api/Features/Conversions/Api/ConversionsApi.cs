@@ -10,95 +10,159 @@ namespace VideoConverter.Api.Features.Conversions.Api;
 
 [ApiController]
 [Route("api/conversions")]
-public sealed class ConversionsApi : ControllerBase
+#pragma warning disable S6960 // Multiple responsibilities - intentional design
+public sealed class ConversionsApi(
+#pragma warning restore S6960
+    AppDbContext db,
+    IRequestValidator<ConversionCreateDto> validator,
+    IConversionService conversionService,
+    Notifications.Services.INotificationService notificationService,
+    ILoggerFactory loggerFactory,
+    IConversionCleanupService cleanupService,
+    IDirectoryBatchCleanupService directoryBatchCleanupService,
+    IConversionExecutionService executor,
+    IRunningProcessRegistry registry,
+    IProcessController processController,
+    IProgressTracker progressTracker,
+    IDirectoryBatchService batchService,
+    ConversionsEndpoints conversionsEndpoints) : ControllerBase
 {
+    private readonly AppDbContext _db = db;
+    private readonly IRequestValidator<ConversionCreateDto> _validator = validator;
+    private readonly IConversionService _conversionService = conversionService;
+    private readonly Notifications.Services.INotificationService _notificationService = notificationService;
+    private readonly ILogger<ConversionsApi> _logger = loggerFactory.CreateLogger<ConversionsApi>();
+    private readonly IConversionCleanupService _cleanupService = cleanupService;
+    private readonly IDirectoryBatchCleanupService _directoryBatchCleanupService = directoryBatchCleanupService;
+    private readonly IConversionExecutionService _executor = executor;
+    private readonly IRunningProcessRegistry _registry = registry;
+    private readonly IProcessController _processController = processController;
+    private readonly IProgressTracker _progressTracker = progressTracker;
+    private readonly IDirectoryBatchService _batchService = batchService;
+    private readonly ConversionsEndpoints _conversionsEndpoints = conversionsEndpoints;
+
     // Back-compat for tests that invoked the previous static endpoint method directly
     public static Task<IResult> ClearFinishedConversionsAsync(
         int? olderThanDays,
-        IConversionCleanupService cleanupService,
+        AppDbContext db,
+        IRequestValidator<ConversionCreateDto> validator,
+        IConversionService conversionService,
+        Notifications.Services.INotificationService notificationService,
         ILoggerFactory loggerFactory,
+        IConversionCleanupService cleanupService,
+        IDirectoryBatchCleanupService directoryBatchCleanupService,
+        IConversionExecutionService executor,
+        IRunningProcessRegistry registry,
+        IProcessController processController,
+        IProgressTracker progressTracker,
+        IDirectoryBatchService batchService,
+        ConversionsEndpoints conversionsEndpoints,
         CancellationToken ct)
     {
-        var controller = new ConversionsApi();
-        return controller.ClearFinishedConversionsActionAsync(olderThanDays, cleanupService, loggerFactory, ct);
+        var controller = new ConversionsApi(
+            db,
+            validator,
+            conversionService,
+            notificationService,
+            loggerFactory,
+            cleanupService,
+            directoryBatchCleanupService,
+            executor,
+            registry,
+            processController,
+            progressTracker,
+            batchService,
+            conversionsEndpoints);
+        return controller.ClearFinishedConversionsActionAsync(olderThanDays, ct);
     }
 
     // Static wrapper for tests
     public static Task<IResult> ClearFinishedDirectoryBatchesAsync(
         int? olderThanDays,
-        IDirectoryBatchCleanupService cleanupService,
+        AppDbContext db,
+        IRequestValidator<ConversionCreateDto> validator,
+        IConversionService conversionService,
+        Notifications.Services.INotificationService notificationService,
         ILoggerFactory loggerFactory,
+        IConversionCleanupService conversionCleanupService,
+        IDirectoryBatchCleanupService directoryBatchCleanupService,
+        IConversionExecutionService executor,
+        IRunningProcessRegistry registry,
+        IProcessController processController,
+        IProgressTracker progressTracker,
+        IDirectoryBatchService batchService,
+        ConversionsEndpoints conversionsEndpoints,
         CancellationToken ct)
     {
-        var controller = new ConversionsApi();
-        return controller.ClearFinishedDirectoryBatchesActionAsync(olderThanDays, cleanupService, loggerFactory, ct);
+        var controller = new ConversionsApi(
+            db,
+            validator,
+            conversionService,
+            notificationService,
+            loggerFactory,
+            conversionCleanupService,
+            directoryBatchCleanupService,
+            executor,
+            registry,
+            processController,
+            progressTracker,
+            batchService,
+            conversionsEndpoints);
+        return controller.ClearFinishedDirectoryBatchesActionAsync(olderThanDays, ct);
     }
 
     [HttpDelete("finished")]
     public async Task<IResult> ClearFinishedConversionsActionAsync(
         int? olderThanDays,
-        [FromServices] IConversionCleanupService cleanupService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
-        var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
+        _logger.LogInformation("Clearing finished conversions olderThanDays={Older}", olderThanDays);
+        var deleted = await _cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
         return Results.Ok(new { deleted });
     }
 
     [HttpDelete("/api/directory-batches/finished")]
     public async Task<IResult> ClearFinishedDirectoryBatchesActionAsync(
         int? olderThanDays,
-        [FromServices] IDirectoryBatchCleanupService cleanupService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogInformation("Clearing finished directory batches olderThanDays={Older}", olderThanDays);
-        var deleted = await cleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
+        _logger.LogInformation("Clearing finished directory batches olderThanDays={Older}", olderThanDays);
+        var deleted = await _directoryBatchCleanupService.CleanupAsync(olderThanDays, ct).ConfigureAwait(false);
         return Results.Ok(new { deleted });
     }
 
     [HttpPost]
     public async Task<IResult> CreateConversionAsync(
         [FromBody] ConversionCreateDto request,
-        [FromServices] AppDbContext db,
-        [FromServices] IRequestValidator<ConversionCreateDto> validator,
-        [FromServices] IConversionService conversionService,
-        [FromServices] Notifications.Services.INotificationService notificationService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-
-        var validation = await validator.ValidateAsync(request, ct).ConfigureAwait(false);
+        var validation = await _validator.ValidateAsync(request, ct).ConfigureAwait(false);
         if (!validation.IsValid)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Validation failed for conversion request: {ValidationErrors}",
                 string.Join("; ", validation.ToDictionary().SelectMany(kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}"))));
             return Results.ValidationProblem(validation.ToDictionary());
         }
 
-        logger.LogDebug("Validation passed for conversion request");
+        _logger.LogDebug("Validation passed for conversion request");
 
         try
         {
-            var conversion = await conversionService.CreateConversionAsync(request, ct).ConfigureAwait(false);
+            var conversion = await _conversionService.CreateConversionAsync(request, ct).ConfigureAwait(false);
 
-            _ = db.Conversions.Add(conversion);
-            _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            _ = _db.Conversions.Add(conversion);
+            _ = await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-            logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
+            _logger.LogInformation("Conversion created successfully with ID: {ConversionId}", conversion.Id);
 
-            await AddNotificationForConversionAddedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
+            await AddNotificationForConversionAddedAsync(conversion: conversion, notificationService: _notificationService, ct: ct).ConfigureAwait(false);
 
             return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
         }
         catch (InvalidOperationException ex)
         {
-            logger.LogWarning(ex, "Conversion creation failed: {Error}", ex.Message);
+            _logger.LogWarning(ex, "Conversion creation failed: {Error}", ex.Message);
             throw ApiErrorException.ValidationError(
                 ex.Message,
                 "The conversion request is invalid. Please check your input parameters and try again.",
@@ -107,12 +171,11 @@ public sealed class ConversionsApi : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IResult> ListConversionsAsync([FromServices] AppDbContext db, [FromServices] ILoggerFactory loggerFactory, CancellationToken ct)
+    public async Task<IResult> ListConversionsAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Listing all conversions");
+        _logger.LogDebug("Listing all conversions");
 
-        var items = await db.Conversions
+        var items = await _db.Conversions
             .AsNoTracking()
             .OrderBy(c => c.Status == ConversionStatus.Deleted)
             .ThenBy(c => c.Status)
@@ -122,28 +185,23 @@ public sealed class ConversionsApi : ControllerBase
             .Select(c => ToDto(c))
             .ToListAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Retrieved {Count} conversions from database", items.Count);
+        _logger.LogInformation("Retrieved {Count} conversions from database", items.Count);
         return Results.Ok(items);
     }
 
     [HttpPost("queue/start")]
-    public async Task<IResult> StartQueueAsync(
-        [FromServices] AppDbContext db,
-        [FromServices] IConversionExecutionService executor,
-        [FromServices] ILoggerFactory loggerFactory,
-        CancellationToken ct)
+    public async Task<IResult> StartQueueAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Starting next conversion from queue");
+        _logger.LogDebug("Starting next conversion from queue");
 
-        var runningConversion = await db.Conversions
+        var runningConversion = await _db.Conversions
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is not null)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Cannot start next conversion: conversion {RunningConversionId} is already running",
                 runningConversion.Id);
             var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -158,20 +216,20 @@ public sealed class ConversionsApi : ControllerBase
                 errorDetails);
         }
 
-        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
+        var anyPending = await _db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
-            logger.LogInformation("No conversions found in queue");
+            _logger.LogInformation("No conversions found in queue");
             throw ApiErrorException.NotFound(
                 ErrorCode.QueueEmpty,
                 "No conversions found in the queue.",
                 "There are no conversions available to start.");
         }
 
-        var (result, conversionId) = await executor.RunNextPendingAsync(ct).ConfigureAwait(false);
+        var (result, conversionId) = await _executor.RunNextPendingAsync(ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Next conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}",
                 conversionId,
                 result.ProcessId,
@@ -179,7 +237,7 @@ public sealed class ConversionsApi : ControllerBase
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId });
         }
 
-        logger.LogError(
+        _logger.LogError(
             "Failed to start next conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
             conversionId,
             result.ErrorMessage,
@@ -191,24 +249,18 @@ public sealed class ConversionsApi : ControllerBase
     }
 
     [HttpPost("queue/pause")]
-    public async Task<IResult> PauseQueueAsync(
-        [FromServices] AppDbContext db,
-        [FromServices] IRunningProcessRegistry registry,
-        [FromServices] IProcessController controller,
-        [FromServices] ILoggerFactory loggerFactory,
-        CancellationToken ct)
+    public async Task<IResult> PauseQueueAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Pausing current conversion in queue");
+        _logger.LogDebug("Pausing current conversion in queue");
 
-        var runningConversion = await db.Conversions
+        var runningConversion = await _db.Conversions
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
         {
-            logger.LogWarning("No conversion is currently running");
+            _logger.LogWarning("No conversion is currently running");
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 "No conversion is currently running.",
@@ -216,45 +268,39 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         var key = $"conversion:{runningConversion.Id}";
-        if (!registry.TryGet(key, out var handle))
+        if (!_registry.TryGet(key, out var handle))
         {
-            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
+            _logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion {runningConversion.Id} is not currently running.",
                 "The running conversion could not be found in the process registry.");
         }
 
-        var paused = controller.TryPause(handle.ProcessId);
+        var paused = _processController.TryPause(handle.ProcessId);
         if (!paused)
         {
-            logger.LogWarning("Failed to pause conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+            _logger.LogWarning("Failed to pause conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
             return Results.Problem(title: "Failed to pause process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        logger.LogInformation("Paused conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+        _logger.LogInformation("Paused conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
         return Results.Ok(new { message = "Paused", pid = handle.ProcessId, conversionId = runningConversion.Id });
     }
 
     [HttpPost("queue/resume")]
-    public async Task<IResult> ResumeQueueAsync(
-        [FromServices] AppDbContext db,
-        [FromServices] IRunningProcessRegistry registry,
-        [FromServices] IProcessController controller,
-        [FromServices] ILoggerFactory loggerFactory,
-        CancellationToken ct)
+    public async Task<IResult> ResumeQueueAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Resuming current conversion in queue");
+        _logger.LogDebug("Resuming current conversion in queue");
 
-        var runningConversion = await db.Conversions
+        var runningConversion = await _db.Conversions
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
         {
-            logger.LogWarning("No conversion is currently running");
+            _logger.LogWarning("No conversion is currently running");
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 "No conversion is currently running.",
@@ -262,44 +308,38 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         var key = $"conversion:{runningConversion.Id}";
-        if (!registry.TryGet(key, out var handle))
+        if (!_registry.TryGet(key, out var handle))
         {
-            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
+            _logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion {runningConversion.Id} is not currently running.",
                 "The running conversion could not be found in the process registry.");
         }
 
-        var resumed = controller.TryResume(handle.ProcessId);
+        var resumed = _processController.TryResume(handle.ProcessId);
         if (!resumed)
         {
-            logger.LogWarning("Failed to resume conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+            _logger.LogWarning("Failed to resume conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
             return Results.Problem(title: "Failed to resume process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        logger.LogInformation("Resumed conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+        _logger.LogInformation("Resumed conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
         return Results.Ok(new { message = "Resumed", pid = handle.ProcessId, conversionId = runningConversion.Id });
     }
 
     [HttpPost("queue/stop")]
-    public async Task<IResult> StopQueueAsync(
-        [FromServices] AppDbContext db,
-        [FromServices] IRunningProcessRegistry registry,
-        [FromServices] IProcessController controller,
-        [FromServices] ILoggerFactory loggerFactory,
-        CancellationToken ct)
+    public async Task<IResult> StopQueueAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Stopping current conversion in queue");
+        _logger.LogDebug("Stopping current conversion in queue");
 
-        var runningConversion = await db.Conversions
+        var runningConversion = await _db.Conversions
             .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is null)
         {
-            logger.LogWarning("No conversion is currently running");
+            _logger.LogWarning("No conversion is currently running");
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 "No conversion is currently running.",
@@ -307,49 +347,44 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         var key = $"conversion:{runningConversion.Id}";
-        if (!registry.TryGet(key, out var handle))
+        if (!_registry.TryGet(key, out var handle))
         {
-            logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
+            _logger.LogWarning("Running conversion {Id} not found in process registry", runningConversion.Id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion {runningConversion.Id} is not currently running.",
                 "The running conversion could not be found in the process registry.");
         }
 
-        var (stopped, forced) = await controller.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+        var (stopped, forced) = await _processController.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
 
         if (!stopped)
         {
-            logger.LogWarning("Failed to stop conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
+            _logger.LogWarning("Failed to stop conversion {Id} (PID {Pid})", runningConversion.Id, handle.ProcessId);
             return Results.Problem(title: "Failed to stop process", statusCode: StatusCodes.Status500InternalServerError);
         }
 
         // Update conversion status to Failed since it was stopped by user
         runningConversion.Status = ConversionStatus.Failed;
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}, status updated to Failed", runningConversion.Id, handle.ProcessId, forced);
+        _logger.LogInformation("Stopped conversion {Id} (PID {Pid}), forced={Forced}, status updated to Failed", runningConversion.Id, handle.ProcessId, forced);
         return Results.Ok(new { message = forced ? "Stopped (forced)" : "Stopped", pid = handle.ProcessId, forced, conversionId = runningConversion.Id });
     }
 
     [HttpPost("start-next")]
-    public async Task<IResult> StartNextConversionAsync(
-        [FromServices] AppDbContext db,
-        [FromServices] IConversionExecutionService executor,
-        [FromServices] ILoggerFactory loggerFactory,
-        CancellationToken ct)
+    public async Task<IResult> StartNextConversionAsync(CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Starting next conversion from queue");
+        _logger.LogDebug("Starting next conversion from queue");
 
-        var runningConversion = await db.Conversions
+        var runningConversion = await _db.Conversions
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Status == ConversionStatus.Running, ct)
             .ConfigureAwait(false);
 
         if (runningConversion is not null)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Cannot start next conversion: conversion {RunningConversionId} is already running",
                 runningConversion.Id);
             var errorDetails = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -364,20 +399,20 @@ public sealed class ConversionsApi : ControllerBase
                 errorDetails);
         }
 
-        var anyPending = await db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
+        var anyPending = await _db.Conversions.AsNoTracking().AnyAsync(c => c.Status == ConversionStatus.Pending, ct).ConfigureAwait(false);
         if (!anyPending)
         {
-            logger.LogInformation("No conversions found in queue");
+            _logger.LogInformation("No conversions found in queue");
             throw ApiErrorException.NotFound(
                 ErrorCode.QueueEmpty,
                 "No conversions found in the queue.",
                 "There are no conversions available to start.");
         }
 
-        var (result, conversionId) = await executor.RunNextPendingAsync(ct).ConfigureAwait(false);
+        var (result, conversionId) = await _executor.RunNextPendingAsync(ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Next conversion {ConversionId} started successfully with PID: {ProcessId}, Command: {Command}",
                 conversionId,
                 result.ProcessId,
@@ -385,7 +420,7 @@ public sealed class ConversionsApi : ControllerBase
             return Results.Ok(new { message = "Started", result.ProcessId, result.Command, conversionId });
         }
 
-        logger.LogError(
+        _logger.LogError(
             "Failed to start next conversion {ConversionId}: {ErrorMessage}. Command: {Command}, ErrorDetails: {ErrorDetails}",
             conversionId,
             result.ErrorMessage,
@@ -399,19 +434,15 @@ public sealed class ConversionsApi : ControllerBase
     [HttpGet("{id:int}/progress")]
     public async Task<IResult> GetConversionProgressAsync(
         int id,
-        [FromServices] AppDbContext db,
-        [FromServices] IProgressTracker progressTracker,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
+        _logger.LogDebug("Getting progress for conversion ID: {ConversionId}", id);
 
         // Check if conversion exists in database
-        var conversionExists = await db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
+        var conversionExists = await _db.Conversions.AsNoTracking().AnyAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (!conversionExists)
         {
-            logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
+            _logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion with ID {id} was not found.",
@@ -419,10 +450,10 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         // Get progress from tracker
-        var progress = progressTracker.GetProgress(id);
+        var progress = _progressTracker.GetProgress(id);
 
         var isTracked = progress?.Status is ConversionProgressStatus.Running;
-        logger.LogDebug(
+        _logger.LogDebug(
             "Retrieved progress for conversion {ConversionId}: Status={Status}, IsTracked={IsTracked}, Percentage={Percentage:F1}%, CurrentTime={CurrentTime}s/{TotalDuration}s, ETA={ETA}",
             id,
             progress?.Status,
@@ -434,7 +465,7 @@ public sealed class ConversionsApi : ControllerBase
 
         if (!isTracked && progress?.Status is ConversionProgressStatus.Waiting)
         {
-            logger.LogDebug(
+            _logger.LogDebug(
                 "Conversion {ConversionId} exists but is not being tracked (Waiting status). Progress tracking may not have started - duration probe may have failed or conversion hasn't started yet.",
                 id);
         }
@@ -445,30 +476,24 @@ public sealed class ConversionsApi : ControllerBase
     [HttpPost("queue-directory")]
     public async Task<IResult> QueueDirectoryAsync(
         [FromBody] DirectoryQueueRequestDto request,
-        [FromServices] IDirectoryBatchService batchService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogInformation(
+        _logger.LogInformation(
             "Queueing directory request for {DirectoryPath} -> {OutputDirectory}",
             request.DirectoryPath,
             request.OutputDirectory);
 
-        var batchId = await batchService.CreateBatchAsync(request, profileId: null, ct).ConfigureAwait(false);
-        logger.LogInformation("Created directory batch {BatchId}", batchId);
+        var batchId = await _batchService.CreateBatchAsync(request, profileId: null, ct).ConfigureAwait(false);
+        _logger.LogInformation("Created directory batch {BatchId}", batchId);
         return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
     }
 
     [HttpGet("queue-directory/batches/{id:int}")]
     public async Task<IResult> GetDirectoryBatchStatusAsync(
         int id,
-        [FromServices] AppDbContext db,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        var batch = await db.DirectoryQueueBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct).ConfigureAwait(false)
+        var batch = await _db.DirectoryQueueBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct).ConfigureAwait(false)
             ?? throw ApiErrorException.NotFound(
                 ErrorCode.InvalidInput,
                 $"Batch {id} not found",
@@ -482,7 +507,7 @@ public sealed class ConversionsApi : ControllerBase
             batch.ProcessedItems,
             unprocessed,
             batch.CurrentItemPath);
-        logger.LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
+        _logger.LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
         return Results.Ok(dto);
     }
 
@@ -490,60 +515,53 @@ public sealed class ConversionsApi : ControllerBase
     public async Task<IResult> UpdateConversionAsync(
         int id,
         [FromBody] Microsoft.AspNetCore.JsonPatch.JsonPatchDocument<ConversionPatchDto>? patchDocument,
-        [FromServices] ConversionsEndpoints handlers,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-
         // Log the raw request body for debugging
         if (HttpContext.Request.Body.CanSeek)
         {
             HttpContext.Request.Body.Position = 0;
             using var reader = new StreamReader(HttpContext.Request.Body, leaveOpen: true);
             var requestBody = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
-            logger.LogInformation("Raw request body for conversion {ConversionId}: {RequestBody}", id, requestBody);
+            _logger.LogInformation("Raw request body for conversion {ConversionId}: {RequestBody}", id, requestBody);
             HttpContext.Request.Body.Position = 0;
         }
 
         if (patchDocument is null)
         {
-            logger.LogWarning("Received null patch document for conversion {ConversionId}. ModelState.IsValid: {IsValid}", id, ModelState.IsValid);
+            _logger.LogWarning("Received null patch document for conversion {ConversionId}. ModelState.IsValid: {IsValid}", id, ModelState.IsValid);
             if (!ModelState.IsValid)
             {
                 foreach (var error in ModelState)
                 {
-                    logger.LogError("ModelState error for key {Key}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                    _logger.LogError("ModelState error for key {Key}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
                 }
             }
         }
         else
         {
-            logger.LogDebug("Received patch document for conversion {ConversionId} with {OperationCount} operations", id, patchDocument.Operations.Count);
+            _logger.LogDebug("Received patch document for conversion {ConversionId} with {OperationCount} operations", id, patchDocument.Operations.Count);
         }
 
-        return await handlers.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
+        return await _conversionsEndpoints.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
     }
 
     [HttpPost("{id:int}/resolve-metadata")]
     public async Task<IResult> ResolveMetadataAsync(
         int id,
         [FromBody] ResolveMetadataRequestDto request,
-        [FromServices] IConversionService conversionService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Resolving metadata for conversion {ConversionId}", id);
+        _logger.LogDebug("Resolving metadata for conversion {ConversionId}", id);
 
         try
         {
-            var updated = await conversionService.UpdateMetadataAsync(id, request, ct).ConfigureAwait(false);
+            var updated = await _conversionService.UpdateMetadataAsync(id, request, ct).ConfigureAwait(false);
             return Results.Ok(ToDto(updated));
         }
         catch (KeyNotFoundException ex)
         {
-            logger.LogWarning(ex, "Conversion not found: {Message}", ex.Message);
+            _logger.LogWarning(ex, "Conversion not found: {Message}", ex.Message);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 ex.Message,
@@ -551,7 +569,7 @@ public sealed class ConversionsApi : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            logger.LogWarning(ex, "Metadata resolution failed: {Message}", ex.Message);
+            _logger.LogWarning(ex, "Metadata resolution failed: {Message}", ex.Message);
             throw ApiErrorException.BusinessError(
                 ErrorCode.MetadataResolutionFailed,
                 ex.Message,
@@ -562,12 +580,8 @@ public sealed class ConversionsApi : ControllerBase
     [HttpPost("resolve-metadata-batch")]
     public async Task<IResult> ResolveMetadataBatchAsync(
         [FromBody] ResolveBatchMetadataRequestDto request,
-        [FromServices] IConversionService conversionService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-
         if (request.ConversionIds is null || !request.ConversionIds.Any())
         {
             throw ApiErrorException.ValidationError(
@@ -575,7 +589,7 @@ public sealed class ConversionsApi : ControllerBase
                 "At least one conversion ID is required for batch metadata resolution.");
         }
 
-        logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
+        _logger.LogDebug("Resolving metadata for {Count} conversions", request.ConversionIds.Count());
 
         var results = new List<ConversionDto>();
         var errors = new List<string>();
@@ -590,19 +604,19 @@ public sealed class ConversionsApi : ControllerBase
                     MediaType = request.MediaType,
                 };
 
-                var updated = await conversionService.UpdateMetadataAsync(id, resolveRequest, ct).ConfigureAwait(false);
+                var updated = await _conversionService.UpdateMetadataAsync(id, resolveRequest, ct).ConfigureAwait(false);
                 results.Add(ToDto(updated));
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to resolve metadata for conversion {Id}", id);
+                _logger.LogWarning(ex, "Failed to resolve metadata for conversion {Id}", id);
                 errors.Add($"ID {id}: {ex.Message}");
             }
         }
 
         if (errors.Count > 0)
         {
-            logger.LogWarning("Batch metadata resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
+            _logger.LogWarning("Batch metadata resolution completed with {ErrorCount} errors: {Errors}", errors.Count, string.Join("; ", errors));
         }
 
         if (errors.Count > 0 && results.Count is 0)
@@ -619,18 +633,14 @@ public sealed class ConversionsApi : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IResult> DeleteConversionAsync(
         int id,
-        [FromServices] AppDbContext db,
-        [FromServices] Notifications.Services.INotificationService notificationService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-        logger.LogDebug("Deleting conversion with ID: {ConversionId}", id);
+        _logger.LogDebug("Deleting conversion with ID: {ConversionId}", id);
 
-        var conversion = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false);
+        var conversion = await _db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false);
         if (conversion is null)
         {
-            logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
+            _logger.LogWarning("Conversion not found with ID: {ConversionId}", id);
             throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion with ID {id} was not found.",
@@ -639,7 +649,7 @@ public sealed class ConversionsApi : ControllerBase
 
         if (conversion.Status is not ConversionStatus.Pending)
         {
-            logger.LogWarning("Conversion {ConversionId} is not in Pending status. Current status: {Status}. Only pending conversions can be deleted.", id, conversion.Status);
+            _logger.LogWarning("Conversion {ConversionId} is not in Pending status. Current status: {Status}. Only pending conversions can be deleted.", id, conversion.Status);
             throw ApiErrorException.BusinessError(
                 ErrorCode.InvalidConversionState,
                 $"Only conversions in Pending status can be deleted. Current status: {conversion.Status}.",
@@ -648,11 +658,11 @@ public sealed class ConversionsApi : ControllerBase
 
         conversion.Status = ConversionStatus.Deleted;
         conversion.DeletedAtUtc = DateTime.UtcNow;
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Conversion {ConversionId} marked as deleted", id);
+        _logger.LogInformation("Conversion {ConversionId} marked as deleted", id);
 
-        await AddNotificationForConversionDeletedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
+        await AddNotificationForConversionDeletedAsync(conversion: conversion, notificationService: _notificationService, ct: ct).ConfigureAwait(false);
 
         return Results.Ok(ToDto(conversion));
     }
@@ -661,12 +671,8 @@ public sealed class ConversionsApi : ControllerBase
     public async Task<IResult> ReorderAsync(
         int id,
         [FromBody] ReorderRequestDto request,
-        [FromServices] AppDbContext db,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-
         if (request.BeforeId is null && request.AfterId is null)
         {
             throw ApiErrorException.ValidationError(
@@ -674,7 +680,7 @@ public sealed class ConversionsApi : ControllerBase
                 "You must specify the target position using beforeId and/or afterId.");
         }
 
-        var target = await db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false)
+        var target = await _db.Conversions.FirstOrDefaultAsync(c => c.Id == id, ct).ConfigureAwait(false)
             ?? throw ApiErrorException.NotFound(
                 ErrorCode.ConversionNotFound,
                 $"Conversion with ID {id} was not found.",
@@ -694,12 +700,12 @@ public sealed class ConversionsApi : ControllerBase
 
         if (request.BeforeId is { } beforeId)
         {
-            before = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == beforeId, ct).ConfigureAwait(false);
+            before = await _db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == beforeId, ct).ConfigureAwait(false);
         }
 
         if (request.AfterId is { } afterId)
         {
-            after = await db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == afterId, ct).ConfigureAwait(false);
+            after = await _db.Conversions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == afterId, ct).ConfigureAwait(false);
         }
 
         var left = after?.Rank ?? Shared.Domain.ValueObjects.RankKey.Min();
@@ -713,21 +719,17 @@ public sealed class ConversionsApi : ControllerBase
         }
 
         target.Rank = Shared.Domain.ValueObjects.RankKey.Between(left, right);
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Reordered conversion {ConversionId} with new rank {Rank}", id, target.Rank);
+        _logger.LogInformation("Reordered conversion {ConversionId} with new rank {Rank}", id, target.Rank);
         return Results.Ok(ToDto(target));
     }
 
     [HttpPut("queue/reorder")]
     public async Task<IResult> ReorderQueueAsync(
         [FromBody] QueueReorderRequestDto request,
-        [FromServices] AppDbContext db,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var logger = loggerFactory.CreateLogger("ConversionsApi");
-
         if (request is null || request.OrderedIds is null)
         {
             throw ApiErrorException.ValidationError(
@@ -738,7 +740,7 @@ public sealed class ConversionsApi : ControllerBase
         var orderedIds = request.OrderedIds;
         var uniqueIds = ValidateOrderedIds(orderedIds);
 
-        var pendingConversions = await db.Conversions
+        var pendingConversions = await _db.Conversions
             .Where(c => c.Status == ConversionStatus.Pending)
             .OrderBy(c => c.Rank ?? Shared.Domain.ValueObjects.RankKey.Max())
             .ThenBy(c => c.CreatedAtUtc)
@@ -750,7 +752,7 @@ public sealed class ConversionsApi : ControllerBase
         {
             if (pendingConversions.Count is 0)
             {
-                logger.LogInformation("No pending conversions available for reorder");
+                _logger.LogInformation("No pending conversions available for reorder");
                 return Results.Ok(new List<ConversionDto>());
             }
 
@@ -773,9 +775,9 @@ public sealed class ConversionsApi : ControllerBase
         var ordered = BuildOrderedQueue(orderedIds, lookup, pendingConversions, uniqueIds);
         ApplySequentialRanks(ordered);
 
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        _ = await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Reordered {Count} pending conversions", ordered.Count);
+        _logger.LogInformation("Reordered {Count} pending conversions", ordered.Count);
         return Results.Ok(ordered.Select(ToDto).ToList());
     }
 

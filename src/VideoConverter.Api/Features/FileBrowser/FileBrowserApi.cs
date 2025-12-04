@@ -4,22 +4,22 @@ namespace VideoConverter.Api.Features.FileBrowser;
 
 [ApiController]
 [Route("api/file-browser")]
-public sealed class FileBrowserApi : ControllerBase
+public sealed class FileBrowserApi(IFileBrowserService fileBrowserService, ILoggerFactory loggerFactory) : ControllerBase
 {
+    private readonly IFileBrowserService _fileBrowserService = fileBrowserService;
+    private readonly ILogger<FileBrowserApi> _logger = loggerFactory.CreateLogger<FileBrowserApi>();
+
     [HttpGet("directories")]
     public async Task<IResult> GetDirectoryContentsAsync(
         [FromQuery] string? path,
-        [FromServices] IFileBrowserService fileBrowserService,
-        [FromServices] ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        var logger = loggerFactory.CreateLogger("FileBrowserApi");
-        logger.LogDebug("Getting directory contents for path: {Path}", path ?? "(root)");
+        _logger.LogDebug("Getting directory contents for path: {Path}", path ?? "(root)");
 
         try
         {
-            var result = await fileBrowserService.GetDirectoryContentsAsync(path, cancellationToken).ConfigureAwait(false);
-            logger.LogInformation(
+            var result = await _fileBrowserService.GetDirectoryContentsAsync(path, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(
                 "Successfully retrieved directory contents for {Path}: {DirectoryCount} directories, {FileCount} files",
                 result.CurrentPath,
                 result.Directories.Count,
@@ -28,7 +28,7 @@ public sealed class FileBrowserApi : ControllerBase
         }
         catch (DirectoryNotFoundException ex)
         {
-            logger.LogWarning(ex, "Directory not found: {Path}", path);
+            _logger.LogWarning(ex, "Directory not found: {Path}", path);
             throw ApiErrorException.NotFound(
                 ErrorCode.FileNotFound,
                 $"Directory not found: {path ?? "(root)"}",
@@ -36,7 +36,7 @@ public sealed class FileBrowserApi : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            logger.LogWarning(ex, "Access denied to directory: {Path}", path);
+            _logger.LogWarning(ex, "Access denied to directory: {Path}", path);
             throw ApiErrorException.BusinessError(
                 ErrorCode.FileSystemError,
                 $"Access denied to directory: {path ?? "(root)"}",
@@ -45,7 +45,7 @@ public sealed class FileBrowserApi : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting directory contents for path: {Path}", path);
+            _logger.LogError(ex, "Error getting directory contents for path: {Path}", path);
             throw ApiErrorException.BusinessError(
                 ErrorCode.FileSystemError,
                 $"Failed to get directory contents: {ex.Message}",

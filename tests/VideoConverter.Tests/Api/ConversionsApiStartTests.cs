@@ -2,10 +2,14 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Conversions.Validation;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
 using VideoConverter.Tests.Fakes;
 using VideoConverter.Tests.TestUtils;
@@ -39,11 +43,10 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db, executor);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
-            api.StartNextConversionAsync(db, executor, loggerFactory, CancellationToken.None));
+            api.StartNextConversionAsync(CancellationToken.None));
 
         _ = ex.ErrorCode.Should().Be(ErrorCode.ConversionAlreadyStarted);
         _ = ex.ErrorMessage.Should().Contain("already running");
@@ -72,10 +75,9 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db, executor);
 
-        var result = await api.StartNextConversionAsync(db, executor, loggerFactory, CancellationToken.None);
+        var result = await api.StartNextConversionAsync(CancellationToken.None);
 
         _ = result.Should().NotBeNull();
         _ = result.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IResult>();
@@ -106,11 +108,10 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db, executor);
 
         var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
-            api.StartQueueAsync(db, executor, loggerFactory, CancellationToken.None));
+            api.StartQueueAsync(CancellationToken.None));
 
         _ = ex.ErrorCode.Should().Be(ErrorCode.ConversionAlreadyStarted);
         _ = ex.ErrorMessage.Should().Contain("already running");
@@ -139,10 +140,9 @@ public sealed class ConversionsApiStartTests
         _ = await db.SaveChangesAsync();
 
         var executor = CreateExecutionService(db);
-        var api = new ConversionsApi();
-        var loggerFactory = NullLoggerFactory.Instance;
+        var api = CreateConversionsApi(db, executor);
 
-        var result = await api.StartQueueAsync(db, executor, loggerFactory, CancellationToken.None);
+        var result = await api.StartQueueAsync(CancellationToken.None);
 
         _ = result.Should().NotBeNull();
         _ = result.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IResult>();
@@ -154,5 +154,43 @@ public sealed class ConversionsApiStartTests
         var notificationService = new FakeNotificationService();
         var logger = NullLogger<ConversionExecutionService>.Instance;
         return new ConversionExecutionService(db, runner, notificationService, logger);
+    }
+
+    private static ConversionsApi CreateConversionsApi(AppDbContext db, IConversionExecutionService executor)
+    {
+        var loggerFactory = NullLoggerFactory.Instance;
+        var validator = new ConversionCreateValidator(
+            NullLogger<ConversionCreateValidator>.Instance,
+            new FileSystemValidator(),
+            new RequestPropertyValidator());
+        var conversionService = new StubConversionService();
+        var notificationService = new FakeNotificationService();
+        var cleanupService = new ConversionCleanupService(db, loggerFactory.CreateLogger<ConversionCleanupService>());
+        var directoryBatchCleanupService = new DirectoryBatchCleanupService(db, loggerFactory.CreateLogger<DirectoryBatchCleanupService>());
+        var registry = new RunningProcessRegistry();
+        var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
+        var progressTracker = new ProgressTracker(loggerFactory.CreateLogger<ProgressTracker>());
+        var batchService = new DirectoryBatchService(db, new FileSystemValidator(), loggerFactory.CreateLogger<DirectoryBatchService>());
+        var patchValidator = new ConversionPatchValidator(
+            NullLogger<ConversionPatchValidator>.Instance,
+            new FileSystemValidator(),
+            new RequestPropertyValidator());
+        var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
+        var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
+
+        return new ConversionsApi(
+            db,
+            validator,
+            conversionService,
+            notificationService,
+            loggerFactory,
+            cleanupService,
+            directoryBatchCleanupService,
+            executor,
+            registry,
+            processController,
+            progressTracker,
+            batchService,
+            conversionsEndpoints);
     }
 }
