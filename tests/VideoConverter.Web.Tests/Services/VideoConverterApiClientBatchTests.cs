@@ -17,6 +17,7 @@ public sealed class VideoConverterApiClientBatchTests
     {
         // Arrange
         var batchId = 42;
+        var createdAtUtc = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var expectedResponse = new DirectoryBatchStatusDto(
             batchId,
             "Processing",
@@ -24,7 +25,7 @@ public sealed class VideoConverterApiClientBatchTests
             5,
             5,
             "/path/to/current.mp4",
-            DateTime.UtcNow,
+            createdAtUtc,
             1);
 
         var handler = new Mock<HttpMessageHandler>();
@@ -133,11 +134,12 @@ public sealed class VideoConverterApiClientBatchTests
     public async Task GetAllBatchesAsync_WithoutStatusFilter_ReturnsAllBatches()
     {
         // Arrange
+        var createdAtUtc = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var expectedResponse = new List<DirectoryBatchStatusDto>
         {
-            new DirectoryBatchStatusDto(1, "Completed", 10, 10, 0, null, DateTime.UtcNow, 1),
-            new DirectoryBatchStatusDto(2, "Processing", 5, 3, 2, "/path/to/file.mp4", DateTime.UtcNow, 2),
-            new DirectoryBatchStatusDto(3, "Pending", 8, 0, 8, null, DateTime.UtcNow, null),
+            new DirectoryBatchStatusDto(1, "Completed", 10, 10, 0, null, createdAtUtc, 1),
+            new DirectoryBatchStatusDto(2, "Processing", 5, 3, 2, "/path/to/file.mp4", createdAtUtc, 2),
+            new DirectoryBatchStatusDto(3, "Pending", 8, 0, 8, null, createdAtUtc, null),
         };
 
         var handler = new Mock<HttpMessageHandler>();
@@ -183,9 +185,10 @@ public sealed class VideoConverterApiClientBatchTests
     {
         // Arrange
         var status = "Processing";
+        var createdAtUtc = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var expectedResponse = new List<DirectoryBatchStatusDto>
         {
-            new DirectoryBatchStatusDto(2, "Processing", 5, 3, 2, "/path/to/file.mp4", DateTime.UtcNow, 2),
+            new DirectoryBatchStatusDto(2, "Processing", 5, 3, 2, "/path/to/file.mp4", createdAtUtc, 2),
         };
 
         var handler = new Mock<HttpMessageHandler>();
@@ -321,9 +324,10 @@ public sealed class VideoConverterApiClientBatchTests
     public async Task GetAllBatchesAsync_WithWhitespaceStatus_UsesNoFilter()
     {
         // Arrange
+        var createdAtUtc = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var expectedResponse = new List<DirectoryBatchStatusDto>
         {
-            new DirectoryBatchStatusDto(1, "Completed", 10, 10, 0, null, DateTime.UtcNow, 1),
+            new DirectoryBatchStatusDto(1, "Completed", 10, 10, 0, null, createdAtUtc, 1),
         };
 
         var handler = new Mock<HttpMessageHandler>();
@@ -368,9 +372,10 @@ public sealed class VideoConverterApiClientBatchTests
     {
         // Arrange
         var status = "Processing & Pending";
+        var createdAtUtc = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var expectedResponse = new List<DirectoryBatchStatusDto>
         {
-            new DirectoryBatchStatusDto(1, status, 10, 5, 5, null, DateTime.UtcNow, 1),
+            new DirectoryBatchStatusDto(1, status, 10, 5, 5, null, createdAtUtc, 1),
         };
 
         var handler = new Mock<HttpMessageHandler>();
