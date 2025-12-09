@@ -188,6 +188,63 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<DirectoryBatchStatusDto> GetBatchStatusAsync(int batchId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting batch status for batch ID {BatchId}", batchId);
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<DirectoryBatchStatusDto>(
+                $"api/conversions/queue-directory/batches/{batchId}",
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            if (response is null)
+            {
+                _logger.LogError("Failed to deserialize batch status response for batch ID {BatchId}", batchId);
+                throw new InvalidOperationException($"Failed to deserialize batch status response for batch ID {batchId}");
+            }
+
+            _logger.LogInformation("Successfully retrieved batch status for batch ID {BatchId}", batchId);
+            return response;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting batch status for batch ID {BatchId}", batchId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<IReadOnlyList<DirectoryBatchStatusDto>> GetAllBatchesAsync(string? status = null, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting all batches with status filter: {Status}", status ?? "none");
+        try
+        {
+            var url = "api/conversions/queue-directory/batches";
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                url += $"?status={Uri.EscapeDataString(status)}";
+            }
+
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<DirectoryBatchStatusDto>>(
+                url,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            var result = response ?? Array.Empty<DirectoryBatchStatusDto>();
+            _logger.LogInformation("Successfully retrieved {Count} batches", result.Count);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all batches");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task StartQueueAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Starting next conversion in queue");

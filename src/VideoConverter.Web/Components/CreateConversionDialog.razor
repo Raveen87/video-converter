@@ -12,6 +12,12 @@
                     <MudSelectItem T="int?" Value="@profile.Id">@profile.Name</MudSelectItem>
                 }
             </MudSelect>
+            @if (_selectedProfileId is not null)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3">
+                    Using profile: <strong>@GetSelectedProfileName()</strong>. You can override any settings below.
+                </MudAlert>
+            }
             <div class="d-flex align-center mb-3">
                 <MudTextField @bind-Value="_formModel.InputPath" Label="Input File Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenFileBrowser" Class="ml-2" Style="height: 56px;">
@@ -153,7 +159,7 @@
 
     private async Task HandleValidSubmit()
     {
-        Logger.LogInformation("Form submission started. Input: {InputPath}, Output: {OutputDirectory}", 
+        Logger.LogInformation("Form submission started. Input: {InputPath}, Output: {OutputDirectory}",
             _formModel.InputPath, _formModel.OutputDirectory);
         _isSubmitting = true;
         try
@@ -166,8 +172,8 @@
                 ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
 
-            Logger.LogDebug("Form data converted. AudioChannels: {AudioChannels}, AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}", 
-                _formModel.AudioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
+            Logger.LogDebug("Form data converted. AudioChannels: {AudioChannels}, AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}",
+                _formModel.AudioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null",
                 subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
 
             var request = new ConversionCreateDto(
@@ -269,6 +275,12 @@
         await OnCancel.InvokeAsync().ConfigureAwait(false);
     }
 
+    private string GetSelectedProfileName()
+    {
+        var profile = _profiles.FirstOrDefault(p => p.Id == _selectedProfileId);
+        return profile?.Name ?? "Unknown Profile";
+    }
+
     private sealed class ConversionFormModel
     {
         public string InputPath { get; set; } = string.Empty;
@@ -290,4 +302,3 @@
         public string? SubtitleLanguagesString { get; set; }
     }
 }
-

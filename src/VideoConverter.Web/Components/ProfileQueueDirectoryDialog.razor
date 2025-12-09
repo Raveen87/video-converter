@@ -21,6 +21,17 @@
                 </MudButton>
             </div>
             <MudTextField @bind-Value="_formModel.ExtensionsString" Label="File Extensions (comma-separated)" HelperText="e.g., .mkv,.mp4 (defaults to .mkv,.mp4 if empty)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="AudioChannels?" @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="AudioChannels?" Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
+            </MudSelect>
+            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
                 @if (_isSubmitting)
                 {
@@ -65,6 +76,13 @@
     {
         Logger.LogDebug("ProfileQueueDirectoryDialog initializing for profile {ProfileId}", Profile.Id);
         _formModel.OutputDirectory = Profile.OutputDirectory ?? string.Empty;
+        _formModel.Crf = Profile.Crf;
+        _formModel.AudioBitrateKbps = Profile.AudioBitrateKbps;
+        _formModel.AudioChannels = Profile.AudioChannels;
+        _formModel.Resolution = Profile.Resolution;
+        _formModel.OutputFilenameTemplate = Profile.OutputFilenameTemplate;
+        _formModel.AudioLanguagesString = Profile.AudioLanguages is not null ? string.Join(", ", Profile.AudioLanguages) : null;
+        _formModel.SubtitleLanguagesString = Profile.SubtitleLanguages is not null ? string.Join(", ", Profile.SubtitleLanguages) : null;
     }
 
     private async Task HandleValidSubmit()
@@ -78,13 +96,29 @@
                 ? _formModel.ExtensionsString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
 
-            Logger.LogDebug("Form data converted. Extensions: {Extensions}",
-                extensions != null ? string.Join(", ", extensions) : "null");
+            var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
+                ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : null;
+            var subtitleLanguages = !string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString)
+                ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : null;
+
+            Logger.LogDebug("Form data converted. Extensions: {Extensions}, AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}",
+                extensions != null ? string.Join(", ", extensions) : "null",
+                audioLanguages != null ? string.Join(", ", audioLanguages) : "null",
+                subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
 
             var request = new ProfileDirectoryQueueRequestDto(
                 _formModel.DirectoryPath,
                 _formModel.OutputDirectory,
-                extensions);
+                extensions,
+                _formModel.Crf,
+                _formModel.AudioBitrateKbps,
+                _formModel.AudioChannels,
+                _formModel.Resolution,
+                audioLanguages,
+                subtitleLanguages,
+                _formModel.OutputFilenameTemplate);
 
             await OnSubmit.InvokeAsync(request);
             Logger.LogInformation("Form submission completed successfully");
@@ -181,7 +215,19 @@
         public string OutputDirectory { get; set; } = string.Empty;
 
         public string? ExtensionsString { get; set; }
+
+        public int? Crf { get; set; }
+
+        public int? AudioBitrateKbps { get; set; }
+
+        public AudioChannels? AudioChannels { get; set; }
+
+        public int? Resolution { get; set; }
+
+        public string? OutputFilenameTemplate { get; set; }
+
+        public string? AudioLanguagesString { get; set; }
+
+        public string? SubtitleLanguagesString { get; set; }
     }
 }
-
-

@@ -35,7 +35,7 @@ dotnet_diagnostic.IDE0005.severity = error  # Remove unnecessary import
 
 # Enforce formatting and key style rules
 dotnet_diagnostic.IDE0055.severity = error
-dotnet_diagnostic.IDE0046.severity = none	# If statement can be simplified, conflicts with S3358 (Extract this nested ternary operation into an independent statement)
+dotnet_diagnostic.IDE0046.severity = none   # If statement can be simplified, conflicts with S3358 (Extract this nested ternary operation into an independent statement)
 
 dotnet_diagnostic.CS1591.severity = silent  # Missing XML comment for publicly visible type or member
 
@@ -261,3 +261,6 @@ dotnet_diagnostic.MA0174.severity = none    # Record should use explicit 'class'
 dotnet_diagnostic.MA0175.severity = error   # Record should not use explicit 'class' keyword
 dotnet_diagnostic.MA0176.severity = error   # Optimize guid creation
 dotnet_diagnostic.MA0177.severity = error   # Use single-line XML comment syntax when possible
+
+[*.razor]
+dotnet_diagnostic.S2325.severity = none    # Methods used in Razor bindings cannot be static

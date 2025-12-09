@@ -1,6 +1,3 @@
-@using VideoConverter.Common.Models
-@using MudBlazor
-
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Queue Directory for Conversion</MudText>
@@ -8,6 +5,19 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
+            <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
+                <MudSelectItem T="int?" Value="@((int?)null)">None (use manual settings)</MudSelectItem>
+                @foreach (var profile in _profiles)
+                {
+                    <MudSelectItem T="int?" Value="@profile.Id">@profile.Name</MudSelectItem>
+                }
+            </MudSelect>
+            @if (_selectedProfileId is not null)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3">
+                    Using profile: <strong>@GetSelectedProfileName()</strong>. You can override any settings below.
+                </MudAlert>
+            }
             <div class="d-flex align-center mb-3">
                 <MudTextField @bind-Value="_formModel.DirectoryPath" Label="Directory Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenDirectoryBrowser" Class="ml-2" Style="height: 56px;">
@@ -58,6 +68,9 @@
     public EventCallback<DirectoryQueueRequestDto> OnSubmit { get; set; }
 
     [Parameter]
+    public EventCallback<(int ProfileId, ProfileDirectoryQueueRequestDto Request)> OnSubmitWithProfile { get; set; }
+
+    [Parameter]
     public EventCallback OnCancel { get; set; }
 
     [Inject]
@@ -66,12 +79,18 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
     private readonly DirectoryFormModel _formModel = new();
     private bool _isSubmitting;
+    private List<ProfileDto> _profiles = [];
+    private int? _selectedProfileId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Logger.LogDebug("QueueDirectoryDialog initializing");
+        await LoadProfilesAsync().ConfigureAwait(false);
         if (InitialModel is not null)
         {
             Logger.LogDebug("Initializing dialog with existing model. Directory: {DirectoryPath}", InitialModel.DirectoryPath);
@@ -92,42 +111,92 @@
         }
     }
 
+    private async Task LoadProfilesAsync()
+    {
+        try
+        {
+            var profiles = await ApiClient.GetProfilesAsync().ConfigureAwait(false);
+            _profiles = profiles.ToList();
+            Logger.LogDebug("Loaded {ProfileCount} profiles", _profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profiles");
+            _profiles = [];
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
-        Logger.LogInformation("Form submission started. Directory: {DirectoryPath}, Output: {OutputDirectory}", 
-            _formModel.DirectoryPath, _formModel.OutputDirectory);
+        Logger.LogInformation("Form submission started. Directory: {DirectoryPath}, Output: {OutputDirectory}, Profile: {ProfileName}",
+            _formModel.DirectoryPath, _formModel.OutputDirectory, _selectedProfileId.HasValue ? GetSelectedProfileName() : "None");
         _isSubmitting = true;
         try
         {
-            // Convert string fields back to proper types
-            var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
-                ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                : null;
-            var subtitleLanguages = !string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString)
-                ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                : null;
             var extensions = !string.IsNullOrWhiteSpace(_formModel.ExtensionsString)
                 ? _formModel.ExtensionsString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : null;
 
-            Logger.LogDebug("Form data converted. AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}, Extensions: {Extensions}", 
-                audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
-                subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null",
-                extensions != null ? string.Join(", ", extensions) : "null");
+            if (_selectedProfileId is not null)
+            {
+                // Convert string fields back to proper types for overrides
+                var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
+                    ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : null;
+                var subtitleLanguages = !string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString)
+                    ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : null;
 
-            var request = new DirectoryQueueRequestDto(
-                _formModel.DirectoryPath,
-                _formModel.OutputDirectory,
-                _formModel.Crf,
-                _formModel.AudioBitrateKbps,
-                _formModel.AudioChannels,
-                _formModel.Resolution,
-                audioLanguages,
-                subtitleLanguages,
-                _formModel.OutputFilenameTemplate,
-                extensions);
+                Logger.LogDebug("Submitting with profile {ProfileId}. AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}, Extensions: {Extensions}",
+                    _selectedProfileId.Value,
+                    audioLanguages != null ? string.Join(", ", audioLanguages) : "null",
+                    subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null",
+                    extensions != null ? string.Join(", ", extensions) : "null");
 
-            await OnSubmit.InvokeAsync(request);
+                var profileRequest = new ProfileDirectoryQueueRequestDto(
+                    _formModel.DirectoryPath,
+                    _formModel.OutputDirectory,
+                    extensions,
+                    _formModel.Crf,
+                    _formModel.AudioBitrateKbps,
+                    _formModel.AudioChannels,
+                    _formModel.Resolution,
+                    audioLanguages,
+                    subtitleLanguages,
+                    _formModel.OutputFilenameTemplate);
+
+                await OnSubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
+            }
+            else
+            {
+                // Convert string fields back to proper types
+                var audioLanguages = !string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString)
+                    ? _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : null;
+                var subtitleLanguages = !string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString)
+                    ? _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : null;
+
+                Logger.LogDebug("Form data converted. AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}, Extensions: {Extensions}",
+                    audioLanguages != null ? string.Join(", ", audioLanguages) : "null",
+                    subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null",
+                    extensions != null ? string.Join(", ", extensions) : "null");
+
+                var request = new DirectoryQueueRequestDto(
+                    _formModel.DirectoryPath,
+                    _formModel.OutputDirectory,
+                    _formModel.Crf,
+                    _formModel.AudioBitrateKbps,
+                    _formModel.AudioChannels,
+                    _formModel.Resolution,
+                    audioLanguages,
+                    subtitleLanguages,
+                    _formModel.OutputFilenameTemplate,
+                    extensions);
+
+                await OnSubmit.InvokeAsync(request).ConfigureAwait(false);
+            }
+
             Logger.LogInformation("Form submission completed successfully");
         }
         catch (Exception ex)
@@ -215,6 +284,65 @@
         await OnCancel.InvokeAsync().ConfigureAwait(false);
     }
 
+    private string GetSelectedProfileName()
+    {
+        var profile = _profiles.FirstOrDefault(p => p.Id == _selectedProfileId);
+        return profile?.Name ?? "Unknown Profile";
+    }
+
+    private void HandleProfileSelectionChanged(int? profileId)
+    {
+        _selectedProfileId = profileId;
+        if (profileId.HasValue)
+        {
+            var profile = _profiles.FirstOrDefault(p => p.Id == profileId);
+            if (profile is not null)
+            {
+                if (string.IsNullOrWhiteSpace(_formModel.OutputDirectory) && !string.IsNullOrWhiteSpace(profile.OutputDirectory))
+                {
+                    _formModel.OutputDirectory = profile.OutputDirectory!;
+                }
+
+                if (!_formModel.Crf.HasValue && profile.Crf.HasValue)
+                {
+                    _formModel.Crf = profile.Crf;
+                }
+
+                if (!_formModel.AudioBitrateKbps.HasValue && profile.AudioBitrateKbps.HasValue)
+                {
+                    _formModel.AudioBitrateKbps = profile.AudioBitrateKbps;
+                }
+
+                if (!_formModel.AudioChannels.HasValue && profile.AudioChannels.HasValue)
+                {
+                    _formModel.AudioChannels = profile.AudioChannels;
+                }
+
+                if (!_formModel.Resolution.HasValue && profile.Resolution.HasValue)
+                {
+                    _formModel.Resolution = profile.Resolution;
+                }
+
+                if (string.IsNullOrWhiteSpace(_formModel.OutputFilenameTemplate) && !string.IsNullOrWhiteSpace(profile.OutputFilenameTemplate))
+                {
+                    _formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
+                }
+
+                if (string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString) && profile.AudioLanguages is not null)
+                {
+                    _formModel.AudioLanguagesString = string.Join(", ", profile.AudioLanguages);
+                }
+
+                if (string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString) && profile.SubtitleLanguages is not null)
+                {
+                    _formModel.SubtitleLanguagesString = string.Join(", ", profile.SubtitleLanguages);
+                }
+            }
+        }
+
+        StateHasChanged();
+    }
+
     private sealed class DirectoryFormModel
     {
         public string DirectoryPath { get; set; } = string.Empty;
@@ -238,4 +366,3 @@
         public string? SubtitleLanguagesString { get; set; }
     }
 }
-

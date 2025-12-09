@@ -1,4 +1,4 @@
-namespace VideoConverter.Api.Features.Conversions.Dtos;
+namespace VideoConverter.Common.Models;
 
 public record DirectoryBatchStatusDto(
     int BatchId,
@@ -6,4 +6,6 @@ public record DirectoryBatchStatusDto(
     int TotalItems,
     int ProcessedItems,
     int UnprocessedItems,
-    string? CurrentItemPath);
+    string? CurrentItemPath,
+    DateTime CreatedAtUtc,
+    int? ProfileId);

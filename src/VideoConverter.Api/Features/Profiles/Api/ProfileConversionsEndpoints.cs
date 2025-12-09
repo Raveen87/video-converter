@@ -73,13 +73,13 @@ public sealed class ProfileConversionsEndpoints(
         var dto = new DirectoryQueueRequestDto(
             DirectoryPath: request.DirectoryPath,
             OutputDirectory: request.OutputDirectory,
-            Crf: profile.Crf,
-            AudioBitrateKbps: profile.AudioBitrateKbps,
-            AudioChannels: profile.AudioChannels,
-            Resolution: profile.Resolution,
-            AudioLanguages: profile.AudioLanguages,
-            SubtitleLanguages: profile.SubtitleLanguages,
-            OutputFilenameTemplate: profile.OutputFilenameTemplate,
+            Crf: request.Crf ?? profile.Crf,
+            AudioBitrateKbps: request.AudioBitrateKbps ?? profile.AudioBitrateKbps,
+            AudioChannels: request.AudioChannels ?? profile.AudioChannels,
+            Resolution: request.Resolution ?? profile.Resolution,
+            AudioLanguages: request.AudioLanguages ?? profile.AudioLanguages,
+            SubtitleLanguages: request.SubtitleLanguages ?? profile.SubtitleLanguages,
+            OutputFilenameTemplate: request.OutputFilenameTemplate ?? profile.OutputFilenameTemplate,
             Extensions: request.Extensions);
 
         var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);

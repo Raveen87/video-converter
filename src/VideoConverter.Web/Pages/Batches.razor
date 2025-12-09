@@ -1,0 +1,225 @@
+@page "/batches"
+@using VideoConverter.Web.Services
+@inject IVideoConverterApiClient ApiClient
+@inject ILogger<Batches> Logger
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<PageTitle>Directory Batches</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">Directory Batches</MudText>
+        <div class="d-flex gap-2">
+            <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                <MudButton OnClick="@(() => SetStatusFilter(null))"
+                           Variant="@(_statusFilter == null ? Variant.Filled : Variant.Outlined)">
+                    All
+                </MudButton>
+                <MudButton OnClick="@(() => SetStatusFilter("Pending"))"
+                           Variant="@(_statusFilter == "Pending" ? Variant.Filled : Variant.Outlined)">
+                    Pending
+                </MudButton>
+                <MudButton OnClick="@(() => SetStatusFilter("Running"))"
+                           Variant="@(_statusFilter == "Running" ? Variant.Filled : Variant.Outlined)">
+                    Running
+                </MudButton>
+                <MudButton OnClick="@(() => SetStatusFilter("Completed"))"
+                           Variant="@(_statusFilter == "Completed" ? Variant.Filled : Variant.Outlined)">
+                    Completed
+                </MudButton>
+                <MudButton OnClick="@(() => SetStatusFilter("Failed"))"
+                           Variant="@(_statusFilter == "Failed" ? Variant.Filled : Variant.Outlined)">
+                    Failed
+                </MudButton>
+            </MudButtonGroup>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadBatchesAsync" Color="Color.Primary" Variant="Variant.Filled" />
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudText>Loading batches...</MudText>
+    }
+    else if (_batches.Count == 0)
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.body1">No batches found.</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@_batches" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>Batch ID</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Progress</MudTh>
+                <MudTh>Current Item</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Profile</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Batch ID">
+                    <MudText Typo="Typo.body2">@context.BatchId</MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Progress">
+                    @if (context.TotalItems > 0)
+                    {
+                        var percentage = (double)context.ProcessedItems / context.TotalItems * 100;
+                        <div style="min-width: 200px;">
+                            <MudProgressLinear Value="@percentage"
+                                             Class="@($"mb-1 {GetStatusCssClass(context.Status)}")" />
+                            <MudText Typo="Typo.caption">
+                                @context.ProcessedItems / @context.TotalItems (@($"{percentage:F1}%"))
+                            </MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">No items</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Current Item">
+                    @if (!string.IsNullOrEmpty(context.CurrentItemPath))
+                    {
+                        <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
+                            @GetFileName(context.CurrentItemPath)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate" Style="max-width: 300px;">
+                            @context.CurrentItemPath
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.body2">@context.CreatedAtUtc.ToLocalTime().ToString("g")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Profile">
+                    @if (context.ProfileId.HasValue)
+                    {
+                        <MudText Typo="Typo.body2">Profile #@context.ProfileId</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<DirectoryBatchStatusDto> _batches = new();
+    private bool _isLoading = true;
+    private string? _statusFilter;
+    private Timer? _pollingTimer;
+    private const int PollingIntervalMs = 5000;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Batches page initializing");
+        await LoadBatchesAsync();
+        StartPolling();
+        Logger.LogInformation("Batches page initialized");
+    }
+
+    private async Task LoadBatchesAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _batches = (await ApiClient.GetAllBatchesAsync(_statusFilter).ConfigureAwait(false)).ToList();
+            Logger.LogInformation("Loaded {Count} batches", _batches.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading batches");
+            Snackbar.Add($"Error loading batches: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetStatusFilter(string? status)
+    {
+        _statusFilter = status;
+        _ = LoadBatchesAsync();
+    }
+
+    private void StartPolling()
+    {
+        Logger.LogInformation("Starting batch polling with interval {IntervalMs}ms", PollingIntervalMs);
+        _pollingTimer = new Timer(async _ =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    // Only auto-refresh if we have active batches
+                    if (_batches.Any(b => b.Status is "Pending" or "Running"))
+                    {
+                        await LoadBatchesAsync();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error during polling");
+            }
+        }, null, PollingIntervalMs, PollingIntervalMs);
+    }
+
+    private void StopPolling()
+    {
+        Logger.LogInformation("Stopping batch polling");
+        _pollingTimer?.Dispose();
+        _pollingTimer = null;
+    }
+
+    private static string GetStatusCssClass(string status)
+    {
+        return status switch
+        {
+            "Pending" => "status-pending",
+            "Running" => "status-running",
+            "Completed" => "status-completed",
+            "Failed" => "status-failed",
+            _ => string.Empty
+        };
+    }
+
+    private static string GetFileName(string path)
+    {
+        try
+        {
+            return Path.GetFileName(path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    public void Dispose()
+    {
+        Logger.LogInformation("Batches page disposing");
+        StopPolling();
+    }
+}
+
