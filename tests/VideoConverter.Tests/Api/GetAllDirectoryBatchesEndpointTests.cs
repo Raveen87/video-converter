@@ -28,9 +28,9 @@ public sealed class GetAllDirectoryBatchesEndpointTests
         await using var db = DbContextTestFactory.CreateInMemory();
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-3) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-2) },
-            new { Status = "Completed", Created = DateTime.UtcNow.AddHours(-1) },
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-3)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-2)),
+            new BatchSeedData("Completed", DateTime.UtcNow.AddHours(-1)),
         });
 
         var api = CreateApi(db);
@@ -47,10 +47,10 @@ public sealed class GetAllDirectoryBatchesEndpointTests
         await using var db = DbContextTestFactory.CreateInMemory();
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-3) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-2) },
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-1) },
-            new { Status = "Completed", Created = DateTime.UtcNow },
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-3)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-2)),
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-1)),
+            new BatchSeedData("Completed", DateTime.UtcNow),
         });
 
         var api = CreateApi(db);
@@ -68,8 +68,8 @@ public sealed class GetAllDirectoryBatchesEndpointTests
         await using var db = DbContextTestFactory.CreateInMemory();
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-2) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-1) },
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-2)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-1)),
         });
 
         var api = CreateApi(db);
@@ -86,8 +86,8 @@ public sealed class GetAllDirectoryBatchesEndpointTests
         await using var db = DbContextTestFactory.CreateInMemory();
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-2) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-1) },
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-2)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-1)),
         });
 
         var api = CreateApi(db);
@@ -108,9 +108,9 @@ public sealed class GetAllDirectoryBatchesEndpointTests
 
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = middle },
-            new { Status = "Running", Created = oldest },
-            new { Status = "Completed", Created = newest },
+            new BatchSeedData("Pending", middle),
+            new BatchSeedData("Running", oldest),
+            new BatchSeedData("Completed", newest),
         });
 
         var api = CreateApi(db);
@@ -266,11 +266,11 @@ public sealed class GetAllDirectoryBatchesEndpointTests
         await using var db = DbContextTestFactory.CreateInMemory();
         await SeedBatches(db, new[]
         {
-            new { Status = "Pending", Created = DateTime.UtcNow.AddHours(-5) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-4) },
-            new { Status = "Completed", Created = DateTime.UtcNow.AddHours(-3) },
-            new { Status = "Failed", Created = DateTime.UtcNow.AddHours(-2) },
-            new { Status = "Running", Created = DateTime.UtcNow.AddHours(-1) },
+            new BatchSeedData("Pending", DateTime.UtcNow.AddHours(-5)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-4)),
+            new BatchSeedData("Completed", DateTime.UtcNow.AddHours(-3)),
+            new BatchSeedData("Failed", DateTime.UtcNow.AddHours(-2)),
+            new BatchSeedData("Running", DateTime.UtcNow.AddHours(-1)),
         });
 
         var api = CreateApi(db);
@@ -293,7 +293,7 @@ public sealed class GetAllDirectoryBatchesEndpointTests
             NullLoggerFactory.Instance);
     }
 
-    private static async Task SeedBatches(AppDbContext db, IEnumerable<dynamic> batches)
+    private static async Task SeedBatches(AppDbContext db, IEnumerable<BatchSeedData> batches)
     {
         foreach (var batch in batches)
         {
@@ -308,6 +308,8 @@ public sealed class GetAllDirectoryBatchesEndpointTests
 
         _ = await db.SaveChangesAsync().ConfigureAwait(false);
     }
+
+    private sealed record BatchSeedData(string Status, DateTime Created);
 
     private sealed class StubDirectoryBatchService : IDirectoryBatchService
     {
