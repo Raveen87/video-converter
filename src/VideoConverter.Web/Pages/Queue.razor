@@ -261,6 +261,12 @@
                 dialogRef?.Close();
                 Logger.LogDebug("Queue directory dialog closed");
             }) },
+            { x => x.OnSubmitWithProfile, EventCallback.Factory.Create<(int ProfileId, ProfileDirectoryQueueRequestDto Request)>(this, async (data) =>
+            {
+                await QueueDirectoryWithProfileAsync(data.ProfileId, data.Request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Queue directory dialog closed");
+            }) },
             { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
         }, new DialogOptions
         {
@@ -334,13 +340,45 @@
         {
             var batchId = await _apiClient.QueueDirectoryAsync(request).ConfigureAwait(false);
             Logger.LogInformation("Successfully queued directory with batch ID {BatchId}", batchId);
-            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}. Click to view batches.", Severity.Success, config =>
+            {
+                config.OnClick = _ =>
+                {
+                    NavigationManager.NavigateTo($"/batches?batchId={batchId}");
+                    return Task.CompletedTask;
+                };
+            });
             await _stateService.LoadConversionsAsync().ConfigureAwait(false);
             UpdatePendingConversions();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error queueing directory. Directory: {DirectoryPath}", request.DirectoryPath);
+            Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task QueueDirectoryWithProfileAsync(int profileId, ProfileDirectoryQueueRequestDto request)
+    {
+        Logger.LogInformation("Queueing directory with profile {ProfileId}. Directory: {DirectoryPath}", profileId, request.DirectoryPath);
+        try
+        {
+            var batchId = await _apiClient.QueueDirectoryWithProfileAsync(profileId, request).ConfigureAwait(false);
+            Logger.LogInformation("Successfully queued directory with profile {ProfileId}. Batch ID: {BatchId}", profileId, batchId);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}. Click to view batches.", Severity.Success, config =>
+            {
+                config.OnClick = _ =>
+                {
+                    NavigationManager.NavigateTo($"/batches?batchId={batchId}");
+                    return Task.CompletedTask;
+                };
+            });
+            await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+            UpdatePendingConversions();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error queueing directory with profile {ProfileId}. Directory: {DirectoryPath}", profileId, request.DirectoryPath);
             Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
         }
     }
@@ -441,6 +479,9 @@
 
     [Inject]
     private IVideoConverterApiClient _apiClient { get; set; } = null!;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
 
     public void Dispose()
     {

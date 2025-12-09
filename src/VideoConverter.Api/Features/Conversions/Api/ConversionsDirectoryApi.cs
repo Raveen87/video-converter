@@ -1,5 +1,4 @@
 using VideoConverter.Api.Common.Exceptions;
-using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 
@@ -47,8 +46,41 @@ public sealed class ConversionsDirectoryApi(
             batch.TotalItems,
             batch.ProcessedItems,
             unprocessed,
-            batch.CurrentItemPath);
+            batch.CurrentItemPath,
+            batch.CreatedAtUtc,
+            batch.ProfileId);
         loggerFactory.CreateLogger<ConversionsDirectoryApi>().LogDebug("Batch {BatchId} status {Status} processed {Processed}/{Total}", id, batch.Status, batch.ProcessedItems, batch.TotalItems);
         return Results.Ok(dto);
+    }
+
+    [HttpGet("queue-directory/batches")]
+    public async Task<IResult> GetAllDirectoryBatchesAsync(
+        [FromQuery] string? status,
+        CancellationToken ct)
+    {
+        var query = db.DirectoryQueueBatches.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(b => b.Status == status);
+        }
+
+        var batches = await query
+            .OrderByDescending(b => b.CreatedAtUtc)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var dtos = batches.Select(batch => new DirectoryBatchStatusDto(
+            batch.Id,
+            batch.Status,
+            batch.TotalItems,
+            batch.ProcessedItems,
+            Math.Max(0, batch.TotalItems - batch.ProcessedItems),
+            batch.CurrentItemPath,
+            batch.CreatedAtUtc,
+            batch.ProfileId)).ToList();
+
+        loggerFactory.CreateLogger<ConversionsDirectoryApi>().LogDebug("Retrieved {Count} batches", dtos.Count);
+        return Results.Ok(dtos);
     }
 }

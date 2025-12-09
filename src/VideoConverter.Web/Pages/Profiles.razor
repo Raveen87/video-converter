@@ -86,6 +86,9 @@
     [Inject]
     private ILogger<Profiles> Logger { get; set; } = null!;
 
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
+
     protected override async Task OnInitializedAsync()
     {
         Logger.LogInformation("Profiles page initializing");
@@ -295,7 +298,14 @@
         {
             var batchId = await ApiClient.QueueDirectoryWithProfileAsync(profileId, request).ConfigureAwait(false);
             Logger.LogInformation("Successfully queued directory with profile {ProfileId}. Batch ID: {BatchId}", profileId, batchId);
-            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}", Severity.Success);
+            Snackbar.Add($"Directory queued successfully. Batch ID: {batchId}. Click to view batches.", Severity.Success, config =>
+            {
+                config.OnClick = _ =>
+                {
+                    NavigationManager.NavigateTo($"/batches?batchId={batchId}");
+                    return Task.CompletedTask;
+                };
+            });
         }
         catch (Exception ex)
         {

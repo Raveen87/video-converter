@@ -1,0 +1,16 @@
+.status-pending {
+    color: var(--mud-palette-info);
+}
+
+.status-running {
+    color: var(--mud-palette-success);
+}
+
+.status-completed {
+    color: var(--mud-palette-success);
+}
+
+.status-failed {
+    color: var(--mud-palette-error);
+}
+
