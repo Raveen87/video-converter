@@ -1,0 +1,149 @@
+@using VideoConverter.Common.Models
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid Class="ma-0">
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle1" Class="mb-2"><b>File Information</b></MudText>
+                <MudSimpleTable Style="overflow-x: auto;">
+                    <tbody>
+                        <tr>
+                            <td><b>Input Path</b></td>
+                            <td style="word-break: break-all;">@Conversion.InputPath</td>
+                        </tr>
+                        <tr>
+                            <td><b>Output Directory</b></td>
+                            <td style="word-break: break-all;">@Conversion.OutputDirectory</td>
+                        </tr>
+                        <tr>
+                            <td><b>Created At</b></td>
+                            <td>@Conversion.CreatedAtUtc.ToString("F")</td>
+                        </tr>
+                         @if (Conversion.DeletedAtUtc.HasValue)
+                        {
+                            <tr>
+                                <td><b>Deleted At</b></td>
+                                <td>@Conversion.DeletedAtUtc.Value.ToString("F")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+
+            <MudItem xs="12" Class="mt-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-2"><b>Conversion Settings</b></MudText>
+                <MudSimpleTable>
+                    <tbody>
+                        <tr>
+                            <td><b>Status</b></td>
+                            <td>
+                                <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Color="@GetStatusColor(Conversion.Status)">
+                                    @Conversion.Status
+                                </MudChip>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>CRF</b></td>
+                            <td>@(Conversion.Crf?.ToString() ?? "Default")</td>
+                        </tr>
+                        <tr>
+                            <td><b>Audio Bitrate</b></td>
+                            <td>@(Conversion.AudioBitrateKbps.HasValue ? $"{Conversion.AudioBitrateKbps} Kbps" : "Default")</td>
+                        </tr>
+                        <tr>
+                            <td><b>Audio Channels</b></td>
+                            <td>@(Conversion.AudioChannels?.ToString() ?? "Default")</td>
+                        </tr>
+                        <tr>
+                            <td><b>Resolution</b></td>
+                            <td>@(Conversion.Resolution.HasValue ? $"{Conversion.Resolution}p" : "Default")</td>
+                        </tr>
+                        <tr>
+                            <td><b>Detected Crop</b></td>
+                            <td>@(string.IsNullOrEmpty(Conversion.DetectedCrop) ? "None/Auto" : Conversion.DetectedCrop)</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+
+            <MudItem xs="12" Class="mt-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-2"><b>Clean Language Selection</b></MudText>
+                <MudSimpleTable>
+                    <tbody>
+                        <tr>
+                            <td><b>Audio Stream Indices</b></td>
+                            <td>@(string.IsNullOrEmpty(Conversion.SelectedAudioStreamIndicesCsv) ? "Default" : Conversion.SelectedAudioStreamIndicesCsv)</td>
+                        </tr>
+                         <tr>
+                            <td><b>Subtitle Stream Indices</b></td>
+                            <td>@(string.IsNullOrEmpty(Conversion.SelectedSubtitleStreamIndicesCsv) ? "None" : Conversion.SelectedSubtitleStreamIndicesCsv)</td>
+                        </tr>
+                         <tr>
+                            <td><b>External Subtitles</b></td>
+                            <td style="word-break: break-all;">@(string.IsNullOrEmpty(Conversion.SelectedExternalSubtitlePathsCsv) ? "None" : Conversion.SelectedExternalSubtitlePathsCsv)</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+
+             @if (!string.IsNullOrEmpty(Conversion.MatchedTitle))
+            {
+                <MudItem xs="12" Class="mt-4">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2"><b>Metadata Match</b></MudText>
+                    <MudSimpleTable>
+                        <tbody>
+                            <tr>
+                                <td><b>Title</b></td>
+                                <td>@Conversion.MatchedTitle</td>
+                            </tr>
+                             <tr>
+                                <td><b>Year</b></td>
+                                <td>@Conversion.MatchedYear</td>
+                            </tr>
+                             @if (Conversion.MatchedSeason.HasValue)
+                            {
+                                <tr>
+                                    <td><b>Season</b></td>
+                                    <td>@Conversion.MatchedSeason</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Episode</b></td>
+                                    <td>@Conversion.MatchedEpisode</td>
+                                </tr>
+                            }
+                            @if (Conversion.TmdbId.HasValue)
+                            {
+                                <tr>
+                                    <td><b>TMDB ID</b></td>
+                                    <td>@Conversion.TmdbId</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IDialogReference MudDialog { get; set; } = null!;
+
+    [Parameter] public ConversionDto Conversion { get; set; } = null!;
+
+    private void Cancel() => MudDialog.Close();
+
+    private static Color GetStatusColor(ConversionStatus status) => status switch
+    {
+        ConversionStatus.Pending => Color.Default,
+        ConversionStatus.Running => Color.Info,
+        ConversionStatus.Completed => Color.Success,
+        ConversionStatus.Failed => Color.Error,
+        ConversionStatus.Deleted => Color.Dark,
+        _ => Color.Default
+    };
+}

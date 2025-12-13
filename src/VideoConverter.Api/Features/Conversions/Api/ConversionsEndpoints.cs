@@ -80,7 +80,11 @@ public sealed class ConversionsEndpoints(
             conversion.MatchedTitle,
             conversion.MatchedYear,
             conversion.MatchedSeason,
-            conversion.MatchedEpisode);
+            conversion.MatchedEpisode,
+            conversion.SelectedAudioStreamIndicesCsv,
+            conversion.SelectedSubtitleStreamIndicesCsv,
+            conversion.SelectedExternalSubtitlePathsCsv,
+            conversion.DetectedCrop);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)
