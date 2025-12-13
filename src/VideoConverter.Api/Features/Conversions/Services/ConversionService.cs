@@ -518,10 +518,27 @@ public sealed class ConversionService(
 
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
-        var requested = request.AudioLanguages?.ToList();
+        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var inputAudioStreams = probe.Streams
+            .Where(s => string.Equals(s.CodecType, "audio", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
+        if (inputAudioStreams.Count is 0)
+        {
+            logger.LogWarning("No audio streams found in input file: {InputPath}", request.InputPath);
+            throw new InvalidOperationException($"No audio streams found in input file {request.InputPath}.");
+        }
+
+        var requested = request.AudioLanguages?.ToList();
         if (requested is not { Count: > 0 })
         {
+            // If no specific languages requested, we essentially want "default" audio behavior.
+            // Since we know audio streams exist (checked above), we can either:
+            // 1. Return empty result (which maps to 0:a? in AudioArgsBuilder) - this works but might be ambiguous if 0:a? finds nothing (unlikely given check above).
+            // 2. Or failing here if we want strictly explicit selection (not per requirement).
+            // Requirement says: "At least one audio stream must always be included".
+            // If we return empty here, AudioArgsBuilder uses "-map 0:a?", which will include audio.
+            // So we are safe just by ensuring inputAudioStreams > 0.
             return new AudioProcessingResult();
         }
 
@@ -529,8 +546,17 @@ public sealed class ConversionService(
             "Processing audio language requirements: {AudioLanguages}",
             string.Join(", ", requested));
 
-        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
         var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
+
+        if (matched.Count is 0)
+        {
+            logger.LogWarning(
+                "No matching audio streams found for languages: {RequestedLanguages} in {InputPath}",
+                string.Join(", ", requested),
+                request.InputPath);
+            throw new InvalidOperationException($"No matching audio streams found for languages: {string.Join(", ", requested)}");
+        }
+
         var audioIndicesCsv = string.Join(',', matched);
 
         logger.LogInformation(

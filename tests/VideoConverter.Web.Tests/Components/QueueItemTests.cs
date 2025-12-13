@@ -188,8 +188,6 @@ public sealed class QueueItemTests : BunitContext
             null,
             null,
             null,
-            null,
-            null,
             null);
     }
 }
