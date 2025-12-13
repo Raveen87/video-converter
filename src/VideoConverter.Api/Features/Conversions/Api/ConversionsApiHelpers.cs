@@ -25,7 +25,11 @@ internal static class ConversionsApiHelpers
             c.MatchedTitle,
             c.MatchedYear,
             c.MatchedSeason,
-            c.MatchedEpisode);
+            c.MatchedEpisode,
+            c.SelectedAudioStreamIndicesCsv,
+            c.SelectedSubtitleStreamIndicesCsv,
+            c.SelectedExternalSubtitlePathsCsv,
+            c.DetectedCrop);
     }
 
     public static void ThrowConversionStartError(ConversionStartResult result)

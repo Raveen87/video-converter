@@ -103,7 +103,11 @@ public sealed class AudioChannelsConverterTests
             MatchedTitle: null,
             MatchedYear: null,
             MatchedSeason: null,
-            MatchedEpisode: null);
+            MatchedEpisode: null,
+            SelectedAudioStreamIndicesCsv: null,
+            SelectedSubtitleStreamIndicesCsv: null,
+            SelectedExternalSubtitlePathsCsv: null,
+            DetectedCrop: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -137,7 +141,11 @@ public sealed class AudioChannelsConverterTests
             MatchedTitle: null,
             MatchedYear: null,
             MatchedSeason: null,
-            MatchedEpisode: null);
+            MatchedEpisode: null,
+            SelectedAudioStreamIndicesCsv: null,
+            SelectedSubtitleStreamIndicesCsv: null,
+            SelectedExternalSubtitlePathsCsv: null,
+            DetectedCrop: null);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

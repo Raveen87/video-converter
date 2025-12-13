@@ -148,6 +148,9 @@
                     <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionStatus.Deleted)">
                         Edit
                     </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Info" OnClick="@(() => OpenDetailsDialog(context))" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
+                        Details
+                    </MudButton>
                 </MudTd>
             </RowTemplate>
         </MudTable>
@@ -220,6 +223,13 @@
             FullWidth = true,
         }).ConfigureAwait(false);
         Logger.LogDebug("Edit conversion dialog opened");
+    }
+
+    private async Task OpenDetailsDialog(ConversionDto conversion)
+    {
+        var parameters = new DialogParameters<ConversionDetailsDialog> { { x => x.Conversion, conversion } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<ConversionDetailsDialog>("Conversion Details", parameters, options);
     }
 
     private async Task OpenResolveMetadataDialog(ConversionDto conversion)

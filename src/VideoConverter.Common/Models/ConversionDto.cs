@@ -16,4 +16,8 @@ public record ConversionDto(
     string? MatchedTitle,
     int? MatchedYear,
     int? MatchedSeason,
-    int? MatchedEpisode);
+    int? MatchedEpisode,
+    string? SelectedAudioStreamIndicesCsv,
+    string? SelectedSubtitleStreamIndicesCsv,
+    string? SelectedExternalSubtitlePathsCsv,
+    string? DetectedCrop);

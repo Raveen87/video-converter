@@ -104,7 +104,11 @@ public sealed class ProfileConversionsEndpoints(
             c.MatchedTitle,
             c.MatchedYear,
             c.MatchedSeason,
-            c.MatchedEpisode);
+            c.MatchedEpisode,
+            c.SelectedAudioStreamIndicesCsv,
+            c.SelectedSubtitleStreamIndicesCsv,
+            c.SelectedExternalSubtitlePathsCsv,
+            c.DetectedCrop);
     }
 
     private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
