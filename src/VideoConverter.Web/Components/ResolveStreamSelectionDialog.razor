@@ -1,0 +1,181 @@
+@using VideoConverter.Common.Models
+@using VideoConverter.Web.Services
+@using MudBlazor
+@using System.Text.Json
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Select Audio/Subtitle Streams</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Select streams for: <strong>@Item?.SourceFileName</strong>
+                </MudText>
+                @if (!string.IsNullOrEmpty(Item?.MissingAudioLanguages))
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                        Missing audio languages: @Item.MissingAudioLanguages
+                    </MudAlert>
+                }
+                @if (!string.IsNullOrEmpty(Item?.MissingSubtitleLanguages))
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                        Missing subtitle languages: @Item.MissingSubtitleLanguages
+                    </MudAlert>
+                }
+            </MudItem>
+
+            @if (_audioStreams.Count > 0)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Audio Streams</MudText>
+                    <MudTable Items="@_audioStreams" MultiSelection="true" @bind-SelectedItems="_selectedAudioStreams" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Index</MudTh>
+                            <MudTh>Language</MudTh>
+                            <MudTh>Codec</MudTh>
+                            <MudTh>Channels</MudTh>
+                            <MudTh>Title</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Index">@context.Index</MudTd>
+                            <MudTd DataLabel="Language">@(context.LanguageTag ?? "Unknown")</MudTd>
+                            <MudTd DataLabel="Codec">@context.CodecName</MudTd>
+                            <MudTd DataLabel="Channels">@(context.Channels?.ToString() ?? "-") @context.ChannelLayout</MudTd>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudItem>
+            }
+
+            @if (_subtitleStreams.Count > 0)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">Subtitle Streams</MudText>
+                    <MudTable Items="@_subtitleStreams" MultiSelection="true" @bind-SelectedItems="_selectedSubtitleStreams" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Index</MudTh>
+                            <MudTh>Language</MudTh>
+                            <MudTh>Codec</MudTh>
+                            <MudTh>Title</MudTh>
+                            <MudTh>Flags</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Index">@context.Index</MudTd>
+                            <MudTd DataLabel="Language">@(context.LanguageTag ?? "Unknown")</MudTd>
+                            <MudTd DataLabel="Codec">@context.CodecName</MudTd>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                            <MudTd DataLabel="Flags">
+                                @if (context.IsDefault) { <MudChip T="string" Size="Size.Small" Color="Color.Info">Default</MudChip> }
+                                @if (context.IsForced) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">Forced</MudChip> }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudItem>
+            }
+
+            @if (_audioStreams.Count == 0 && _subtitleStreams.Count == 0)
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info">No stream information available.</MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="ResolveAsync" Disabled="@((_audioStreams.Count > 0 && _selectedAudioStreams.Count == 0) || _isResolving)">
+            @if (_isResolving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <text>Creating...</text>
+            }
+            else
+            {
+                <text>Create Conversion</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public ManualResolutionQueueItemDto? Item { get; set; }
+
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
+    private List<MediaStreamDto> _audioStreams = new();
+    private List<MediaStreamDto> _subtitleStreams = new();
+    private HashSet<MediaStreamDto> _selectedAudioStreams = new();
+    private HashSet<MediaStreamDto> _selectedSubtitleStreams = new();
+    private bool _isResolving;
+
+    protected override void OnInitialized()
+    {
+        if (Item != null)
+        {
+            if (!string.IsNullOrEmpty(Item.AvailableAudioStreamsJson))
+            {
+                try
+                {
+                    _audioStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableAudioStreamsJson) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    _audioStreams = new();
+                    Snackbar.Add($"Failed to load audio streams: {ex.Message}", Severity.Error);
+                }
+            }
+            if (!string.IsNullOrEmpty(Item.AvailableSubtitleStreamsJson))
+            {
+                try
+                {
+                    _subtitleStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableSubtitleStreamsJson) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    _subtitleStreams = new();
+                    Snackbar.Add($"Failed to load subtitle streams: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+    }
+
+    private async Task ResolveAsync()
+    {
+        if (Item == null || _selectedAudioStreams.Count == 0) return;
+
+        _isResolving = true;
+        try
+        {
+            var request = new ResolveStreamSelectionRequestDto
+            {
+                AudioStreamIndices = string.Join(",", _selectedAudioStreams.Select(s => s.Index)),
+                SubtitleStreamIndices = _selectedSubtitleStreams.Count > 0
+                    ? string.Join(",", _selectedSubtitleStreams.Select(s => s.Index))
+                    : null,
+            };
+
+            await ApiClient.ResolveStreamSelectionQueueItemAsync(Item.Id, request);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error resolving item: {ex.Message}", Severity.Error);
+            _isResolving = false;
+            return;
+        }
+
+        await OnClose.InvokeAsync(true);
+    }
+
+    private async Task Cancel() => await OnClose.InvokeAsync(false);
+}

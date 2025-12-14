@@ -180,11 +180,19 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.ToTable("DirectoryQueueBatchItems");
                 });
 
-            modelBuilder.Entity("VideoConverter.Api.Shared.Domain.Entities.MetadataResolutionQueueItem", b =>
+            modelBuilder.Entity("VideoConverter.Api.Shared.Domain.Entities.ManualResolutionQueueItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("AvailableAudioStreamsJson")
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AvailableSubtitleStreamsJson")
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
@@ -203,6 +211,14 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MissingAudioLanguages")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MissingSubtitleLanguages")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("ParsedEpisode")
                         .HasColumnType("INTEGER");
 
@@ -215,6 +231,11 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("ParsedYear")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResolutionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SerializedRequest")
                         .IsRequired()
@@ -239,10 +260,10 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SourcePath", "Status")
+                    b.HasIndex("SourcePath", "ResolutionType", "Status")
                         .IsUnique();
 
-                    b.ToTable("MetadataResolutionQueue");
+                    b.ToTable("ManualResolutionQueue");
                 });
 
             modelBuilder.Entity("VideoConverter.Api.Shared.Domain.Entities.Notification", b =>

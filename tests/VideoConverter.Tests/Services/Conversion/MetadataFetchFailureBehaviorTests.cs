@@ -74,7 +74,7 @@ public class MetadataFetchFailureBehaviorTests
         dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
 
         await Assert.ThrowsAsync<ApiErrorException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
-        Assert.Equal(1, await db.MetadataResolutionQueue.CountAsync());
+        Assert.Equal(1, await db.ManualResolutionQueue.CountAsync());
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class MetadataFetchFailureBehaviorTests
         dto = dto with { OutputFilenameTemplate = "{Title}.{Year}" };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => svc.CreateConversionAsync(dto, CancellationToken.None));
-        Assert.Equal(0, await db.MetadataResolutionQueue.CountAsync());
+        Assert.Equal(0, await db.ManualResolutionQueue.CountAsync());
     }
 
     private static ConversionService CreateService(
@@ -180,6 +180,7 @@ public class MetadataFetchFailureBehaviorTests
             Options.Create(new FilenameTemplateOptions { DefaultTemplate = null }),
             logger.Object,
             behaviorOptions,
+            Options.Create(new StreamSelectionOptions { OnFailureBehavior = StreamSelectionFailureBehavior.Fail }),
             db,
             notificationService);
     }

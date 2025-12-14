@@ -47,7 +47,9 @@ public class ConversionServiceTests
             _mockFilenameGenerator.Object,
             _mockTemplateEngine.Object,
             Options.Create(new FilenameTemplateOptions { DefaultTemplate = null }),
-            _mockLogger.Object);
+            _mockLogger.Object,
+            metadataFetchOptions: null,
+            Options.Create(new StreamSelectionOptions { OnFailureBehavior = StreamSelectionFailureBehavior.Fail }));
     }
 
     [Fact]
@@ -288,7 +290,7 @@ public class ConversionServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _conversionService.CreateConversionAsync(request, CancellationToken.None));
 
-        _ = exception.Message.Should().Contain("Requested subtitle language 'French' not found in file or as external .srt");
+        _ = exception.Message.Should().Contain("Requested subtitle languages not found: French");
     }
 
     [Fact]

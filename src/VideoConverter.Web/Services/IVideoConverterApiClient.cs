@@ -54,9 +54,11 @@ public interface IVideoConverterApiClient
 
     Task DeleteNotificationAsync(int id, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<MetadataResolutionQueueItemDto>> GetMetadataQueueItemsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ManualResolutionQueueItemDto>> GetManualResolutionQueueItemsAsync(ManualResolutionType? type = null, CancellationToken cancellationToken = default);
 
     Task ResolveMetadataQueueItemAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default);
+
+    Task ResolveStreamSelectionQueueItemAsync(int id, ResolveStreamSelectionRequestDto request, CancellationToken cancellationToken = default);
 
     Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default);
 
@@ -64,7 +66,7 @@ public interface IVideoConverterApiClient
 
     Task<IReadOnlyList<ConversionDto>> ResolveBatchConversionMetadataAsync(ResolveBatchMetadataRequestDto request, CancellationToken cancellationToken = default);
 
-    Task DeleteMetadataQueueItemAsync(int id, CancellationToken cancellationToken = default);
+    Task DeleteManualResolutionQueueItemAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<MetadataSearchResultDto>> SearchMetadataAsync(MetadataSearchRequestDto request, CancellationToken cancellationToken = default);
 }

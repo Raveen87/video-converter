@@ -273,11 +273,34 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Deleted items are marked with `Deleted` status and remain visible in the Conversions view but are excluded from queue operations.
 - The deletion timestamp is stored in `deletedAtUtc` for audit purposes.
 
-#### Manual Metadata Resolution
-- When automatic metadata lookup fails (and configuration is set to `QueueForManualResolution`), items are added to a "Metadata Resolution Queue".
-- **Metadata Queue View (`/metadata-queue`)**: Lists all items pending manual resolution.
+#### Manual Resolution Queue
+The Manual Resolution Queue handles two types of failures that require user intervention:
+
+**Metadata Resolution**
+- When automatic metadata lookup fails (and configuration is set to `QueueForManualResolution`), items are added to the queue.
 - **Resolution Dialog**: Allows searching TMDb manually by title/year, selecting the correct match, and creating the conversion with the selected metadata.
-- **Queue Actions**: Items can be resolved or deleted (skipped).
+
+**Stream Selection Resolution**
+- When required audio or subtitle languages are not found in the input file (and `StreamSelection:OnFailureBehavior` is set to `QueueForManualResolution`), items are added to the queue.
+- **Resolution Dialog**: Shows all available audio and subtitle streams from the input file, allowing manual selection of which streams to include in the conversion.
+- Displays which languages were requested but not found.
+
+**Manual Resolution View (`/manual-resolution`)**
+- Lists all items pending manual resolution, grouped by resolution type (Metadata or Stream Selection).
+- **Queue Actions**: Items can be resolved (with appropriate dialog) or deleted (skipped).
+
+**API Endpoints**
+- `GET /api/manual-resolution?type={Metadata|StreamSelection}` - List queue items, optionally filtered by type
+- `POST /api/manual-resolution/{id}/resolve-metadata` - Resolve a metadata queue item
+- `POST /api/manual-resolution/{id}/resolve-streams` - Resolve a stream selection queue item
+- `POST /api/manual-resolution/resolve-metadata-batch` - Batch resolve metadata items
+- `DELETE /api/manual-resolution/{id}` - Delete/skip a queue item
+
+**Configuration**
+- `StreamSelection:OnFailureBehavior` controls behavior when required audio/subtitle streams are not found:
+  - `Fail` (default for tests): Throw an error immediately
+  - `QueueForManualResolution`: Add to manual resolution queue for user intervention
+  - `SkipItem`: Skip the item entirely
 
 - POST `/api/profiles/{id:int}/conversions`
   - Body:

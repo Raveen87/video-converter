@@ -4,7 +4,7 @@ public static class MetadataApi
 {
     public static void MapMetadataEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapMetadataQueueEndpoints();
+        app.MapManualResolutionEndpoints();
         app.MapMetadataSearchEndpoints();
     }
 }

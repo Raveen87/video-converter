@@ -1,3 +1,4 @@
+@page "/manual-resolution"
 @page "/metadata-queue"
 @using VideoConverter.Common.Models
 @using VideoConverter.Web.Components
@@ -8,8 +9,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.h4">Metadata Resolution Queue</MudText>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadQueueAsync">Refresh</MudButton>
+        <MudText Typo="Typo.h4">Manual Resolution Queue</MudText>
+        <div class="d-flex gap-2">
+            <MudSelect T="ManualResolutionType?" Label="Filter" Value="_filterType" ValueChanged="OnFilterChanged" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
+                <MudSelectItem T="ManualResolutionType?" Value="@((ManualResolutionType?)null)">All</MudSelectItem>
+                <MudSelectItem T="ManualResolutionType?" Value="@ManualResolutionType.Metadata">Metadata</MudSelectItem>
+                <MudSelectItem T="ManualResolutionType?" Value="@ManualResolutionType.StreamSelection">Stream Selection</MudSelectItem>
+            </MudSelect>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadQueueAsync">Refresh</MudButton>
+        </div>
     </div>
 
     @if (_isLoading)
@@ -24,13 +32,13 @@
     {
         <MudTable Items="@_items" MultiSelection="true" @bind-SelectedItems="_selectedItems" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">Metadata Resolution Queue</MudText>
+                <MudText Typo="Typo.h6">Manual Resolution Queue</MudText>
                 <MudSpacer />
-                @if (_selectedItems.Count > 0)
+                @if (_selectedItems.Count > 0 && _selectedItems.All(i => i.ResolutionType == ManualResolutionType.Metadata))
                 {
-                    <MudButton StartIcon="@Icons.Material.Filled.CheckCircle" 
-                              Variant="Variant.Filled" 
-                              Color="Color.Primary" 
+                    <MudButton StartIcon="@Icons.Material.Filled.CheckCircle"
+                              Variant="Variant.Filled"
+                              Color="Color.Primary"
                               OnClick="OpenBatchResolveDialog"
                               Class="ml-2">
                         Resolve (@_selectedItems.Count)
@@ -38,33 +46,53 @@
                 }
             </ToolBarContent>
             <HeaderContent>
+                <MudTh>Type</MudTh>
                 <MudTh>File</MudTh>
-                <MudTh>Parsed Info</MudTh>
+                <MudTh>Info</MudTh>
                 <MudTh>Reason</MudTh>
                 <MudTh>Created</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <MudTd DataLabel="Type">
+                    <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(context.ResolutionType)">
+                        @GetTypeLabel(context.ResolutionType)
+                    </MudChip>
+                </MudTd>
                 <MudTd DataLabel="File">
                     <MudText Typo="Typo.body2">@context.SourceFileName</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@context.SourcePath</MudText>
                 </MudTd>
-                <MudTd DataLabel="Parsed Info">
-                    @if (context.InputKind != "Unknown")
+                <MudTd DataLabel="Info">
+                    @if (context.ResolutionType == ManualResolutionType.Metadata)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">@context.InputKind</MudChip>
+                        @if (context.InputKind != "Unknown")
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">@context.InputKind</MudChip>
+                        }
+                        <MudText Typo="Typo.body2" Class="d-inline">
+                            @(context.ParsedTitle ?? "Unknown Title")
+                            @if (context.ParsedYear.HasValue)
+                            {
+                                <span class="ml-1">(@context.ParsedYear)</span>
+                            }
+                            @if (context.ParsedSeason.HasValue)
+                            {
+                                <span class="ml-1">S@(context.ParsedSeason)E@(context.ParsedEpisode)</span>
+                            }
+                        </MudText>
                     }
-                    <MudText Typo="Typo.body2" Class="d-inline">
-                        @(context.ParsedTitle ?? "Unknown Title")
-                        @if (context.ParsedYear.HasValue)
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(context.MissingAudioLanguages))
                         {
-                            <span class="ml-1">(@context.ParsedYear)</span>
+                            <MudText Typo="Typo.body2">Missing audio: @context.MissingAudioLanguages</MudText>
                         }
-                        @if (context.ParsedSeason.HasValue)
+                        @if (!string.IsNullOrEmpty(context.MissingSubtitleLanguages))
                         {
-                            <span class="ml-1">S@(context.ParsedSeason)E@(context.ParsedEpisode)</span>
+                            <MudText Typo="Typo.body2">Missing subtitles: @context.MissingSubtitleLanguages</MudText>
                         }
-                    </MudText>
+                    }
                 </MudTd>
                 <MudTd DataLabel="Reason">
                     <MudTooltip Text="@context.FailureDetails">
@@ -84,21 +112,29 @@
 </MudContainer>
 
 @code {
-    private List<MetadataResolutionQueueItemDto> _items = new();
-    private HashSet<MetadataResolutionQueueItemDto> _selectedItems = new();
+    private List<ManualResolutionQueueItemDto> _items = new();
+    private HashSet<ManualResolutionQueueItemDto> _selectedItems = new();
     private bool _isLoading = true;
+    private ManualResolutionType? _filterType;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadQueueAsync();
     }
 
+    private async Task OnFilterChanged(ManualResolutionType? value)
+    {
+        _filterType = value;
+        await LoadQueueAsync();
+    }
+
     private async Task LoadQueueAsync()
     {
         _isLoading = true;
+        _selectedItems.Clear();
         try
         {
-            var items = await ApiClient.GetMetadataQueueItemsAsync();
+            var items = await ApiClient.GetManualResolutionQueueItemsAsync(_filterType);
             _items = items.ToList();
         }
         catch (Exception ex)
@@ -111,12 +147,38 @@
         }
     }
 
-    private async Task OpenResolveDialog(MetadataResolutionQueueItemDto item)
+    private static Color GetTypeColor(ManualResolutionType type) => type switch
+    {
+        ManualResolutionType.Metadata => Color.Info,
+        ManualResolutionType.StreamSelection => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetTypeLabel(ManualResolutionType type) => type switch
+    {
+        ManualResolutionType.Metadata => "Metadata",
+        ManualResolutionType.StreamSelection => "Streams",
+        _ => "Unknown"
+    };
+
+    private async Task OpenResolveDialog(ManualResolutionQueueItemDto item)
+    {
+        if (item.ResolutionType == ManualResolutionType.Metadata)
+        {
+            await OpenMetadataResolveDialog(item);
+        }
+        else
+        {
+            await OpenStreamSelectionDialog(item);
+        }
+    }
+
+    private async Task OpenMetadataResolveDialog(ManualResolutionQueueItemDto item)
     {
         IDialogReference? dialogRef = null;
         var parameters = new DialogParameters<ResolveMetadataDialog>
         {
-            { x => x.Item, item },
+            { x => x.ManualResolutionItem, item },
             { x => x.OnClose, EventCallback.Factory.Create<bool>(this, (success) =>
                 {
                     if (success)
@@ -142,6 +204,37 @@
         }
     }
 
+    private async Task OpenStreamSelectionDialog(ManualResolutionQueueItemDto item)
+    {
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<ResolveStreamSelectionDialog>
+        {
+            { x => x.Item, item },
+            { x => x.OnClose, EventCallback.Factory.Create<bool>(this, (success) =>
+                {
+                    if (success)
+                    {
+                        dialogRef?.Close(DialogResult.Ok(true));
+                    }
+                    else
+                    {
+                        dialogRef?.Close(DialogResult.Cancel());
+                    }
+                })
+            }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        dialogRef = await DialogService.ShowAsync<ResolveStreamSelectionDialog>("Select Streams", parameters, options);
+        var result = await dialogRef.Result;
+
+        if (result is not null && !result.Canceled && result.Data is bool successResult && successResult)
+        {
+            Snackbar.Add("Item resolved and conversion created.", Severity.Success);
+            await LoadQueueAsync();
+        }
+    }
+
     private async Task OpenBatchResolveDialog()
     {
         if (_selectedItems.Count == 0) return;
@@ -149,7 +242,7 @@
         IDialogReference? dialogRef = null;
         var parameters = new DialogParameters<ResolveMetadataDialog>
         {
-            { x => x.QueueItems, _selectedItems.ToList() },
+            { x => x.ManualResolutionItems, _selectedItems.ToList() },
             { x => x.OnClose, EventCallback.Factory.Create<bool>(this, async (success) =>
                 {
                     if (success)
@@ -172,7 +265,7 @@
         dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Batch Metadata", parameters, options);
     }
 
-    private async Task DeleteItem(MetadataResolutionQueueItemDto item)
+    private async Task DeleteItem(ManualResolutionQueueItemDto item)
     {
         var confirmed = await DialogService.ShowMessageBox(
             "Delete Item",
@@ -183,7 +276,7 @@
         {
             try
             {
-                await ApiClient.DeleteMetadataQueueItemAsync(item.Id);
+                await ApiClient.DeleteManualResolutionQueueItemAsync(item.Id);
                 Snackbar.Add("Item removed from queue.", Severity.Success);
                 await LoadQueueAsync();
             }
@@ -194,4 +287,3 @@
         }
     }
 }
-
