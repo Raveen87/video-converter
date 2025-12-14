@@ -1,0 +1,191 @@
+@page "/notifications"
+@using VideoConverter.Common.Models
+@using VideoConverter.Web.Services
+@inject IVideoConverterApiClient ApiClient
+@inject ILogger<Notifications> Logger
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h4">Notification Center</MudText>
+            <MudStack Row="true" Spacing="2">
+                @if (_notifications.Any(n => !n.IsRead))
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.MarkEmailRead" OnClick="MarkAllAsReadAsync">Mark All Read</MudButton>
+                }
+                @if (_notifications.Count > 0)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="ClearAllAsync">Clear All</MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="my-4" />
+        }
+        else if (_notifications.Count == 0)
+        {
+            <MudPaper Class="pa-8 d-flex flex-column align-center justify-center fade-in">
+                <MudIcon Icon="@Icons.Material.Filled.NotificationsOff" Size="Size.Large" Color="Color.Default" Style="width: 64px; height: 64px; opacity: 0.5;" />
+                <MudText Typo="Typo.h6" Class="mt-4" Color="Color.Default">You're all caught up!</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">No new notifications to display.</MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudTable Items="@_notifications" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="2" Loading="@_isLoading" T="NotificationDto"
+                      RowClassFunc="@((item, _) => item.IsRead ? "" : "mud-alert-text-info font-weight-bold")">
+                <HeaderContent>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Message</MudTh>
+                    <MudTh>Time</MudTh>
+                    <MudTh Style="text-align:right">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Type">
+                         <MudChip T="string" Size="Size.Small" Color="@GetColorForType(context.Type)">@context.Type</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Title">
+                        <MudText Typo="Typo.body1">@context.Title</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Message">
+                        <MudText Typo="Typo.body2">@context.Message</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Time">
+                        <MudText Typo="Typo.caption">@context.CreatedAtUtc.ToLocalTime().ToString("g")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Actions" Style="text-align:right">
+                         <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="0">
+                            @if (!context.IsRead)
+                            {
+                                <MudTooltip Text="Mark as Read">
+                                    <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" OnClick="@(() => MarkAsReadAsync(context.Id))" />
+                                </MudTooltip>
+                            }
+                            <MudTooltip Text="Delete">
+                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Default" Size="Size.Small" OnClick="@(() => DeleteAsync(context.Id))" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                 <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+    </MudStack>
+</MudContainer>
+
+
+@code {
+    private bool _isLoading;
+    private List<NotificationDto> _notifications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotificationsAsync().ConfigureAwait(false);
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var notifications = await ApiClient.GetNotificationsAsync().ConfigureAwait(false);
+            _notifications = notifications.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading notifications");
+            Snackbar.Add("Failed to load notifications", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MarkAsReadAsync(int id)
+    {
+        try
+        {
+            await ApiClient.MarkNotificationAsReadAsync(id).ConfigureAwait(false);
+            // Updating local state to reflect change
+            var index = _notifications.FindIndex(n => n.Id == id);
+            if (index != -1)
+            {
+                var n = _notifications[index];
+                _notifications[index] = new NotificationDto(n.Id, n.Title, n.Message, n.Type, n.CreatedAtUtc, true);
+            }
+        }
+        catch (Exception ex)
+        {
+             Logger.LogError(ex, "Error marking notification as read");
+             Snackbar.Add("Failed to mark as read", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await ApiClient.DeleteNotificationAsync(id).ConfigureAwait(false);
+            _notifications.RemoveAll(n => n.Id == id);
+             Snackbar.Add("Notification deleted", Severity.Success);
+        }
+         catch (Exception ex)
+        {
+             Logger.LogError(ex, "Error deleting notification");
+             Snackbar.Add("Failed to delete notification", Severity.Error);
+        }
+    }
+
+
+    private async Task MarkAllAsReadAsync()
+    {
+        try
+        {
+            await ApiClient.MarkAllNotificationsAsReadAsync().ConfigureAwait(false);
+            await LoadNotificationsAsync().ConfigureAwait(false);
+             Snackbar.Add("All notifications marked as read", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error marking notifications as read");
+            Snackbar.Add("Failed to mark all as read", Severity.Error);
+        }
+    }
+
+    private async Task ClearAllAsync()
+    {
+        try
+        {
+            await ApiClient.ClearNotificationsAsync().ConfigureAwait(false);
+            _notifications.Clear();
+             Snackbar.Add("All notifications cleared", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error clearing notifications");
+             Snackbar.Add("Failed to clear notifications", Severity.Error);
+        }
+    }
+
+    private static Color GetColorForType(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Success => Color.Success,
+            NotificationType.Error => Color.Error,
+            NotificationType.Warning => Color.Warning,
+            NotificationType.Info => Color.Info,
+            _ => Color.Default,
+        };
+    }
+}

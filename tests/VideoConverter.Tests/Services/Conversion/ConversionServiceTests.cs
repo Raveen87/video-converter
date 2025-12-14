@@ -60,7 +60,11 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080,
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:1080:0:0");
@@ -147,6 +151,7 @@ public class ConversionServiceTests
 
         var streams = new List<MediaStream>
         {
+            new() { Index = 0, CodecType = "audio", LanguageTag = "eng" },
             new() { Index = 2, CodecType = "subtitle", LanguageTag = "eng" },
             new() { Index = 3, CodecType = "subtitle", LanguageTag = "swe" },
         };
@@ -186,7 +191,11 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 }); // Source is only 1080p
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080, // Source is only 1080p
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -208,7 +217,11 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.5 });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                DurationSeconds = 120.5,
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), 120.5, It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:800:0:140");
@@ -233,7 +246,10 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [] });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Crop detection failed"));
@@ -257,7 +273,10 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [] });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+            });
 
         _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
             .Throws(new InvalidOperationException("Subtitle not found"));
@@ -283,7 +302,10 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [] });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+            });
 
         _ = _mockSubtitleMatcher.Setup(x => x.MatchSubtitleStreams(It.IsAny<IReadOnlyList<MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
             .Throws(new InvalidOperationException("Subtitle not found"));
@@ -378,7 +400,11 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080,
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -414,7 +440,11 @@ public class ConversionServiceTests
             .Build();
 
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080,
+            });
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -449,6 +479,7 @@ public class ConversionServiceTests
 
         var streams = new List<MediaStream>
         {
+            new() { Index = 0, CodecType = "audio", LanguageTag = "eng" },
             new() { Index = 2, CodecType = "subtitle", LanguageTag = "eng" },
         };
 
@@ -485,6 +516,7 @@ public class ConversionServiceTests
 
         var streams = new List<MediaStream>
         {
+            new() { Index = 0, CodecType = "audio", LanguageTag = "eng" },
             new() { Index = 2, CodecType = "subtitle", LanguageTag = "eng" },
             new() { Index = 3, CodecType = "subtitle", LanguageTag = "swe" },
         };

@@ -1,5 +1,6 @@
 @inject IVideoConverterApiClient ApiClient
 @inject ILogger<NotificationCenter> Logger
+@inject NavigationManager NavManager
 
 <MudMenu>
     <ActivatorContent>
@@ -13,6 +14,7 @@
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.h6">Notifications</MudText>
                     <MudStack Row="true" Spacing="1">
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ViewAll" Color="Color.Primary">View All</MudButton>
                         @if (_unreadCount > 0)
                         {
                             <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="MarkAllAsReadAsync" Color="Color.Primary">Mark Read</MudButton>
@@ -131,5 +133,10 @@
             NotificationType.Info => Color.Info,
             _ => Color.Default,
         };
+    }
+
+    private void ViewAll()
+    {
+        NavManager.NavigateTo("/notifications");
     }
 }

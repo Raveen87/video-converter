@@ -103,4 +103,21 @@ public sealed class NotificationService(AppDbContext db, ILogger<NotificationSer
 
         logger.LogInformation("Cleared {Count} notifications", notifications.Count);
     }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Deleting notification {Id}", id);
+
+        var notification = await db.Notifications.FindAsync([id], cancellationToken).ConfigureAwait(false);
+        if (notification is null)
+        {
+            logger.LogWarning("Notification {Id} not found", id);
+            return;
+        }
+
+        _ = db.Notifications.Remove(notification);
+        _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        logger.LogInformation("Deleted notification {Id}", id);
+    }
 }

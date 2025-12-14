@@ -37,4 +37,12 @@ public sealed class NotificationsController(INotificationService notificationSer
         await notificationService.ClearAllAsync(cancellationToken).ConfigureAwait(false);
         return NoContent();
     }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteNotification(int id, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Deleting notification {Id}", id);
+        await notificationService.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
+        return NoContent();
+    }
 }

@@ -672,6 +672,28 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task DeleteNotificationAsync(int id, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Deleting notification {Id}", id);
+        try
+        {
+            var response = await _httpClient.DeleteAsync(
+                $"api/notifications/{id}",
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, $"Delete notification {id}", cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Successfully deleted notification {Id}", id);
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting notification {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<IReadOnlyList<MetadataResolutionQueueItemDto>> GetMetadataQueueItemsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting metadata queue items from API");
