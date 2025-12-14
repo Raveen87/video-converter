@@ -41,4 +41,11 @@ public static class Converters
             v => v.ToString(),
             v => Enum.Parse<NotificationType>(v));
     }
+
+    public static ValueConverter<ManualResolutionType, string> CreateManualResolutionTypeString()
+    {
+        return new ValueConverter<ManualResolutionType, string>(
+            v => v.ToString(),
+            v => Enum.Parse<ManualResolutionType>(v));
+    }
 }

@@ -47,7 +47,9 @@ public class ConversionServiceAudioTests
             _mockFilenameGenerator.Object,
             _mockTemplateEngine.Object,
             Options.Create(new FilenameTemplateOptions { DefaultTemplate = null }),
-            _mockLogger.Object);
+            _mockLogger.Object,
+            metadataFetchOptions: null,
+            Options.Create(new StreamSelectionOptions { OnFailureBehavior = StreamSelectionFailureBehavior.Fail }));
     }
 
     [Fact]
