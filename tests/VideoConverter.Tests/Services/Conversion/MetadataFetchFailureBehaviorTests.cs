@@ -154,7 +154,16 @@ public class MetadataFetchFailureBehaviorTests
         INotificationService? notificationService = null)
     {
         var mockProber = new Mock<IMediaProber>();
+        _ = mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new VideoConverter.Api.Shared.Domain.ValueObjects.MediaProbeResult
+            {
+                Streams = [new VideoConverter.Api.Shared.Domain.ValueObjects.MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+            });
+
         var mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
+        _ = mockAudioMatcher.Setup(x => x.MatchAudioStreams(It.IsAny<IReadOnlyList<VideoConverter.Api.Shared.Domain.ValueObjects.MediaStream>>(), It.IsAny<IReadOnlyList<string>>()))
+            .Returns([0]);
+
         var mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         var mockCropDetector = new Mock<ICropDetector>();
         var logger = new Mock<ILogger<ConversionService>>();

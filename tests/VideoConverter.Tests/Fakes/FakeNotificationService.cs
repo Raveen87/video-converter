@@ -29,4 +29,9 @@ public sealed class FakeNotificationService : INotificationService
     {
         return Task.CompletedTask;
     }
+
+    public Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
 }

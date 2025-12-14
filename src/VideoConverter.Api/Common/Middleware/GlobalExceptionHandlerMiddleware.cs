@@ -44,6 +44,16 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         var requestMethod = context.Request.Method;
         var innerException = exception.InnerException;
 
+        // Don't log cancellation exceptions at error level - they're normal when clients disconnect
+        if (exception is OperationCanceledException or TaskCanceledException)
+        {
+            logger.LogDebug(
+                "Request was cancelled. Method: {Method}, Path: {Path}",
+                requestMethod,
+                requestPath);
+            return;
+        }
+
         logger.LogError(
             exception,
             "An unhandled exception occurred. Method: {Method}, Path: {Path}, Message: {Message}, Type: {ExceptionType}",

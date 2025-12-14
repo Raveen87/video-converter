@@ -11,4 +11,6 @@ public interface INotificationService
     Task MarkAllAsReadAsync(CancellationToken cancellationToken = default);
 
     Task ClearAllAsync(CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

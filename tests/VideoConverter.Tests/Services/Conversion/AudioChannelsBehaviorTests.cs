@@ -121,7 +121,11 @@ public class AudioChannelsBehaviorTests
     private void SetupDefaults()
     {
         _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], VideoHeight = 1080 });
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080,
+            });
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
         _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
