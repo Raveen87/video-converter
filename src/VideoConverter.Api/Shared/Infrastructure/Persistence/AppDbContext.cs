@@ -8,7 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Profile> Profiles => Set<Profile>();
 
-    public DbSet<MetadataResolutionQueueItem> MetadataResolutionQueue => Set<MetadataResolutionQueueItem>();
+    public DbSet<ManualResolutionQueueItem> ManualResolutionQueue => Set<ManualResolutionQueueItem>();
 
     public DbSet<DirectoryQueueBatch> DirectoryQueueBatches => Set<DirectoryQueueBatch>();
 
@@ -20,7 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         ConfigureConversion(modelBuilder);
         ConfigureProfile(modelBuilder);
-        ConfigureMetadataResolutionQueue(modelBuilder);
+        ConfigureManualResolutionQueue(modelBuilder);
         ConfigureDirectoryQueueBatch(modelBuilder);
         ConfigureNotification(modelBuilder);
     }
@@ -98,15 +98,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         subtitleLangProp.SetValueComparer(listComparer);
     }
 
-    private static void ConfigureMetadataResolutionQueue(ModelBuilder modelBuilder)
+    private static void ConfigureManualResolutionQueue(ModelBuilder modelBuilder)
     {
-        var queue = modelBuilder.Entity<MetadataResolutionQueueItem>();
+        var queue = modelBuilder.Entity<ManualResolutionQueueItem>();
         _ = queue.HasKey(q => q.Id);
         _ = queue.Property(q => q.SourcePath)
             .IsRequired()
             .HasMaxLength(2048);
         _ = queue.Property(q => q.SourceFileName)
             .HasMaxLength(1024);
+        _ = queue.Property(q => q.ResolutionType)
+            .IsRequired()
+            .HasConversion(Converters.CreateManualResolutionTypeString())
+            .HasMaxLength(32);
         _ = queue.Property(q => q.InputKind)
             .IsRequired()
             .HasMaxLength(32);
@@ -124,7 +128,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired();
         _ = queue.Property(q => q.UpdatedAtUtc)
             .IsRequired();
-        _ = queue.HasIndex(q => new { q.SourcePath, q.Status }).IsUnique();
+        _ = queue.Property(q => q.AvailableAudioStreamsJson)
+            .HasMaxLength(8192);
+        _ = queue.Property(q => q.AvailableSubtitleStreamsJson)
+            .HasMaxLength(8192);
+        _ = queue.Property(q => q.MissingAudioLanguages)
+            .HasMaxLength(512);
+        _ = queue.Property(q => q.MissingSubtitleLanguages)
+            .HasMaxLength(512);
+        _ = queue.HasIndex(q => new { q.SourcePath, q.ResolutionType, q.Status }).IsUnique();
     }
 
     private static void ConfigureDirectoryQueueBatch(ModelBuilder modelBuilder)

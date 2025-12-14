@@ -94,7 +94,7 @@
     public EventCallback<bool> OnClose { get; set; }
 
     [Parameter]
-    public MetadataResolutionQueueItemDto? Item { get; set; }
+    public ManualResolutionQueueItemDto? ManualResolutionItem { get; set; }
 
     [Parameter]
     public ConversionDto? Conversion { get; set; }
@@ -103,7 +103,7 @@
     public IReadOnlyList<ConversionDto>? Conversions { get; set; }
 
     [Parameter]
-    public IReadOnlyList<MetadataResolutionQueueItemDto>? QueueItems { get; set; }
+    public IReadOnlyList<ManualResolutionQueueItemDto>? ManualResolutionItems { get; set; }
 
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
@@ -120,10 +120,10 @@
 
     protected override void OnInitialized()
     {
-        if (Item != null)
+        if (ManualResolutionItem != null)
         {
-            _searchQuery = Item.ParsedTitle ?? Path.GetFileNameWithoutExtension(Item.SourceFileName) ?? string.Empty;
-            _searchYear = Item.ParsedYear;
+            _searchQuery = ManualResolutionItem.ParsedTitle ?? Path.GetFileNameWithoutExtension(ManualResolutionItem.SourceFileName) ?? string.Empty;
+            _searchYear = ManualResolutionItem.ParsedYear;
         }
         else if (Conversion != null)
         {
@@ -136,9 +136,9 @@
             _searchQuery = first.MatchedTitle ?? Path.GetFileNameWithoutExtension(first.InputPath) ?? string.Empty;
             _searchYear = first.MatchedYear;
         }
-        else if (QueueItems is { Count: > 0 })
+        else if (ManualResolutionItems is { Count: > 0 })
         {
-            var first = QueueItems[0];
+            var first = ManualResolutionItems[0];
             _searchQuery = first.ParsedTitle ?? Path.GetFileNameWithoutExtension(first.SourceFileName) ?? string.Empty;
             _searchYear = first.ParsedYear;
         }
@@ -147,39 +147,39 @@
     private string GetTitle()
     {
         if (Conversions is { Count: > 1 }) return $"Resolve Metadata ({Conversions.Count} items)";
-        if (QueueItems is { Count: > 1 }) return $"Resolve Metadata ({QueueItems.Count} items)";
+        if (ManualResolutionItems is { Count: > 1 }) return $"Resolve Metadata ({ManualResolutionItems.Count} items)";
         return "Resolve Metadata";
     }
 
     private string GetSourceFileName()
     {
-        if (Item != null) return Item.SourceFileName ?? string.Empty;
+        if (ManualResolutionItem != null) return ManualResolutionItem.SourceFileName ?? string.Empty;
         if (Conversion != null) return Path.GetFileName(Conversion.InputPath) ?? string.Empty;
-        if (Conversions is { Count: > 0 }) 
+        if (Conversions is { Count: > 0 })
         {
             if (Conversions.Count == 1) return Path.GetFileName(Conversions[0].InputPath) ?? string.Empty;
             return $"{Conversions.Count} items";
         }
-        if (QueueItems is { Count: > 0 })
+        if (ManualResolutionItems is { Count: > 0 })
         {
-            if (QueueItems.Count == 1) return QueueItems[0].SourceFileName ?? string.Empty;
-            return $"{QueueItems.Count} items";
+            if (ManualResolutionItems.Count == 1) return ManualResolutionItems[0].SourceFileName ?? string.Empty;
+            return $"{ManualResolutionItems.Count} items";
         }
         return string.Empty;
     }
 
     private string GetInputKind()
     {
-         if (Item != null) return Item.InputKind;
-         if (QueueItems is { Count: > 0 }) return QueueItems[0].InputKind;
+         if (ManualResolutionItem != null) return ManualResolutionItem.InputKind;
+         if (ManualResolutionItems is { Count: > 0 }) return ManualResolutionItems[0].InputKind;
          return "Unknown";
     }
 
     private string GetButtonText()
     {
-        if (Item != null) return "Resolve & Create";
+        if (ManualResolutionItem != null) return "Resolve & Create";
         if (Conversions is { Count: > 1 }) return "Update All";
-        if (QueueItems is { Count: > 1 }) return "Resolve All";
+        if (ManualResolutionItems is { Count: > 1 }) return "Resolve All";
         return "Update Metadata";
     }
 
@@ -242,9 +242,9 @@
                 MediaType = _selectedResult.Type
             };
 
-            if (Item != null)
+            if (ManualResolutionItem != null)
             {
-                await ApiClient.ResolveMetadataQueueItemAsync(Item.Id, request);
+                await ApiClient.ResolveMetadataQueueItemAsync(ManualResolutionItem.Id, request);
             }
             else if (Conversion != null)
             {
@@ -260,11 +260,11 @@
                  };
                  await ApiClient.ResolveBatchConversionMetadataAsync(batchRequest);
             }
-            else if (QueueItems is { Count: > 0 })
+            else if (ManualResolutionItems is { Count: > 0 })
             {
                 var batchRequest = new ResolveBatchMetadataQueueRequestDto
                 {
-                    QueueItemIds = QueueItems.Select(q => q.Id).ToList(),
+                    QueueItemIds = ManualResolutionItems.Select(q => q.Id).ToList(),
                     TmdbId = _selectedResult.Id,
                     MediaType = _selectedResult.Type
                 };

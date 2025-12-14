@@ -694,23 +694,24 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task<IReadOnlyList<MetadataResolutionQueueItemDto>> GetMetadataQueueItemsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ManualResolutionQueueItemDto>> GetManualResolutionQueueItemsAsync(ManualResolutionType? type = null, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Getting metadata queue items from API");
+        _logger.LogDebug("Getting manual resolution queue items from API");
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<MetadataResolutionQueueItemDto>>(
-                "api/metadata-queue",
+            var url = type is not null ? $"api/manual-resolution?type={type}" : "api/manual-resolution";
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<ManualResolutionQueueItemDto>>(
+                url,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
-            var result = response ?? Array.Empty<MetadataResolutionQueueItemDto>();
-            _logger.LogInformation("Successfully retrieved {Count} metadata queue items", result.Count);
+            var result = response ?? Array.Empty<ManualResolutionQueueItemDto>();
+            _logger.LogInformation("Successfully retrieved {Count} manual resolution queue items", result.Count);
             return result;
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting metadata queue items from API");
+            _logger.LogError(ex, "Error getting manual resolution queue items from API");
             throw;
         }
 #pragma warning restore S2139
@@ -722,7 +723,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
-                $"api/metadata-queue/{id}/resolve",
+                $"api/manual-resolution/{id}/resolve-metadata",
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
@@ -739,6 +740,29 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task ResolveStreamSelectionQueueItemAsync(int id, ResolveStreamSelectionRequestDto request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Resolving stream selection queue item {Id}", id);
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/manual-resolution/{id}/resolve-streams",
+                request,
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Resolve stream selection queue item", cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully resolved stream selection queue item {Id}", id);
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving stream selection queue item {Id}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default)
     {
         var count = request.QueueItemIds.Count();
@@ -746,7 +770,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
-                "api/metadata-queue/resolve-batch",
+                "api/manual-resolution/resolve-metadata-batch",
                 request,
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
@@ -819,22 +843,22 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task DeleteMetadataQueueItemAsync(int id, CancellationToken cancellationToken = default)
+    public async Task DeleteManualResolutionQueueItemAsync(int id, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Deleting metadata queue item {Id}", id);
+        _logger.LogDebug("Deleting manual resolution queue item {Id}", id);
         try
         {
             var response = await _httpClient.DeleteAsync(
-                $"api/metadata-queue/{id}",
+                $"api/manual-resolution/{id}",
                 cancellationToken).ConfigureAwait(false);
 
-            await EnsureSuccessAsync(response, "Delete metadata queue item", cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Successfully deleted metadata queue item {Id}", id);
+            await EnsureSuccessAsync(response, "Delete manual resolution queue item", cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully deleted manual resolution queue item {Id}", id);
         }
 #pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting metadata queue item {Id}", id);
+            _logger.LogError(ex, "Error deleting manual resolution queue item {Id}", id);
             throw;
         }
 #pragma warning restore S2139

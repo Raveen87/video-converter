@@ -20,10 +20,12 @@ public sealed class ConversionService(
     IOptions<FilenameTemplateOptions> filenameTemplateOptions,
     ILogger<ConversionService> logger,
     IOptions<MetadataFetchOptions>? metadataFetchOptions = null,
+    IOptions<StreamSelectionOptions>? streamSelectionOptions = null,
     Shared.Infrastructure.Persistence.AppDbContext? db = null,
     INotificationService? notificationService = null) : IConversionService
 {
     private readonly IOptions<MetadataFetchOptions> _metadataFetchOptions = metadataFetchOptions ?? Options.Create(new MetadataFetchOptions { OnFailureBehavior = FetchFailureBehavior.DefaultToInputName });
+    private readonly IOptions<StreamSelectionOptions> _streamSelectionOptions = streamSelectionOptions ?? Options.Create(new StreamSelectionOptions { OnFailureBehavior = StreamSelectionFailureBehavior.QueueForManualResolution });
     private readonly Shared.Infrastructure.Persistence.AppDbContext? _db = db;
     private readonly INotificationService? _notificationService = notificationService;
 
@@ -293,6 +295,39 @@ public sealed class ConversionService(
         return (trimmed, false);
     }
 
+    private static List<MediaStreamDto> MapToStreamDtos(IReadOnlyList<MediaStream> streams)
+    {
+        return
+        [
+            .. streams.Select(s => new MediaStreamDto
+            {
+                Index = s.Index,
+                CodecType = s.CodecType,
+                CodecName = s.CodecName,
+                LanguageTag = s.LanguageTag,
+                Title = s.Title,
+            }),
+        ];
+    }
+
+    private List<string> FindMissingAudioLanguages(IReadOnlyList<MediaStream> audioStreams, List<string> requestedLanguages)
+    {
+        var missing = new List<string>();
+        foreach (var language in requestedLanguages)
+        {
+            try
+            {
+                _ = audioMatcher.MatchAudioStreams(audioStreams, [language]);
+            }
+            catch
+            {
+                missing.Add(language);
+            }
+        }
+
+        return missing;
+    }
+
     private async Task<MediaMetadata?> FetchMetadataForUpdateAsync(ResolveMetadataRequestDto request, ParsedFilename parsedFilename, Conversion conversion, CancellationToken cancellationToken)
     {
         if (request.MediaType is MediaType.Movie)
@@ -468,22 +503,23 @@ public sealed class ConversionService(
         }
 
         // Check if item is already in the queue to avoid unique constraint violation
-        var existing = await _db.MetadataResolutionQueue
+        var existing = await _db.ManualResolutionQueue
             .AsNoTracking()
-            .FirstOrDefaultAsync(q => q.SourcePath == request.InputPath && q.Status == "Pending", cancellationToken)
+            .FirstOrDefaultAsync(q => q.SourcePath == request.InputPath && q.ResolutionType == ManualResolutionType.Metadata && q.Status == "Pending", cancellationToken)
             .ConfigureAwait(false);
 
         if (existing is not null)
         {
-            logger.LogInformation("Item is already in metadata resolution queue: {InputPath}", request.InputPath);
+            logger.LogInformation("Item is already in manual resolution queue: {InputPath}", request.InputPath);
             return;
         }
 
         var now = DateTime.UtcNow;
-        var item = new MetadataResolutionQueueItem
+        var item = new ManualResolutionQueueItem
         {
             SourcePath = request.InputPath,
             SourceFileName = filename,
+            ResolutionType = ManualResolutionType.Metadata,
             InputKind = parsedFilename.DetectedType.ToString(),
             ParsedTitle = parsedFilename.Title,
             ParsedYear = parsedFilename.Year,
@@ -496,7 +532,7 @@ public sealed class ConversionService(
             UpdatedAtUtc = now,
             SerializedRequest = JsonSerializer.Serialize(request),
         };
-        _ = _db.MetadataResolutionQueue.Add(item);
+        _ = _db.ManualResolutionQueue.Add(item);
 
         try
         {
@@ -516,6 +552,93 @@ public sealed class ConversionService(
         }
     }
 
+    private async Task QueueForStreamSelectionAsync(
+        ConversionCreateDto request,
+        IReadOnlyList<MediaStream> audioStreams,
+        IReadOnlyList<MediaStream> subtitleStreams,
+        IEnumerable<string>? missingAudioLanguages,
+        IEnumerable<string>? missingSubtitleLanguages,
+        string failureReason,
+        string failureDetails,
+        CancellationToken cancellationToken)
+    {
+        logger.LogWarning("Stream selection failed for: {InputPath}, queuing for manual resolution", request.InputPath);
+        if (_db is null)
+        {
+            throw new InvalidOperationException("Cannot queue for manual resolution because the database context (_db) is not available.");
+        }
+
+        if (await IsAlreadyQueuedForStreamSelectionAsync(request.InputPath, cancellationToken).ConfigureAwait(false))
+        {
+            logger.LogInformation("Item is already in manual resolution queue for stream selection: {InputPath}", request.InputPath);
+            return;
+        }
+
+        var item = BuildStreamSelectionQueueItem(request, audioStreams, subtitleStreams, missingAudioLanguages, missingSubtitleLanguages, failureReason, failureDetails);
+        _ = _db.ManualResolutionQueue.Add(item);
+
+        try
+        {
+            _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex)
+        {
+            if (IsUniqueConstraintViolation(ex))
+            {
+                logger.LogDebug(ex, "Item already queued for stream selection (caught race condition): {InputPath}", request.InputPath);
+            }
+            else
+            {
+                throw;
+            }
+        }
+    }
+
+    private async Task<bool> IsAlreadyQueuedForStreamSelectionAsync(string inputPath, CancellationToken cancellationToken)
+    {
+        var existing = await _db!.ManualResolutionQueue
+            .AsNoTracking()
+            .FirstOrDefaultAsync(q => q.SourcePath == inputPath && q.ResolutionType == ManualResolutionType.StreamSelection && q.Status == "Pending", cancellationToken)
+            .ConfigureAwait(false);
+        return existing is not null;
+    }
+
+    private ManualResolutionQueueItem BuildStreamSelectionQueueItem(
+        ConversionCreateDto request,
+        IReadOnlyList<MediaStream> audioStreams,
+        IReadOnlyList<MediaStream> subtitleStreams,
+        IEnumerable<string>? missingAudioLanguages,
+        IEnumerable<string>? missingSubtitleLanguages,
+        string failureReason,
+        string failureDetails)
+    {
+        var filename = Path.GetFileName(request.InputPath);
+        var parsedFilename = filenameParser.ParseFilename(filename);
+        var now = DateTime.UtcNow;
+
+        return new ManualResolutionQueueItem
+        {
+            SourcePath = request.InputPath,
+            SourceFileName = filename,
+            ResolutionType = ManualResolutionType.StreamSelection,
+            InputKind = parsedFilename.DetectedType.ToString(),
+            ParsedTitle = parsedFilename.Title,
+            ParsedYear = parsedFilename.Year,
+            ParsedSeason = parsedFilename.Season,
+            ParsedEpisode = parsedFilename.Episode,
+            FailureReason = failureReason,
+            FailureDetails = failureDetails,
+            Status = "Pending",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            SerializedRequest = JsonSerializer.Serialize(request),
+            AvailableAudioStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(audioStreams)),
+            AvailableSubtitleStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(subtitleStreams)),
+            MissingAudioLanguages = missingAudioLanguages is not null ? string.Join(',', missingAudioLanguages) : null,
+            MissingSubtitleLanguages = missingSubtitleLanguages is not null ? string.Join(',', missingSubtitleLanguages) : null,
+        };
+    }
+
     private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
     {
         var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
@@ -532,13 +655,6 @@ public sealed class ConversionService(
         var requested = request.AudioLanguages?.ToList();
         if (requested is not { Count: > 0 })
         {
-            // If no specific languages requested, we essentially want "default" audio behavior.
-            // Since we know audio streams exist (checked above), we can either:
-            // 1. Return empty result (which maps to 0:a? in AudioArgsBuilder) - this works but might be ambiguous if 0:a? finds nothing (unlikely given check above).
-            // 2. Or failing here if we want strictly explicit selection (not per requirement).
-            // Requirement says: "At least one audio stream must always be included".
-            // If we return empty here, AudioArgsBuilder uses "-map 0:a?", which will include audio.
-            // So we are safe just by ensuring inputAudioStreams > 0.
             return new AudioProcessingResult();
         }
 
@@ -546,25 +662,96 @@ public sealed class ConversionService(
             "Processing audio language requirements: {AudioLanguages}",
             string.Join(", ", requested));
 
-        var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
-
-        if (matched.Count is 0)
+        try
         {
-            logger.LogWarning(
-                "No matching audio streams found for languages: {RequestedLanguages} in {InputPath}",
-                string.Join(", ", requested),
-                request.InputPath);
-            throw new InvalidOperationException($"No matching audio streams found for languages: {string.Join(", ", requested)}");
+            var matched = audioMatcher.MatchAudioStreams(probe.Streams, requested);
+
+            if (matched.Count is 0)
+            {
+                return await HandleAudioStreamSelectionFailureAsync(
+                    request,
+                    probe.Streams,
+                    requested,
+                    "No matching audio streams found",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            var audioIndicesCsv = string.Join(',', matched);
+
+            logger.LogInformation(
+                "Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
+                audioIndicesCsv,
+                string.Join(", ", requested));
+
+            return new AudioProcessingResult { AudioIndicesCsv = audioIndicesCsv };
         }
+        catch (ApiErrorException ex) when (ex.ErrorCode is ErrorCode.ValidationFailed)
+        {
+            return await HandleAudioStreamSelectionFailureAsync(
+                request,
+                probe.Streams,
+                requested,
+                ex.Message,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
 
-        var audioIndicesCsv = string.Join(',', matched);
+    private async Task<AudioProcessingResult> HandleAudioStreamSelectionFailureAsync(
+        ConversionCreateDto request,
+        IReadOnlyList<MediaStream> allStreams,
+        List<string> requestedLanguages,
+        string failureDetails,
+        CancellationToken cancellationToken)
+    {
+        var audioStreams = allStreams.Where(s => string.Equals(s.CodecType, "audio", StringComparison.OrdinalIgnoreCase)).ToList();
+        var subtitleStreams = allStreams.Where(s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)).ToList();
 
-        logger.LogInformation(
-            "Matched audio streams: {MatchedIndices} for languages: {RequestedLanguages}",
-            audioIndicesCsv,
-            string.Join(", ", requested));
+        // Determine which specific languages are actually missing
+        var missingLanguages = FindMissingAudioLanguages(audioStreams, requestedLanguages);
 
-        return new AudioProcessingResult { AudioIndicesCsv = audioIndicesCsv };
+        switch (_streamSelectionOptions.Value.OnFailureBehavior)
+        {
+            case StreamSelectionFailureBehavior.Fail:
+                logger.LogWarning(
+                    "Audio stream selection failed for languages: {MissingLanguages} in {InputPath}",
+                    string.Join(", ", missingLanguages),
+                    request.InputPath);
+                throw new InvalidOperationException($"No matching audio streams found for languages: {string.Join(", ", missingLanguages)}");
+
+            case StreamSelectionFailureBehavior.QueueForManualResolution:
+                await QueueForStreamSelectionAsync(
+                    request,
+                    audioStreams,
+                    subtitleStreams,
+                    missingLanguages,
+                    missingSubtitleLanguages: null,
+                    "AudioLanguageNotFound",
+                    failureDetails,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (_notificationService is not null)
+                {
+                    var filename = Path.GetFileName(request.InputPath);
+                    _ = await _notificationService.AddAsync(
+                        "Audio Stream Selection Failed",
+                        $"Input: {filename}. Item added to Manual Resolution Queue.",
+                        NotificationType.Warning,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                throw ApiErrorException.BusinessError(
+                    ErrorCode.InvalidConversionState,
+                    "Audio stream selection failed and item queued for manual resolution.",
+                    "Audio stream selection failed and item queued for manual resolution.");
+
+            case StreamSelectionFailureBehavior.SkipItem:
+                logger.LogWarning("Audio stream selection failed for: {InputPath}, skipping item as per configuration", request.InputPath);
+                throw new InvalidOperationException("Audio stream selection failed and item skipped by configuration.");
+
+            default:
+                logger.LogError("Unknown stream selection failure behavior: {Behavior}", _streamSelectionOptions.Value.OnFailureBehavior);
+                throw new InvalidOperationException("Unknown stream selection failure behavior.");
+        }
     }
 
     private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
@@ -581,30 +768,56 @@ public sealed class ConversionService(
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
-        var (matchedIndices, externalPaths) = await ProcessSubtitleLanguageListAsync(request.InputPath, requested, probe.Streams).ConfigureAwait(false);
 
-        var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
-        var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
-
-        logger.LogInformation(
-            "Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
-            subtitleIndicesCsv ?? "none",
-            externalSubtitlePathsCsv ?? "none");
-
-        return new SubtitleProcessingResult
+        try
         {
-            SubtitleIndicesCsv = subtitleIndicesCsv,
-            ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
-        };
+            var (matchedIndices, externalPaths, missingLanguages) = await ProcessSubtitleLanguageListAsync(request.InputPath, requested, probe.Streams).ConfigureAwait(false);
+
+            if (missingLanguages.Count > 0)
+            {
+                return await HandleSubtitleStreamSelectionFailureAsync(
+                    request,
+                    probe.Streams,
+                    missingLanguages,
+                    $"Subtitle languages not found: {string.Join(", ", missingLanguages)}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
+            var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
+
+            logger.LogInformation(
+                "Subtitle processing complete - Stream indices: {StreamIndices}, External files: {ExternalFiles}",
+                subtitleIndicesCsv ?? "none",
+                externalSubtitlePathsCsv ?? "none");
+
+            return new SubtitleProcessingResult
+            {
+                SubtitleIndicesCsv = subtitleIndicesCsv,
+                ExternalSubtitlePathsCsv = externalSubtitlePathsCsv,
+            };
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("subtitle language"))
+        {
+            // Extract missing language from the error message
+            var missingLanguages = requested.Where(r => ex.Message.Contains(ParseLanguageRequest(r).Language)).ToList();
+            return await HandleSubtitleStreamSelectionFailureAsync(
+                request,
+                probe.Streams,
+                missingLanguages,
+                ex.Message,
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 
-    private Task<(List<int> MatchedIndices, List<string> ExternalPaths)> ProcessSubtitleLanguageListAsync(
+    private Task<(List<int> MatchedIndices, List<string> ExternalPaths, List<string> MissingLanguages)> ProcessSubtitleLanguageListAsync(
         string inputPath,
         List<string> requested,
         IReadOnlyList<MediaStream> streams)
     {
         var matchedIndices = new List<int>();
         var externalPaths = new List<string>();
+        var missingLanguages = new List<string>();
 
         foreach (var lang in requested)
         {
@@ -637,12 +850,67 @@ public sealed class ConversionService(
                     }
 
                     logger.LogWarning("Subtitle language '{Language}' not found in file or as external .srt", language);
-                    throw new InvalidOperationException($"Requested subtitle language '{language}' not found in file or as external .srt.");
+                    missingLanguages.Add(language);
                 }
             }
         }
 
-        return Task.FromResult((matchedIndices, externalPaths));
+        return Task.FromResult((matchedIndices, externalPaths, missingLanguages));
+    }
+
+    private async Task<SubtitleProcessingResult> HandleSubtitleStreamSelectionFailureAsync(
+        ConversionCreateDto request,
+        IReadOnlyList<MediaStream> allStreams,
+        List<string> missingLanguages,
+        string failureDetails,
+        CancellationToken cancellationToken)
+    {
+        var audioStreams = allStreams.Where(s => string.Equals(s.CodecType, "audio", StringComparison.OrdinalIgnoreCase)).ToList();
+        var subtitleStreams = allStreams.Where(s => string.Equals(s.CodecType, "subtitle", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        switch (_streamSelectionOptions.Value.OnFailureBehavior)
+        {
+            case StreamSelectionFailureBehavior.Fail:
+                logger.LogWarning(
+                    "Subtitle stream selection failed for languages: {MissingLanguages} in {InputPath}",
+                    string.Join(", ", missingLanguages),
+                    request.InputPath);
+                throw new InvalidOperationException($"Requested subtitle languages not found: {string.Join(", ", missingLanguages)}");
+
+            case StreamSelectionFailureBehavior.QueueForManualResolution:
+                await QueueForStreamSelectionAsync(
+                    request,
+                    audioStreams,
+                    subtitleStreams,
+                    missingAudioLanguages: null,
+                    missingLanguages,
+                    "SubtitleLanguageNotFound",
+                    failureDetails,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (_notificationService is not null)
+                {
+                    var filename = Path.GetFileName(request.InputPath);
+                    _ = await _notificationService.AddAsync(
+                        "Subtitle Stream Selection Failed",
+                        $"Input: {filename}. Item added to Manual Resolution Queue.",
+                        NotificationType.Warning,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                throw ApiErrorException.BusinessError(
+                    ErrorCode.InvalidConversionState,
+                    "Subtitle stream selection failed and item queued for manual resolution.",
+                    "Subtitle stream selection failed and item queued for manual resolution.");
+
+            case StreamSelectionFailureBehavior.SkipItem:
+                logger.LogWarning("Subtitle stream selection failed for: {InputPath}, skipping item as per configuration", request.InputPath);
+                throw new InvalidOperationException("Subtitle stream selection failed and item skipped by configuration.");
+
+            default:
+                logger.LogError("Unknown stream selection failure behavior: {Behavior}", _streamSelectionOptions.Value.OnFailureBehavior);
+                throw new InvalidOperationException("Unknown stream selection failure behavior.");
+        }
     }
 
     private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
@@ -770,7 +1038,7 @@ public sealed class ConversionService(
             string.Join(", ", requested));
 
         var probe = await prober.ProbeAsync(inputPath, cancellationToken).ConfigureAwait(false);
-        var (matchedIndices, externalPaths) = await ProcessSubtitleLanguageListAsync(inputPath, requested, probe.Streams).ConfigureAwait(false);
+        var (matchedIndices, externalPaths, _) = await ProcessSubtitleLanguageListAsync(inputPath, requested, probe.Streams).ConfigureAwait(false);
 
         var subtitleIndicesCsv = matchedIndices.Count > 0 ? string.Join(',', matchedIndices) : null;
         var externalSubtitlePathsCsv = externalPaths.Count > 0 ? string.Join('|', externalPaths) : null;
