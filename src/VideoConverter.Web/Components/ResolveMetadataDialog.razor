@@ -68,6 +68,127 @@
                 }
             </MudList>
         }
+
+        @* Episode Group Selection - shown when a TV show is selected *@
+        @if (_selectedResult?.Type == MediaType.TvShow)
+        {
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Episode Ordering</MudText>
+
+            @if (_isLoadingEpisodeGroups)
+            {
+                <div class="d-flex align-center gap-2">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Typo="Typo.body2">Loading episode groups...</MudText>
+                </div>
+            }
+            else if (_episodeGroups != null)
+            {
+                <MudRadioGroup T="string" Value="_selectedEpisodeGroupId" ValueChanged="OnEpisodeGroupSelected">
+                    <MudRadio T="string" Value="@((string?)null)" Color="Color.Primary">
+                        <MudText Typo="Typo.body2">Default Order</MudText>
+                    </MudRadio>
+                    @foreach (var group in _episodeGroups)
+                    {
+                        <div class="d-flex align-center">
+                            <MudRadio T="string" Value="@group.Id" Color="Color.Primary">
+                                <div class="d-flex align-center gap-2">
+                                    <MudText Typo="Typo.body2">@group.Name</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@group.Type</MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@group.EpisodeCount episodes</MudText>
+                                </div>
+                            </MudRadio>
+                            <MudTooltip Text="Preview episodes">
+                                <MudIconButton Icon="@GetExpandIcon(group.Id)" Size="Size.Small" OnClick="@(() => ToggleGroupExpansion(group.Id))" />
+                            </MudTooltip>
+                        </div>
+                        @if (_expandedGroupId == group.Id)
+                        {
+                            <div class="ml-8 mb-2">
+                                @if (_isLoadingGroupDetails)
+                                {
+                                    <div class="d-flex align-center gap-2 pa-2">
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                        <MudText Typo="Typo.caption">Loading episodes...</MudText>
+                                    </div>
+                                }
+                                else if (_expandedGroupDetails != null)
+                                {
+                                    <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto; background-color: var(--mud-palette-background-grey);">
+                                        @foreach (var season in _expandedGroupDetails.Seasons.OrderBy(s => s.Order))
+                                        {
+                                            <div class="mb-2">
+                                                <MudText Typo="Typo.caption"><b>@(string.IsNullOrEmpty(season.Name) ? $"Season {season.Order}" : season.Name)</b></MudText>
+                                            </div>
+                                            @foreach (var episode in season.Episodes.OrderBy(e => e.Order))
+                                            {
+                                                <div class="ml-2 mb-1">
+                                                    <MudText Typo="Typo.caption" Style="font-size: 0.75rem;">
+                                                        S@(season.Order.ToString("D2"))E@(episode.Order.ToString("D2")) - @episode.Name
+                                                        @if (episode.OriginalSeason.HasValue && episode.OriginalEpisode.HasValue)
+                                                        {
+                                                            <span style="color: var(--mud-palette-text-secondary);"> (was S@(episode.OriginalSeason.Value.ToString("D2"))E@(episode.OriginalEpisode.Value.ToString("D2")))</span>
+                                                        }
+                                                    </MudText>
+                                                </div>
+                                            }
+                                        }
+                                    </MudPaper>
+                                }
+                            </div>
+                        }
+                    }
+                </MudRadioGroup>
+
+                @if (!_episodeGroups.Any())
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">No alternative episode orderings available for this show.</MudText>
+                }
+            }
+
+            @* Batch Preview - shown when multiple items selected and episode group chosen *@
+            @if (IsBatchMode && !string.IsNullOrEmpty(_selectedEpisodeGroupId) && _batchPreviewMappings.Count > 0)
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Episode Mapping Preview</MudText>
+
+                @if (_unmappableItemsCount > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-2" Dense="true">
+                        @_unmappableItemsCount item(s) cannot be mapped to the selected episode group.
+                    </MudAlert>
+                }
+
+                <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto; background-color: var(--mud-palette-background-grey);">
+                    @foreach (var mapping in _batchPreviewMappings)
+                    {
+                        <div class="d-flex align-center gap-2 mb-1">
+                            @if (mapping.IsMappable)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                <MudText Typo="Typo.caption">
+                                    <b>@mapping.FileName</b>:
+                                    S@(mapping.OriginalSeason?.ToString("D2") ?? "??")E@(mapping.OriginalEpisode?.ToString("D2") ?? "??")
+                                    @if (!string.IsNullOrEmpty(mapping.MappedEpisodeName))
+                                    {
+                                        <span> → @mapping.MappedEpisodeName</span>
+                                    }
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Color="Color.Warning">
+                                    <b>@mapping.FileName</b>:
+                                    S@(mapping.OriginalSeason?.ToString("D2") ?? "??")E@(mapping.OriginalEpisode?.ToString("D2") ?? "??")
+                                    - Not found in group
+                                </MudText>
+                            }
+                        </div>
+                    }
+                </MudPaper>
+            }
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
@@ -117,6 +238,33 @@
     private bool _isResolving;
     private List<MetadataSearchResultDto>? _searchResults;
     private MetadataSearchResultDto? _selectedResult;
+
+    // Episode group state
+    private IReadOnlyList<EpisodeGroupDto>? _episodeGroups;
+    private string? _selectedEpisodeGroupId;
+    private string? _expandedGroupId;
+    private EpisodeGroupDetailsDto? _expandedGroupDetails;
+    private bool _isLoadingEpisodeGroups;
+    private bool _isLoadingGroupDetails;
+
+    // Batch preview state
+    private readonly List<BatchPreviewMapping> _batchPreviewMappings = [];
+    private int _unmappableItemsCount;
+
+    // Batch resolution result state
+    private BatchResolutionResultDto? _batchResolutionResult;
+
+    private bool IsBatchMode => ManualResolutionItems is { Count: > 1 };
+
+    private sealed record BatchPreviewMapping(
+        int ItemId,
+        string FileName,
+        int? OriginalSeason,
+        int? OriginalEpisode,
+        bool IsMappable,
+        int? MappedSeason,
+        int? MappedEpisode,
+        string? MappedEpisodeName);
 
     protected override void OnInitialized()
     {
@@ -224,9 +372,200 @@
         }
     }
 
-    private void OnResultSelected(MetadataSearchResultDto? result)
+    private async Task OnResultSelected(MetadataSearchResultDto? result)
     {
         _selectedResult = result;
+
+        // Reset episode group state
+        _episodeGroups = null;
+        _selectedEpisodeGroupId = null;
+        _expandedGroupId = null;
+        _expandedGroupDetails = null;
+
+        // Fetch episode groups if a TV show is selected
+        if (result?.Type == MediaType.TvShow)
+        {
+            await FetchEpisodeGroupsAsync(result.Id);
+        }
+    }
+
+    private async Task FetchEpisodeGroupsAsync(int showId)
+    {
+        _isLoadingEpisodeGroups = true;
+        StateHasChanged();
+
+        try
+        {
+            _episodeGroups = await ApiClient.GetEpisodeGroupsAsync(showId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading episode groups: {ex.Message}", Severity.Warning);
+            _episodeGroups = Array.Empty<EpisodeGroupDto>();
+        }
+        finally
+        {
+            _isLoadingEpisodeGroups = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnEpisodeGroupSelected(string? groupId)
+    {
+        _selectedEpisodeGroupId = groupId;
+
+        // Clear expanded details if selecting a different group
+        if (_expandedGroupId != groupId)
+        {
+            _expandedGroupId = null;
+            _expandedGroupDetails = null;
+        }
+
+        // Generate batch preview if in batch mode and a group is selected
+        if (IsBatchMode && !string.IsNullOrEmpty(groupId))
+        {
+            await GenerateBatchPreviewAsync(groupId);
+        }
+        else
+        {
+            _batchPreviewMappings.Clear();
+            _unmappableItemsCount = 0;
+        }
+    }
+
+    private async Task GenerateBatchPreviewAsync(string groupId)
+    {
+        if (_selectedResult == null || ManualResolutionItems == null)
+        {
+            return;
+        }
+
+        _batchPreviewMappings.Clear();
+        _unmappableItemsCount = 0;
+
+        // Fetch group details if not already loaded
+        EpisodeGroupDetailsDto? groupDetails = null;
+        if (_expandedGroupId == groupId && _expandedGroupDetails != null)
+        {
+            groupDetails = _expandedGroupDetails;
+        }
+        else
+        {
+            try
+            {
+                groupDetails = await ApiClient.GetEpisodeGroupDetailsAsync(_selectedResult.Id, groupId);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error loading episode group details: {ex.Message}", Severity.Warning);
+                return;
+            }
+        }
+
+        if (groupDetails == null)
+        {
+            return;
+        }
+
+        // Map each item to the group - input S/E represents position in the group
+        foreach (var item in ManualResolutionItems)
+        {
+            var fileName = item.SourceFileName ?? Path.GetFileName(item.SourcePath) ?? "Unknown";
+            var inputSeason = item.ParsedSeason;
+            var inputEpisode = item.ParsedEpisode;
+
+            // Try to find the episode at this position in the group
+            var foundEpisode = FindEpisodeByGroupPosition(groupDetails, inputSeason, inputEpisode);
+
+            if (foundEpisode != null)
+            {
+                _batchPreviewMappings.Add(new BatchPreviewMapping(
+                    item.Id,
+                    fileName,
+                    inputSeason,
+                    inputEpisode,
+                    IsMappable: true,
+                    foundEpisode.Value.Season,
+                    foundEpisode.Value.Episode,
+                    foundEpisode.Value.Name));
+            }
+            else
+            {
+                _unmappableItemsCount++;
+                _batchPreviewMappings.Add(new BatchPreviewMapping(
+                    item.Id,
+                    fileName,
+                    inputSeason,
+                    inputEpisode,
+                    IsMappable: false,
+                    MappedSeason: null,
+                    MappedEpisode: null,
+                    MappedEpisodeName: null));
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private static (int Season, int Episode, string Name)? FindEpisodeByGroupPosition(
+        EpisodeGroupDetailsDto groupDetails,
+        int? inputSeason,
+        int? inputEpisode)
+    {
+        if (!inputSeason.HasValue || !inputEpisode.HasValue)
+        {
+            return null;
+        }
+
+        // The input season/episode represents the position within the group's ordering
+        var season = groupDetails.Seasons.FirstOrDefault(s => s.Order == inputSeason.Value);
+        var episode = season?.Episodes.FirstOrDefault(e => e.Order == inputEpisode.Value);
+
+        if (episode != null && season != null)
+        {
+            return (season.Order, episode.Order, episode.Name);
+        }
+
+        return null;
+    }
+
+    private async Task ToggleGroupExpansion(string groupId)
+    {
+        if (_expandedGroupId == groupId)
+        {
+            // Collapse
+            _expandedGroupId = null;
+            _expandedGroupDetails = null;
+            return;
+        }
+
+        // Expand and fetch details
+        _expandedGroupId = groupId;
+        _expandedGroupDetails = null;
+        _isLoadingGroupDetails = true;
+        StateHasChanged();
+
+        try
+        {
+            if (_selectedResult != null)
+            {
+                _expandedGroupDetails = await ApiClient.GetEpisodeGroupDetailsAsync(_selectedResult.Id, groupId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading episode group details: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _isLoadingGroupDetails = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetExpandIcon(string groupId)
+    {
+        return _expandedGroupId == groupId ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore;
     }
 
     private async Task ResolveAsync()
@@ -239,7 +578,8 @@
             var request = new ResolveMetadataRequestDto
             {
                 TmdbId = _selectedResult.Id,
-                MediaType = _selectedResult.Type
+                MediaType = _selectedResult.Type,
+                EpisodeGroupId = _selectedResult.Type == MediaType.TvShow ? _selectedEpisodeGroupId : null
             };
 
             if (ManualResolutionItem != null)
@@ -266,9 +606,13 @@
                 {
                     QueueItemIds = ManualResolutionItems.Select(q => q.Id).ToList(),
                     TmdbId = _selectedResult.Id,
-                    MediaType = _selectedResult.Type
+                    MediaType = _selectedResult.Type,
+                    EpisodeGroupId = _selectedResult.Type == MediaType.TvShow ? _selectedEpisodeGroupId : null
                 };
-                await ApiClient.ResolveBatchMetadataQueueItemsAsync(batchRequest);
+                _batchResolutionResult = await ApiClient.ResolveBatchMetadataQueueItemsAsync(batchRequest);
+
+                // Show success/error summary
+                ShowBatchResolutionSummary(_batchResolutionResult);
             }
         }
         catch (Exception ex)
@@ -278,8 +622,38 @@
             return;
         }
 
-        // Operation succeeded, signal close
+        // Operation succeeded, signal close to refresh queue
         await OnClose.InvokeAsync(true);
+    }
+
+    private void ShowBatchResolutionSummary(BatchResolutionResultDto result)
+    {
+        var successCount = result.SuccessfulIds.Count;
+        var errorCount = result.Errors.Count;
+
+        if (errorCount == 0)
+        {
+            Snackbar.Add($"Successfully resolved {successCount} item(s).", Severity.Success);
+        }
+        else if (successCount == 0)
+        {
+            Snackbar.Add($"Failed to resolve all {errorCount} item(s).", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add($"Resolved {successCount} item(s), {errorCount} failed.", Severity.Warning);
+
+            // Show individual error messages
+            foreach (var error in result.Errors.Take(3))
+            {
+                Snackbar.Add($"Item {error.QueueItemId}: {error.ErrorMessage}", Severity.Error);
+            }
+
+            if (result.Errors.Count > 3)
+            {
+                Snackbar.Add($"...and {result.Errors.Count - 3} more error(s).", Severity.Warning);
+            }
+        }
     }
 
     private async Task Cancel() => await OnClose.InvokeAsync(false);

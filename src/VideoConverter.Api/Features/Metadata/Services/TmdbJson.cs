@@ -33,6 +33,16 @@ internal static class TmdbJson
         return JsonSerializer.Deserialize<TmdbSeasonDetailsResponse>(json, Options);
     }
 
+    public static TmdbEpisodeGroupsResponse? DeserializeEpisodeGroupsResponse(string json)
+    {
+        return JsonSerializer.Deserialize<TmdbEpisodeGroupsResponse>(json, Options);
+    }
+
+    public static TmdbEpisodeGroupDetailResponse? DeserializeEpisodeGroupDetailResponse(string json)
+    {
+        return JsonSerializer.Deserialize<TmdbEpisodeGroupDetailResponse>(json, Options);
+    }
+
     internal sealed record TmdbMovieSearchResult([property: JsonPropertyName("results")] List<TmdbMovie>? Results);
 
     internal sealed record TmdbMovie(
@@ -54,4 +64,51 @@ internal static class TmdbJson
     internal sealed record TmdbEpisodeDetails(
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("overview")] string? Overview);
+
+    /// <summary>
+    /// Response from GET /tv/{showId}?append_to_response=episode_groups.
+    /// Contains the episode_groups field from the appended response.
+    /// </summary>
+    internal sealed record TmdbEpisodeGroupsResponse(
+        [property: JsonPropertyName("results")] List<TmdbEpisodeGroupSummary>? Results);
+
+    /// <summary>
+    /// Summary of an episode group returned in the list.
+    /// </summary>
+    internal sealed record TmdbEpisodeGroupSummary(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("type")] int Type,
+        [property: JsonPropertyName("description")] string? Description,
+        [property: JsonPropertyName("group_count")] int GroupCount,
+        [property: JsonPropertyName("episode_count")] int EpisodeCount);
+
+    /// <summary>
+    /// Response from GET /tv/episode_group/{groupId}.
+    /// </summary>
+    internal sealed record TmdbEpisodeGroupDetailResponse(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("type")] int Type,
+        [property: JsonPropertyName("description")] string? Description,
+        [property: JsonPropertyName("groups")] List<TmdbEpisodeGroupPart>? Groups);
+
+    /// <summary>
+    /// A season/part within an episode group.
+    /// </summary>
+    internal sealed record TmdbEpisodeGroupPart(
+        [property: JsonPropertyName("order")] int Order,
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("episodes")] List<TmdbEpisodeGroupEpisode>? Episodes);
+
+    /// <summary>
+    /// An episode within an episode group part.
+    /// </summary>
+    internal sealed record TmdbEpisodeGroupEpisode(
+        [property: JsonPropertyName("id")] int Id,
+        [property: JsonPropertyName("order")] int Order,
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("overview")] string? Overview,
+        [property: JsonPropertyName("season_number")] int SeasonNumber,
+        [property: JsonPropertyName("episode_number")] int EpisodeNumber);
 }

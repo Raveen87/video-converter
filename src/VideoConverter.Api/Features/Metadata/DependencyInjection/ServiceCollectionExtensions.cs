@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
     {
         _ = services.AddSingleton<IMetadataService, TmdbMetadataService>();
         _ = services.AddSingleton<ITmdbSearchService, TmdbSearchService>();
+        _ = services.AddSingleton<IEpisodeGroupService, EpisodeGroupService>();
         _ = services.AddSingleton<ISourceDetector, SourceDetector>();
         _ = services.AddSingleton<ITitleSanitizer, TitleSanitizer>();
         _ = services.AddSingleton<IMovieFilenameParser, MovieFilenameParser>();

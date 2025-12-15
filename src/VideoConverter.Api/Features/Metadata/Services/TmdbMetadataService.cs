@@ -236,6 +236,49 @@ public class TmdbMetadataService(
         }
     }
 
+    public async Task<TvShowMetadata?> GetTvShowMetadataByIdWithGroupAsync(
+        int tmdbId,
+        int groupSeason,
+        int groupEpisode,
+        string episodeName,
+        string? source = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"https://api.themoviedb.org/3/tv/{tmdbId}";
+            Logger.LogDebug("Fetching TV show metadata by ID with group ordering: {TmdbId}, S{Season}E{Episode}", tmdbId, groupSeason, groupEpisode);
+
+            var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
+
+            using var doc = JsonDocument.Parse(responseString);
+            var root = doc.RootElement;
+
+            var name = root.GetProperty("name").GetString() ?? string.Empty;
+            var firstAirDate = root.TryGetProperty("first_air_date", out var fad) ? fad.GetString() : null;
+            var showOverview = root.TryGetProperty("overview", out var ov) ? ov.GetString() : null;
+            var posterPath = root.TryGetProperty("poster_path", out var pp) ? pp.GetString() : null;
+
+            // Use the episode name from the group instead of fetching from TMDb
+            // The group provides the correct episode name for this ordering
+            return new TvShowMetadata(
+                name,
+                ExtractYear(firstAirDate),
+                groupSeason,
+                groupEpisode,
+                episodeName,
+                source,
+                showOverview,
+                GetPosterUrl(posterPath),
+                tmdbId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching TV show metadata by ID with group: {TmdbId}", tmdbId);
+            return null;
+        }
+    }
+
     public async Task<TmdbTvShowDetailsResponse?> GetTvShowDetailsAsync(int showId, CancellationToken cancellationToken = default)
     {
         try

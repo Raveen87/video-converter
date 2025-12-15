@@ -101,7 +101,10 @@ public static class ManualResolutionEndpoints
         }
     }
 
-    private static async Task<IResult> ResolveBatchMetadataQueueItems([FromBody] ResolveBatchMetadataQueueRequestDto request, IManualResolutionService service, CancellationToken cancellationToken)
+    private static async Task<IResult> ResolveBatchMetadataQueueItems(
+        [FromBody] ResolveBatchMetadataQueueRequestDto request,
+        IManualResolutionService service,
+        CancellationToken cancellationToken)
     {
         if (request.QueueItemIds is null || !request.QueueItemIds.Any())
         {
@@ -110,8 +113,15 @@ public static class ManualResolutionEndpoints
 
         try
         {
-            await service.ResolveBatchMetadataQueueItemsAsync(request, cancellationToken).ConfigureAwait(false);
-            return Results.Ok();
+            var result = await service.ResolveBatchMetadataQueueItemsAsync(request, cancellationToken).ConfigureAwait(false);
+
+            // Return 207 Multi-Status if there are partial failures
+            if (result.Errors.Count > 0 && result.SuccessfulIds.Count > 0)
+            {
+                return Results.Json(result, statusCode: StatusCodes.Status207MultiStatus);
+            }
+
+            return Results.Ok(result);
         }
         catch (KeyNotFoundException)
         {

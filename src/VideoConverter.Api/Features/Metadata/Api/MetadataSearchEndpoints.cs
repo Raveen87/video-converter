@@ -24,10 +24,16 @@ public static class MetadataSearchEndpoints
         {
             results = await service.SearchTvShowAsync(request.Query, request.Year, cancellationToken).ConfigureAwait(false);
         }
+        else if (request.Type is MediaType.Movie)
+        {
+            results = await service.SearchMovieAsync(request.Query, request.Year, cancellationToken).ConfigureAwait(false);
+        }
         else
         {
-            // Default to movie or if explictly Movie
-            results = await service.SearchMovieAsync(request.Query, request.Year, cancellationToken).ConfigureAwait(false);
+            // No type specified - search both movies and TV shows
+            var movieResults = await service.SearchMovieAsync(request.Query, request.Year, cancellationToken).ConfigureAwait(false);
+            var tvResults = await service.SearchTvShowAsync(request.Query, request.Year, cancellationToken).ConfigureAwait(false);
+            results = movieResults.Concat(tvResults).OrderByDescending(r => r.Year ?? 0);
         }
 
         return Results.Ok(results);

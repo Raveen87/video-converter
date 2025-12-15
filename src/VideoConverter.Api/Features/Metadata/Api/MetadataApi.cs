@@ -6,5 +6,6 @@ public static class MetadataApi
     {
         app.MapManualResolutionEndpoints();
         app.MapMetadataSearchEndpoints();
+        app.MapEpisodeGroupEndpoints();
     }
 }
