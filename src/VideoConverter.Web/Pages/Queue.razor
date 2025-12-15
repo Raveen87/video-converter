@@ -6,11 +6,8 @@
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h4">Conversion Queue</MudText>
         <div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateConversionDialog" Class="mr-2">
-                Create Conversion
-            </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Folder" OnClick="OpenQueueDirectoryDialog" Class="mr-2">
-                Queue Directory
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenUnifiedQueueDialog" Class="mr-2">
+                Add to Queue
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="StartQueue" Disabled="@(!_stateService.HasPendingConversions || _stateService.IsRunning || _stateService.IsPaused || _stateService.IsStopping || _stateService.IsStarting)" Class="mr-2">
                 Start Queue
@@ -225,56 +222,44 @@
         }
     }
 
-    private async Task OpenCreateConversionDialog()
+    private async Task OpenUnifiedQueueDialog()
     {
-        Logger.LogInformation("User action: Opening create conversion dialog");
+        Logger.LogInformation("User action: Opening unified queue dialog");
         IDialogReference? dialogRef = null;
-        dialogRef = await DialogService.ShowAsync<CreateConversionDialog>("Create Conversion", new DialogParameters<CreateConversionDialog>
+        dialogRef = await DialogService.ShowAsync<UnifiedQueueDialog>("Add to Queue", new DialogParameters<UnifiedQueueDialog>
         {
-            { x => x.InitialModel, null },
-            { x => x.OnSubmit, EventCallback.Factory.Create<ConversionCreateDto>(this, async (request) =>
+            { x => x.OnFileSubmit, EventCallback.Factory.Create<ConversionCreateDto>(this, async (request) =>
             {
                 await CreateConversionOptimisticAsync(request).ConfigureAwait(false);
                 dialogRef?.Close();
-                Logger.LogDebug("Create conversion dialog closed");
+                Logger.LogDebug("Unified queue dialog closed after file submission");
             }) },
-            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
-        }, new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-        }).ConfigureAwait(false);
-        Logger.LogDebug("Create conversion dialog opened");
-    }
-
-    private async Task OpenQueueDirectoryDialog()
-    {
-        Logger.LogInformation("User action: Opening queue directory dialog");
-        IDialogReference? dialogRef = null;
-        dialogRef = await DialogService.ShowAsync<QueueDirectoryDialog>("Queue Directory", new DialogParameters<QueueDirectoryDialog>
-        {
-            { x => x.InitialModel, null },
-            { x => x.OnSubmit, EventCallback.Factory.Create<DirectoryQueueRequestDto>(this, async (request) =>
+            { x => x.OnDirectorySubmit, EventCallback.Factory.Create<DirectoryQueueRequestDto>(this, async (request) =>
             {
                 await QueueDirectoryAsync(request).ConfigureAwait(false);
                 dialogRef?.Close();
-                Logger.LogDebug("Queue directory dialog closed");
+                Logger.LogDebug("Unified queue dialog closed after directory submission");
             }) },
-            { x => x.OnSubmitWithProfile, EventCallback.Factory.Create<(int ProfileId, ProfileDirectoryQueueRequestDto Request)>(this, async (data) =>
+            { x => x.OnFileSubmitWithProfile, EventCallback.Factory.Create<(int ProfileId, ProfileConversionCreateDto Request)>(this, async (data) =>
+            {
+                await CreateConversionWithProfileAsync(data.ProfileId, data.Request).ConfigureAwait(false);
+                dialogRef?.Close();
+                Logger.LogDebug("Unified queue dialog closed after profile file submission");
+            }) },
+            { x => x.OnDirectorySubmitWithProfile, EventCallback.Factory.Create<(int ProfileId, ProfileDirectoryQueueRequestDto Request)>(this, async (data) =>
             {
                 await QueueDirectoryWithProfileAsync(data.ProfileId, data.Request).ConfigureAwait(false);
                 dialogRef?.Close();
-                Logger.LogDebug("Queue directory dialog closed");
+                Logger.LogDebug("Unified queue dialog closed after profile directory submission");
             }) },
             { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
         }, new DialogOptions
         {
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
+            MaxWidth = MaxWidth.Large,
             FullWidth = true,
         }).ConfigureAwait(false);
-        Logger.LogDebug("Queue directory dialog opened");
+        Logger.LogDebug("Unified queue dialog opened");
     }
 
     private async Task CreateConversionOptimisticAsync(ConversionCreateDto request)
@@ -332,6 +317,66 @@
             else
             {
                 Logger.LogError(ex, "Error creating conversion, removing temporary conversion {TempId}", tempId);
+                Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task CreateConversionWithProfileAsync(int profileId, ProfileConversionCreateDto request)
+    {
+        Logger.LogInformation("Creating conversion with profile {ProfileId}. Input: {InputPath}", profileId, request.InputPath);
+        var tempId = GetNextTempId();
+        var tempConversion = new ConversionDto(
+            tempId,
+            request.InputPath,
+            request.OutputDirectory,
+            DateTime.UtcNow,
+            ConversionStatus.Pending,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+        Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
+        _stateService.UpdateConversion(tempConversion);
+        UpdatePendingConversions();
+
+        try
+        {
+            var created = await _apiClient.QueueConversionWithProfileAsync(profileId, request).ConfigureAwait(false);
+
+            Logger.LogInformation("Conversion created successfully with profile {ProfileId}, ID {ConversionId}, replacing temporary ID {TempId}",
+                profileId, created.Id, tempId);
+            _stateService.RemoveConversion(tempId);
+            _stateService.UpdateConversion(created);
+            UpdatePendingConversions();
+
+            Snackbar.Add("Conversion created successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _stateService.RemoveConversion(tempId);
+            UpdatePendingConversions();
+
+            if (ex.Message.Contains("queued for manual resolution", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogInformation("Conversion queued for manual metadata resolution");
+                Snackbar.Add("Metadata lookup failed. Item added to Metadata Resolution Queue.", Severity.Warning);
+            }
+            else
+            {
+                Logger.LogError(ex, "Error creating conversion with profile {ProfileId}, removing temporary conversion {TempId}", profileId, tempId);
                 Snackbar.Add($"Error creating conversion: {ex.Message}", Severity.Error);
             }
         }

@@ -4,4 +4,5 @@ public enum FileBrowserMode
 {
     File,
     Directory,
+    FileOrDirectory,
 }
