@@ -306,6 +306,10 @@ public sealed class ConversionService(
                 CodecName = s.CodecName,
                 LanguageTag = s.LanguageTag,
                 Title = s.Title,
+                Channels = s.Channels,
+                ChannelLayout = s.ChannelLayout,
+                IsDefault = s.IsDefault,
+                IsForced = s.IsForced,
             }),
         ];
     }
