@@ -125,11 +125,27 @@
         {
             if (!string.IsNullOrEmpty(Item.AvailableAudioStreamsJson))
             {
-                _audioStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableAudioStreamsJson) ?? new();
+                try
+                {
+                    _audioStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableAudioStreamsJson) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    _audioStreams = new();
+                    Snackbar.Add($"Failed to load audio streams: {ex.Message}", Severity.Error);
+                }
             }
             if (!string.IsNullOrEmpty(Item.AvailableSubtitleStreamsJson))
             {
-                _subtitleStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableSubtitleStreamsJson) ?? new();
+                try
+                {
+                    _subtitleStreams = JsonSerializer.Deserialize<List<MediaStreamDto>>(Item.AvailableSubtitleStreamsJson) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    _subtitleStreams = new();
+                    Snackbar.Add($"Failed to load subtitle streams: {ex.Message}", Severity.Error);
+                }
             }
         }
     }
