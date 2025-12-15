@@ -79,6 +79,13 @@ public static class ManualResolutionEndpoints
 
     private static async Task<IResult> ResolveStreamSelectionQueueItem(int id, [FromBody] ResolveStreamSelectionRequestDto request, IManualResolutionService service, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.AudioStreamIndices) &&
+            string.IsNullOrWhiteSpace(request.SubtitleStreamIndices) &&
+            string.IsNullOrWhiteSpace(request.ExternalSubtitlePaths))
+        {
+            return Results.BadRequest("At least one stream selection (audio, subtitle, or external subtitle) is required.");
+        }
+
         try
         {
             await service.ResolveStreamSelectionQueueItemAsync(id, request, cancellationToken).ConfigureAwait(false);
