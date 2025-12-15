@@ -86,7 +86,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="ResolveAsync" Disabled="@(_selectedAudioStreams.Count == 0 || _isResolving)">
+        <MudButton Color="Color.Primary" OnClick="ResolveAsync" Disabled="@((_audioStreams.Count > 0 && _selectedAudioStreams.Count == 0) || _isResolving)">
             @if (_isResolving)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
