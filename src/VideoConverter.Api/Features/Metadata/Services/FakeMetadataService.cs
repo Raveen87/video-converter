@@ -121,6 +121,24 @@ public class FakeMetadataService : IMetadataService
         return Task.FromResult(show);
     }
 
+    public Task<TvShowMetadata?> GetTvShowMetadataByIdWithGroupAsync(
+        int tmdbId,
+        int groupSeason,
+        int groupEpisode,
+        string episodeName,
+        string? source = null,
+        CancellationToken cancellationToken = default)
+    {
+        // For fake service, return a show with the group-specific ordering
+        var show = _tvShowData.Values.FirstOrDefault();
+        if (show != null)
+        {
+            show = show with { Season = groupSeason, Episode = groupEpisode, EpisodeTitle = episodeName };
+        }
+
+        return Task.FromResult(show);
+    }
+
     private static Dictionary<string, MovieMetadata> LoadMovieTestData()
     {
         return new Dictionary<string, MovieMetadata>(StringComparer.Ordinal)

@@ -763,7 +763,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<BatchResolutionResultDto> ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default)
     {
         var count = request.QueueItemIds.Count();
         _logger.LogDebug("Resolving {Count} metadata queue items with TmdbId {TmdbId}", count, request.TmdbId);
@@ -775,8 +775,21 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
                 _jsonOptions,
                 cancellationToken).ConfigureAwait(false);
 
-            await EnsureSuccessAsync(response, "Resolve batch metadata queue items", cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Successfully resolved {Count} metadata queue items", count);
+            // Handle both 200 OK and 207 Multi-Status responses
+            if (!response.IsSuccessStatusCode && response.StatusCode is not System.Net.HttpStatusCode.MultiStatus)
+            {
+                await EnsureSuccessAsync(response, "Resolve batch metadata queue items", cancellationToken).ConfigureAwait(false);
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<BatchResolutionResultDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? new BatchResolutionResultDto();
+
+            _logger.LogInformation(
+                "Batch resolution completed: {SuccessCount} successful, {ErrorCount} errors",
+                result.SuccessfulIds.Count,
+                result.Errors.Count);
+
+            return result;
         }
 #pragma warning disable S2139
         catch (Exception ex)
@@ -887,6 +900,58 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching metadata for: {Query}", request.Query);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<IReadOnlyList<EpisodeGroupDto>> GetEpisodeGroupsAsync(int showId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting episode groups for show {ShowId}", showId);
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<EpisodeGroupDto>>(
+                $"api/tv/{showId}/episode-groups",
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            var result = response ?? Array.Empty<EpisodeGroupDto>();
+            _logger.LogInformation("Successfully retrieved {Count} episode groups for show {ShowId}", result.Count, showId);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting episode groups for show {ShowId}", showId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<EpisodeGroupDetailsDto?> GetEpisodeGroupDetailsAsync(int showId, string groupId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting episode group details for show {ShowId}, group {GroupId}", showId, groupId);
+        try
+        {
+            var response = await _httpClient.GetAsync(
+                $"api/tv/{showId}/episode-groups/{Uri.EscapeDataString(groupId)}",
+                cancellationToken).ConfigureAwait(false);
+
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Episode group {GroupId} not found for show {ShowId}", groupId, showId);
+                return null;
+            }
+
+            await EnsureSuccessAsync(response, $"Get episode group details {groupId}", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<EpisodeGroupDetailsDto>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Successfully retrieved episode group details for group {GroupId}", groupId);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting episode group details for show {ShowId}, group {GroupId}", showId, groupId);
             throw;
         }
 #pragma warning restore S2139

@@ -28,6 +28,9 @@ obj/
 # VSCode
 .vscode/
 
+# Kiro
+.kiro/
+
 # Logs
 *.log
 

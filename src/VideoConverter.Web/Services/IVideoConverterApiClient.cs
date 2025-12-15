@@ -60,7 +60,7 @@ public interface IVideoConverterApiClient
 
     Task ResolveStreamSelectionQueueItemAsync(int id, ResolveStreamSelectionRequestDto request, CancellationToken cancellationToken = default);
 
-    Task ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default);
+    Task<BatchResolutionResultDto> ResolveBatchMetadataQueueItemsAsync(ResolveBatchMetadataQueueRequestDto request, CancellationToken cancellationToken = default);
 
     Task<ConversionDto> ResolveConversionMetadataAsync(int id, ResolveMetadataRequestDto request, CancellationToken cancellationToken = default);
 
@@ -69,4 +69,8 @@ public interface IVideoConverterApiClient
     Task DeleteManualResolutionQueueItemAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IEnumerable<MetadataSearchResultDto>> SearchMetadataAsync(MetadataSearchRequestDto request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EpisodeGroupDto>> GetEpisodeGroupsAsync(int showId, CancellationToken cancellationToken = default);
+
+    Task<EpisodeGroupDetailsDto?> GetEpisodeGroupDetailsAsync(int showId, string groupId, CancellationToken cancellationToken = default);
 }
