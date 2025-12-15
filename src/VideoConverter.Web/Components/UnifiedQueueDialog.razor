@@ -1,0 +1,536 @@
+@using VideoConverter.Common.Models
+@using VideoConverter.Web.Models
+@using VideoConverter.Web.Services
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add to Queue</MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="unified-queue-dialog">
+            @* File Browser Section *@
+            <MudPaper Class="pa-3 mb-4" Elevation="1">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Select File or Directory</MudText>
+                @if (_fileBrowserError is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-3">@_fileBrowserError</MudAlert>
+                }
+                <div class="file-browser-embedded">
+                    @if (_currentPath is not null)
+                    {
+                        <div class="mb-2">
+                            <MudBreadcrumbs Items="@_breadcrumbs" MaxItems="5" Separator="/">
+                                <ItemTemplate>
+                                    <MudLink OnClick="@(() => NavigateToPath(context.Href ?? string.Empty))" Underline="Underline.Hover" Style="cursor: pointer;">@context.Text</MudLink>
+                                </ItemTemplate>
+                            </MudBreadcrumbs>
+                        </div>
+                    }
+
+                    @if (_parentPath is not null)
+                    {
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowUpward" OnClick="@(() => NavigateToPath(_parentPath))" Class="mb-2" Size="Size.Small">
+                            Parent Directory
+                        </MudButton>
+                    }
+
+                    @if (_isLoadingBrowser)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+                    }
+                    else
+                    {
+                        <MudPaper Class="pa-2" Style="max-height: 250px; overflow-y: auto;" Outlined="true">
+                            @if (_directories.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Directories</MudText>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var dir in _directories)
+                                    {
+                                        <MudListItem T="string" Value="@dir.Path" OnClick="@(() => HandleDirectoryClick(dir.Path))" @ondblclick="@(() => HandleDirectoryDoubleClick(dir.Path))" Class="@(IsSelected(dir.Path) ? "selected-item mud-primary-text" : "")">
+                                            <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" Color="@(IsSelected(dir.Path) ? Color.Primary : Color.Default)" />
+                                            <MudText>@dir.Name</MudText>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+
+                            @if (_files.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 mt-2">Files</MudText>
+                                <MudList T="string" Dense="true">
+                                    @foreach (var file in _files)
+                                    {
+                                        <MudListItem T="string" Value="@file.Path" OnClick="@(() => HandleFileClick(file.Path))" Class="@(IsSelected(file.Path) ? "selected-item mud-primary-text" : "")">
+                                            <MudIcon Icon="@Icons.Material.Filled.VideoFile" Class="mr-2" Color="@(IsSelected(file.Path) ? Color.Primary : Color.Default)" />
+                                            <div class="d-flex flex-column">
+                                                <MudText>@file.Name</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @FormatFileSize(file.Size)
+                                                </MudText>
+                                            </div>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+
+                            @if (_directories.Count == 0 && _files.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">No items found</MudText>
+                            }
+                        </MudPaper>
+                    }
+                </div>
+
+                @if (_formModel.SelectedPath is not null)
+                {
+                    <MudAlert Severity="Severity.Info" Class="mt-3" Dense="true">
+                        <strong>@(_formModel.SelectionType == SelectionType.File ? "File" : "Directory"):</strong> @_formModel.SelectedPath
+                    </MudAlert>
+                }
+            </MudPaper>
+
+            @* Profile Selection *@
+            <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (Optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
+                <MudSelectItem T="int?" Value="@((int?)null)">None - Enter settings manually</MudSelectItem>
+                @foreach (var profile in _profiles)
+                {
+                    <MudSelectItem T="int?" Value="@profile.Id">@profile.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            @if (_selectedProfileId is not null)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
+                    Using profile: <strong>@GetSelectedProfileName()</strong>. You can override any settings below.
+                </MudAlert>
+            }
+
+            @* Output Directory *@
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenOutputDirectoryBrowser" Class="ml-2" Style="height: 56px;">
+                    Browse
+                </MudButton>
+            </div>
+
+            @* Extensions Filter - Only shown for directory selection *@
+            @if (_formModel.SelectionType == SelectionType.Directory)
+            {
+                <MudTextField @bind-Value="_formModel.ExtensionsString" Label="File Extensions (comma-separated)" HelperText="e.g., .mkv,.mp4 (defaults to .mkv,.mp4 if empty)" Variant="Variant.Outlined" Class="mb-3" />
+            }
+
+            @* Conversion Settings *@
+            <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="AudioChannels?" @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="AudioChannels?" Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
+                <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
+            </MudSelect>
+            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanSubmit)" OnClick="HandleSubmit">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <text>Queueing...</text>
+            }
+            else
+            {
+                <text>Add to Queue</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter]
+    public IDialogReference MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ConversionCreateDto> OnFileSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback<DirectoryQueueRequestDto> OnDirectorySubmit { get; set; }
+
+    [Parameter]
+    public EventCallback<(int ProfileId, ProfileConversionCreateDto Request)> OnFileSubmitWithProfile { get; set; }
+
+    [Parameter]
+    public EventCallback<(int ProfileId, ProfileDirectoryQueueRequestDto Request)> OnDirectorySubmitWithProfile { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Inject]
+    private ILogger<UnifiedQueueDialog> Logger { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
+    [Inject]
+    private IVideoConverterApiClient ApiClient { get; set; } = null!;
+
+    [Inject]
+    private IFileBrowserService FileBrowserService { get; set; } = null!;
+
+    private readonly UnifiedQueueFormModel _formModel = new();
+    private readonly List<ProfileDto> _profiles = new();
+    private int? _selectedProfileId;
+    private bool _isSubmitting;
+
+    // File browser state
+    private string? _currentPath;
+    private string? _parentPath;
+    private List<DirectoryItemDto> _directories = new();
+    private List<FileItemDto> _files = new();
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private bool _isLoadingBrowser;
+    private string? _fileBrowserError;
+
+    private bool CanSubmit => _formModel.SelectedPath is not null
+                              && _formModel.SelectionType != SelectionType.None
+                              && !_isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogDebug("UnifiedQueueDialog initializing");
+        await LoadProfilesAsync().ConfigureAwait(false);
+        await LoadDirectoryAsync(null).ConfigureAwait(false);
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        try
+        {
+            var profiles = await ApiClient.GetProfilesAsync().ConfigureAwait(false);
+            _profiles.Clear();
+            _profiles.AddRange(profiles);
+            Logger.LogDebug("Loaded {Count} profiles", profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error loading profiles, continuing without profile selection");
+        }
+    }
+
+    private async Task LoadDirectoryAsync(string? path)
+    {
+        _isLoadingBrowser = true;
+        _fileBrowserError = null;
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogDebug("Loading directory contents for path: {Path}", path ?? "(root)");
+            var response = await FileBrowserService.GetDirectoryContentsAsync(path).ConfigureAwait(false);
+
+            _currentPath = response.CurrentPath;
+            _parentPath = response.ParentPath;
+            _directories = response.Directories.ToList();
+            _files = response.Files.ToList();
+            _breadcrumbs = BuildBreadcrumbs(_currentPath);
+
+            Logger.LogInformation("Loaded directory contents. Path: {Path}, Directories: {DirCount}, Files: {FileCount}",
+                _currentPath, _directories.Count, _files.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading directory contents for path: {Path}", path);
+            _fileBrowserError = $"Failed to load directory contents: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingBrowser = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateToPath(string path)
+    {
+        Logger.LogDebug("Navigating to path: {Path}", path);
+        await LoadDirectoryAsync(path).ConfigureAwait(false);
+    }
+
+    private void HandleDirectoryClick(string path)
+    {
+        Logger.LogDebug("Directory clicked: {Path}", path);
+        _formModel.SelectedPath = path;
+        _formModel.SelectionType = SelectionType.Directory;
+        StateHasChanged();
+    }
+
+    private async Task HandleDirectoryDoubleClick(string path)
+    {
+        Logger.LogDebug("Directory double-clicked: {Path}", path);
+        await NavigateToPath(path).ConfigureAwait(false);
+    }
+
+    private void HandleFileClick(string path)
+    {
+        Logger.LogDebug("File clicked: {Path}", path);
+        _formModel.SelectedPath = path;
+        _formModel.SelectionType = SelectionType.File;
+        StateHasChanged();
+    }
+
+    private bool IsSelected(string path)
+    {
+        return _formModel.SelectedPath == path;
+    }
+
+    private void HandleProfileSelectionChanged(int? profileId)
+    {
+        Logger.LogDebug("Profile selection changed to: {ProfileId}", profileId);
+        _selectedProfileId = profileId;
+
+        if (profileId.HasValue)
+        {
+            var profile = _profiles.FirstOrDefault(p => p.Id == profileId.Value);
+            if (profile is not null)
+            {
+                Logger.LogInformation("Pre-filling form with profile: {ProfileName}", profile.Name);
+                _formModel.OutputDirectory = profile.OutputDirectory ?? _formModel.OutputDirectory;
+                _formModel.Crf = profile.Crf;
+                _formModel.AudioBitrateKbps = profile.AudioBitrateKbps;
+                _formModel.AudioChannels = profile.AudioChannels;
+                _formModel.Resolution = profile.Resolution;
+                _formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
+                _formModel.AudioLanguagesString = profile.AudioLanguages is not null ? string.Join(", ", profile.AudioLanguages) : null;
+                _formModel.SubtitleLanguagesString = profile.SubtitleLanguages is not null ? string.Join(", ", profile.SubtitleLanguages) : null;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private string GetSelectedProfileName()
+    {
+        var profile = _profiles.FirstOrDefault(p => p.Id == _selectedProfileId);
+        return profile?.Name ?? "Unknown Profile";
+    }
+
+    private async Task OpenOutputDirectoryBrowser()
+    {
+        Logger.LogDebug("Opening output directory browser dialog");
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        IDialogReference? dialogRef = null;
+        var parameters = new DialogParameters<FileBrowser>
+        {
+            { x => x.Title, "Select Output Directory" },
+            { x => x.Mode, FileBrowserMode.Directory },
+            { x => x.InitialPath, _formModel.OutputDirectory },
+            { x => x.OnPathSelected, EventCallback.Factory.Create<string>(this, (path) =>
+            {
+                _formModel.OutputDirectory = path;
+                StateHasChanged();
+                dialogRef?.Close();
+            }) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialogRef?.Close()) },
+        };
+
+        dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Output Directory", parameters, options).ConfigureAwait(false);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+        Logger.LogInformation("Form submission started. Path: {Path}, Type: {Type}, Profile: {ProfileId}",
+            _formModel.SelectedPath, _formModel.SelectionType, _selectedProfileId);
+
+        _isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var audioLanguages = ParseCommaSeparatedString(_formModel.AudioLanguagesString);
+            var subtitleLanguages = ParseCommaSeparatedString(_formModel.SubtitleLanguagesString);
+
+            if (_formModel.SelectionType == SelectionType.File)
+            {
+                await SubmitFileConversionAsync(audioLanguages, subtitleLanguages).ConfigureAwait(false);
+            }
+            else if (_formModel.SelectionType == SelectionType.Directory)
+            {
+                await SubmitDirectoryQueueAsync(audioLanguages, subtitleLanguages).ConfigureAwait(false);
+            }
+
+            Logger.LogInformation("Form submission completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during form submission");
+            throw new InvalidOperationException("Failed to submit queue form", ex);
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFileConversionAsync(string[]? audioLanguages, string[]? subtitleLanguages)
+    {
+        if (_selectedProfileId.HasValue)
+        {
+            var profileRequest = new ProfileConversionCreateDto(
+                _formModel.SelectedPath!,
+                _formModel.OutputDirectory);
+
+            await OnFileSubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
+        }
+        else
+        {
+            var request = new ConversionCreateDto(
+                _formModel.SelectedPath!,
+                _formModel.OutputDirectory,
+                _formModel.Crf,
+                _formModel.AudioBitrateKbps,
+                _formModel.AudioChannels,
+                _formModel.Resolution,
+                audioLanguages,
+                subtitleLanguages,
+                _formModel.OutputFilenameTemplate);
+
+            await OnFileSubmit.InvokeAsync(request).ConfigureAwait(false);
+        }
+    }
+
+    private async Task SubmitDirectoryQueueAsync(string[]? audioLanguages, string[]? subtitleLanguages)
+    {
+        var extensions = ParseCommaSeparatedString(_formModel.ExtensionsString);
+
+        if (_selectedProfileId.HasValue)
+        {
+            var profileRequest = new ProfileDirectoryQueueRequestDto(
+                _formModel.SelectedPath!,
+                _formModel.OutputDirectory,
+                extensions,
+                _formModel.Crf,
+                _formModel.AudioBitrateKbps,
+                _formModel.AudioChannels,
+                _formModel.Resolution,
+                audioLanguages,
+                subtitleLanguages,
+                _formModel.OutputFilenameTemplate);
+
+            await OnDirectorySubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
+        }
+        else
+        {
+            var request = new DirectoryQueueRequestDto(
+                _formModel.SelectedPath!,
+                _formModel.OutputDirectory,
+                _formModel.Crf,
+                _formModel.AudioBitrateKbps,
+                _formModel.AudioChannels,
+                _formModel.Resolution,
+                audioLanguages,
+                subtitleLanguages,
+                _formModel.OutputFilenameTemplate,
+                extensions);
+
+            await OnDirectorySubmit.InvokeAsync(request).ConfigureAwait(false);
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        Logger.LogDebug("Unified queue dialog cancelled");
+        await OnCancel.InvokeAsync().ConfigureAwait(false);
+    }
+
+    private static string[]? ParseCommaSeparatedString(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static List<BreadcrumbItem> BuildBreadcrumbs(string? path)
+    {
+        var breadcrumbs = new List<BreadcrumbItem>();
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            breadcrumbs.Add(new BreadcrumbItem("Root", "/", disabled: false));
+            return breadcrumbs;
+        }
+
+        var parts = path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var isWindowsPath = parts.Length > 0 && parts[0].Length == 2 && parts[0][1] == ':';
+
+        string currentPath;
+
+        if (isWindowsPath)
+        {
+            var drive = parts[0];
+            var driveRoot = drive + Path.DirectorySeparatorChar;
+            if (!driveRoot.EndsWith('\\') && !driveRoot.EndsWith('/'))
+            {
+                driveRoot += "\\";
+            }
+
+            breadcrumbs.Add(new BreadcrumbItem(drive, driveRoot, disabled: false));
+            currentPath = driveRoot;
+            parts = parts.Skip(1).ToArray();
+        }
+        else
+        {
+            breadcrumbs.Add(new BreadcrumbItem("Root", "/", disabled: false));
+            currentPath = "/";
+        }
+
+        foreach (var part in parts)
+        {
+            if (isWindowsPath)
+            {
+                var separator = '\\';
+                currentPath = currentPath.TrimEnd(separator) + separator + part;
+            }
+            else
+            {
+                var separator = '/';
+                currentPath = currentPath.TrimEnd(separator) + separator + part;
+            }
+
+            breadcrumbs.Add(new BreadcrumbItem(part, currentPath, disabled: false));
+        }
+
+        return breadcrumbs;
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        var order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

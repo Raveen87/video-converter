@@ -48,7 +48,7 @@
                             <MudList T="string" Dense="true">
                                 @foreach (var dir in _directories)
                                 {
-                                    <MudListItem T="string" Value="@dir.Path" OnClick="@(() => HandleDirectoryClick(dir.Path))" Class="@(Mode == FileBrowserMode.Directory && _selectedPath == dir.Path ? "selected-file" : "")">
+                                    <MudListItem T="string" Value="@dir.Path" OnClick="@(() => HandleDirectoryClick(dir.Path))" @ondblclick="@(() => HandleDirectoryDoubleClick(dir.Path))" Class="@(IsDirectorySelected(dir.Path) ? "selected-file" : "")">
                                         <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" />
                                         <MudText>@dir.Name</MudText>
                                     </MudListItem>
@@ -62,7 +62,7 @@
                             <MudList T="string" Dense="true">
                                 @foreach (var file in _files)
                                 {
-                                    <MudListItem T="string" Value="@file.Path" OnClick="@(() => SelectFile(file.Path))" Class="@(Mode == FileBrowserMode.File && _selectedPath == file.Path ? "selected-file" : "")">
+                                    <MudListItem T="string" Value="@file.Path" OnClick="@(() => SelectFile(file.Path))" Class="@(IsFileSelected(file.Path) ? "selected-file" : "")">
                                         <MudIcon Icon="@Icons.Material.Filled.VideoFile" Class="mr-2" />
                                         <div class="d-flex flex-column">
                                             <MudText>@file.Name</MudText>
@@ -156,6 +156,12 @@
             {
                 _selectedPath = _currentPath;
             }
+            else if (Mode == FileBrowserMode.FileOrDirectory)
+            {
+                // In FileOrDirectory mode, don't auto-select the current directory
+                // User must explicitly select a file or directory
+                _selectedPath = null;
+            }
 
             Logger.LogInformation(
                 "Loaded directory contents. Path: {Path}, Directories: {DirCount}, Files: {FileCount}",
@@ -188,16 +194,51 @@
         {
             _selectedPath = path;
             StateHasChanged();
+            await NavigateToPath(path).ConfigureAwait(false);
         }
+        else if (Mode == FileBrowserMode.FileOrDirectory)
+        {
+            // In FileOrDirectory mode, single-click selects the directory
+            _selectedPath = path;
+            StateHasChanged();
+        }
+        else
+        {
+            // In File mode, just navigate into the directory
+            await NavigateToPath(path).ConfigureAwait(false);
+        }
+    }
 
-        await NavigateToPath(path).ConfigureAwait(false);
+    private async Task HandleDirectoryDoubleClick(string path)
+    {
+        Logger.LogDebug("Directory double-clicked: {Path}, Mode: {Mode}", path, Mode);
+        if (Mode == FileBrowserMode.FileOrDirectory)
+        {
+            // In FileOrDirectory mode, double-click navigates into the directory
+            await NavigateToPath(path).ConfigureAwait(false);
+        }
     }
 
     private void SelectFile(string path)
     {
         Logger.LogDebug("File selected: {Path}", path);
-        _selectedPath = path;
-        StateHasChanged();
+        if (Mode == FileBrowserMode.File || Mode == FileBrowserMode.FileOrDirectory)
+        {
+            _selectedPath = path;
+            StateHasChanged();
+        }
+    }
+
+    private bool IsDirectorySelected(string path)
+    {
+        return (Mode == FileBrowserMode.Directory || Mode == FileBrowserMode.FileOrDirectory)
+               && _selectedPath == path;
+    }
+
+    private bool IsFileSelected(string path)
+    {
+        return (Mode == FileBrowserMode.File || Mode == FileBrowserMode.FileOrDirectory)
+               && _selectedPath == path;
     }
 
     private async Task HandleCancel()
