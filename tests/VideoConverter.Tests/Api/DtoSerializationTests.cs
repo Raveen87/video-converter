@@ -76,6 +76,7 @@ public class DtoSerializationTests
             AudioLanguages: new[] { "English" },
             SubtitleLanguages: new[] { "English" },
             OutputFilenameTemplate: "{Title}",
+            OutputPathTemplate: "{Type}/{Title}",
             Extensions: new[] { ".mkv", ".mp4" });
 
         var json = JsonSerializer.Serialize(dto);

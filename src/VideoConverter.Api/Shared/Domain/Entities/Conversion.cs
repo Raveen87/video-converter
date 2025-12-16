@@ -43,4 +43,6 @@ public class Conversion
     public int? MatchedSeason { get; set; }
 
     public int? MatchedEpisode { get; set; }
+
+    public string? OutputPathTemplate { get; set; }
 }

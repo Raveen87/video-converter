@@ -30,7 +30,8 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "resolution": 720,
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
-      "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}"
+      "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}",
+      "outputPathTemplate": "{Type}/{Title}"
     }
     ```
   - Profiles cannot be used with this endpoint anymore.
@@ -136,6 +137,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       { "op": "replace", "path": "/audioChannels", "value": "Surround51" },
       { "op": "replace", "path": "/resolution", "value": 1080 },
       { "op": "replace", "path": "/outputFilenameTemplate", "value": "{Title}" },
+      { "op": "replace", "path": "/outputPathTemplate", "value": "{Type}/{Title}" },
       { "op": "replace", "path": "/audioLanguages", "value": ["English", "Spanish"] },
       { "op": "replace", "path": "/subtitleLanguages", "value": ["English"] }
     ]
@@ -147,6 +149,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     - `audioChannels` (AudioChannels?)
     - `resolution` (int?)
     - `outputFilenameTemplate` (string?)
+    - `outputPathTemplate` (string?)
     - `audioLanguages` (string[]?)
     - `subtitleLanguages` (string[]?)
   - Note: `inputPath` cannot be updated. If `audioLanguages` or `subtitleLanguages` are updated, the system will re-process stream matching.
@@ -170,6 +173,7 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "audioLanguages": ["English"],
       "subtitleLanguages": ["English"],
       "outputFilenameTemplate": "{Title}",
+      "outputPathTemplate": "{Type}/{Title}",
       "extensions": [".mkv", ".mp4"]
     }
     ```
@@ -466,6 +470,51 @@ Example:
 {Title:spaces=dot}.S{Season:00}E{Episode:00}.{EpisodeName:spaces=dot}.{Source:spaces=dot}
 ```
 Outputs dot-separated names for titles, episode names, and sources.
+
+Output path template (optional):
+
+The `outputPathTemplate` field allows dynamic directory structures based on metadata. When specified, the rendered template path is appended to the `outputDirectory` to create the final output location.
+
+Supported tokens:
+- `{Type}`: Media type ("Movie" or "TV")
+- `{Title}`: Movie title or TV show name
+- `{Year}`: Movie year or TV first aired year
+- `{Season}` / `{Episode}`: Season and episode numbers (support formatting like `{Season:00}`)
+- `{EpisodeName}`: TV episode title
+- `{Source}`: Optional source tag (e.g., WEB-DL, HDTV)
+
+Template filters (same as filename templates):
+- `spaces=dot|underscore|hyphen|space`: Replaces spaces inside the token
+- `lower` / `upper`: Case transformations
+
+Precedence rules:
+1. If a profile has `outputPathTemplate`, it takes precedence over the request's template
+2. If only the request has `outputPathTemplate`, it is used
+3. If neither has a template, no dynamic path is applied (files go directly to `outputDirectory`)
+
+Smart collapse:
+- When a token is empty (e.g., `{Season}` for movies), the token and adjacent path separators are automatically removed
+- Empty path segments are removed from the final path
+
+Path handling:
+- Illegal filesystem characters are replaced with `_`
+- Non-ASCII characters are converted to ASCII equivalents
+- Path separators are normalized to the platform-appropriate separator
+- The directory structure is created automatically if it doesn't exist
+
+Examples:
+```
+outputDirectory: "C:/media/out"
+outputPathTemplate: "{Type}/{Title}"
+→ Movie "Inception" outputs to: C:/media/out/Movie/Inception/
+
+outputDirectory: "/media/converted"
+outputPathTemplate: "{Type}/{Title}/Season {Season:00}"
+→ TV show "Breaking Bad" S01E01 outputs to: /media/converted/TV/Breaking Bad/Season 01/
+
+outputPathTemplate: "{Type}/{Title:spaces=dot}/{Year}"
+→ Movie "The Dark Knight" (2008) outputs to: Movie/The.Dark.Knight/2008/
+```
 
 FFmpeg options (appsettings.json):
 

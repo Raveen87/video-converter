@@ -63,9 +63,10 @@ public class UnifiedQueueDialogPropertyTests
             AudioBitrateKbps: audioBitrate.Item,
             AudioChannels: AudioChannels.Stereo20,
             Resolution: (resolution.Item % 2160) + 480, // Reasonable resolution range
+            OutputFilenameTemplate: template.Item,
+            OutputPathTemplate: null,
             AudioLanguages: new[] { "eng", "jpn" },
-            SubtitleLanguages: new[] { "eng" },
-            OutputFilenameTemplate: template.Item);
+            SubtitleLanguages: new[] { "eng" });
 
         var formModel = new UnifiedQueueFormModel();
 

@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
         _ = services.AddSingleton<IFilenameParser, FilenameParser>();
         _ = services.AddSingleton<IFilenameGenerator, FilenameGenerator>();
         _ = services.AddSingleton<IFilenameTemplateEngine, FilenameTemplateEngine>();
+        _ = services.AddSingleton<IOutputPathTemplateEngine, OutputPathTemplateEngine>();
         _ = services.AddScoped<IManualResolutionService, ManualResolutionService>();
         return services;
     }

@@ -100,7 +100,7 @@ public class VideoConverterApiClientErrorTests
             BaseAddress = new Uri("https://localhost"),
         };
         var client = new VideoConverterApiClient(httpClient, NullLogger<VideoConverterApiClient>.Instance);
-        var request = new DirectoryQueueRequestDto("dir", "out", null, null, null, null, null, null, null, null);
+        var request = new DirectoryQueueRequestDto("dir", "out", null, null, null, null, null, null, null, null, null);
 
         // Act
         var act = () => client.QueueDirectoryAsync(request);

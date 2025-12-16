@@ -25,7 +25,7 @@ public class DirectoryQueueServiceTests
         await File.WriteAllTextAsync(avi, "x");
 
         var (db, svc) = CreateSut();
-        var req = new DirectoryQueueRequestDto(inputDir, outputDir, 23, 128, AudioChannels: null, Resolution: 1080, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, Extensions: null);
+        var req = new DirectoryQueueRequestDto(inputDir, outputDir, 23, 128, AudioChannels: null, Resolution: 1080, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, OutputPathTemplate: null, Extensions: null);
 
         var result = await svc.QueueDirectoryAsync(req, CancellationToken.None);
 
@@ -47,7 +47,7 @@ public class DirectoryQueueServiceTests
         await File.WriteAllTextAsync(avi, "x");
 
         var (db, svc) = CreateSut();
-        var req = new DirectoryQueueRequestDto(inputDir, outputDir, 23, 128, AudioChannels: null, Resolution: 1080, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, Extensions: new[] { ".mkv", ".avi" });
+        var req = new DirectoryQueueRequestDto(inputDir, outputDir, 23, 128, AudioChannels: null, Resolution: 1080, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, OutputPathTemplate: null, Extensions: new[] { ".mkv", ".avi" });
 
         var result = await svc.QueueDirectoryAsync(req, CancellationToken.None);
 
@@ -71,7 +71,7 @@ public class DirectoryQueueServiceTests
         db.Conversions.Add(new Conversion { InputPath = mkv, OutputDirectory = outputDir, CreatedAtUtc = DateTime.UtcNow });
         _ = await db.SaveChangesAsync();
 
-        var req = new DirectoryQueueRequestDto(inputDir, outputDir, null, null, AudioChannels: null, Resolution: null, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, Extensions: null);
+        var req = new DirectoryQueueRequestDto(inputDir, outputDir, null, null, AudioChannels: null, Resolution: null, AudioLanguages: null, SubtitleLanguages: null, OutputFilenameTemplate: null, OutputPathTemplate: null, Extensions: null);
         var result = await svc.QueueDirectoryAsync(req, CancellationToken.None);
 
         _ = result.TotalFilesFound.Should().Be(2);

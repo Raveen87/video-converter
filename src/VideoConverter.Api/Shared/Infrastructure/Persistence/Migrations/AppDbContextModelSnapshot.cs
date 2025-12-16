@@ -68,6 +68,10 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OutputPathTemplate")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Rank")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
@@ -330,6 +334,10 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OutputFilenameTemplate")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutputPathTemplate")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 

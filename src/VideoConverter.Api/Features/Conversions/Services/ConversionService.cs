@@ -70,23 +70,15 @@ public sealed class ConversionService(
             DetectedCrop = detectedCrop,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata?.TmdbId,
+            OutputPathTemplate = request.OutputPathTemplate,
         };
 
-        if (metadata is MovieMetadata movie)
+        if (metadata is not null)
         {
-            conversion.MatchedTitle = movie.Title;
-            conversion.MatchedYear = movie.Year;
-        }
-        else if (metadata is TvShowMetadata tv)
-        {
-            conversion.MatchedTitle = tv.ShowName;
-            conversion.MatchedYear = tv.FirstAiredYear;
-            conversion.MatchedSeason = tv.Season;
-            conversion.MatchedEpisode = tv.Episode;
+            UpdateConversionWithMetadata(conversion, metadata);
         }
 
         LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
-
         return conversion;
     }
 
@@ -133,23 +125,11 @@ public sealed class ConversionService(
             DetectedCrop = detectedCrop,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata.TmdbId,
+            OutputPathTemplate = request.OutputPathTemplate,
         };
 
-        if (metadata is MovieMetadata movie)
-        {
-            conversion.MatchedTitle = movie.Title;
-            conversion.MatchedYear = movie.Year;
-        }
-        else if (metadata is TvShowMetadata tv)
-        {
-            conversion.MatchedTitle = tv.ShowName;
-            conversion.MatchedYear = tv.FirstAiredYear;
-            conversion.MatchedSeason = tv.Season;
-            conversion.MatchedEpisode = tv.Episode;
-        }
-
+        UpdateConversionWithMetadata(conversion, metadata);
         LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
-
         return conversion;
     }
 

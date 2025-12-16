@@ -9,4 +9,5 @@ public record ProfileCreateDto(
     int? Resolution,
     IReadOnlyList<string>? AudioLanguages,
     IReadOnlyList<string>? SubtitleLanguages,
-    string? OutputFilenameTemplate = null);
+    string? OutputFilenameTemplate = null,
+    string? OutputPathTemplate = null);
