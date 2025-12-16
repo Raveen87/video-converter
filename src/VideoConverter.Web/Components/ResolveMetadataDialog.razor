@@ -14,10 +14,23 @@
                 }
             </MudItem>
             <MudItem xs="8">
-                <MudTextField @bind-Value="_searchQuery" Label="Search Query" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="SearchAsync" />
+                <MudTextField @bind-Value="_searchQuery" Label="Search Query" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="SearchAsync" @onkeydown="HandleSearchKeyDown" />
             </MudItem>
             <MudItem xs="4">
-                <MudNumericField @bind-Value="_searchYear" Label="Year (Optional)" Variant="Variant.Outlined" />
+                <MudNumericField @bind-Value="_searchYear" Label="Year (Optional)" Variant="Variant.Outlined" @onkeydown="HandleSearchKeyDown" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButtonGroup OverrideStyles="false" Class="mb-2">
+                    <MudButton Variant="@(_selectedMediaType == null ? Variant.Filled : Variant.Outlined)"
+                               Color="Color.Primary"
+                               OnClick="@(() => OnMediaTypeChanged(null))">All</MudButton>
+                    <MudButton Variant="@(_selectedMediaType == MediaType.Movie ? Variant.Filled : Variant.Outlined)"
+                               Color="Color.Primary"
+                               OnClick="@(() => OnMediaTypeChanged(MediaType.Movie))">Movies</MudButton>
+                    <MudButton Variant="@(_selectedMediaType == MediaType.TvShow ? Variant.Filled : Variant.Outlined)"
+                               Color="Color.Primary"
+                               OnClick="@(() => OnMediaTypeChanged(MediaType.TvShow))">TV Shows</MudButton>
+                </MudButtonGroup>
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SearchAsync" Disabled="@_isSearching" FullWidth="true">
@@ -57,7 +70,9 @@
                             }
                             <div>
                                 <MudText Typo="Typo.subtitle1"><b>@result.Title</b> (@(result.Year?.ToString() ?? "N/A"))</MudText>
-                                <MudText Typo="Typo.caption">@result.Type</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(result.Type == MediaType.Movie ? Color.Primary : Color.Secondary)">
+                                    @ResolveMetadataDialogLogic.GetMediaTypeDisplayText(result.Type)
+                                </MudChip>
                                 <MudText Typo="Typo.body2" Class="mt-1" Style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
                                     @result.Overview
                                 </MudText>
@@ -207,6 +222,7 @@
 </MudDialog>
 
 @using VideoConverter.Common.Models
+@using VideoConverter.Web.Models
 @using VideoConverter.Web.Services
 @using MudBlazor
 
@@ -234,10 +250,14 @@
 
     private string _searchQuery = string.Empty;
     private int? _searchYear;
+    private MediaType? _selectedMediaType;
     private bool _isSearching;
     private bool _isResolving;
     private List<MetadataSearchResultDto>? _searchResults;
     private MetadataSearchResultDto? _selectedResult;
+
+    // Search results cache per media type
+    private readonly ResolveMetadataDialogLogic.ResultsCache _resultsCache = new();
 
     // Episode group state
     private IReadOnlyList<EpisodeGroupDto>? _episodeGroups;
@@ -268,6 +288,9 @@
 
     protected override void OnInitialized()
     {
+        // Per requirement 7.5: Clear all cached results when dialog is opened/reset
+        _resultsCache.ClearAll();
+
         if (ManualResolutionItem != null)
         {
             _searchQuery = ManualResolutionItem.ParsedTitle ?? Path.GetFileNameWithoutExtension(ManualResolutionItem.SourceFileName) ?? string.Empty;
@@ -344,23 +367,15 @@
 
         try
         {
-            // Determine type based on input kind or default
-            MediaType? type = null;
-            var inputKind = GetInputKind();
-            if (Enum.TryParse<MediaType>(inputKind, out var parsedType))
-            {
-                type = parsedType;
-            }
-
-            var request = new MetadataSearchRequestDto
-            {
-                Query = _searchQuery,
-                Year = _searchYear,
-                Type = type
-            };
-
+            var request = ResolveMetadataDialogLogic.CreateSearchRequest(_searchQuery, _searchYear, _selectedMediaType);
             var results = await ApiClient.SearchMetadataAsync(request);
             _searchResults = results.ToList();
+
+            // Cache the results for the current media type
+            if (_searchResults.Count > 0)
+            {
+                _resultsCache.CacheResults(_selectedMediaType, _searchResults);
+            }
         }
         catch (Exception ex)
         {
@@ -657,4 +672,39 @@
     }
 
     private async Task Cancel() => await OnClose.InvokeAsync(false);
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (ResolveMetadataDialogLogic.ShouldTriggerSearch(e.Key, _isSearching, _searchQuery))
+        {
+            await SearchAsync();
+        }
+    }
+
+    private void OnMediaTypeChanged(MediaType? newMediaType)
+    {
+        if (_selectedMediaType == newMediaType)
+        {
+            return;
+        }
+
+        // Cache current results under the previous media type (if any results exist)
+        if (_searchResults is { Count: > 0 })
+        {
+            _resultsCache.CacheResults(_selectedMediaType, _searchResults);
+        }
+
+        // Update the selected media type
+        _selectedMediaType = newMediaType;
+
+        // Clear displayed results and selection
+        _searchResults = null;
+        _selectedResult = null;
+
+        // Try to restore cached results for the new media type
+        if (_resultsCache.TryRestoreResults(newMediaType, out var cachedResults))
+        {
+            _searchResults = cachedResults.ToList();
+        }
+    }
 }
