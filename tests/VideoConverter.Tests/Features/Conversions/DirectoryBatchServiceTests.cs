@@ -32,6 +32,7 @@ public class DirectoryBatchServiceTests
             AudioLanguages: null,
             SubtitleLanguages: null,
             OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
             Extensions: null);
 
         var batchId = await svc.CreateBatchAsync(dto, profileId: null, CancellationToken.None);

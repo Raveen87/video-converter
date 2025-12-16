@@ -63,6 +63,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096);
         _ = entity.Property(c => c.DetectedCrop)
             .HasMaxLength(64);
+        _ = entity.Property(c => c.OutputPathTemplate)
+            .HasMaxLength(1024);
 
         _ = entity.HasIndex(c => new { c.Status, c.Rank });
     }
@@ -80,6 +82,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasConversion(Converters.CreateAudioChannelsString())
             .HasMaxLength(32);
         _ = profileEntity.Property(p => p.OutputFilenameTemplate)
+            .HasMaxLength(1024);
+        _ = profileEntity.Property(p => p.OutputPathTemplate)
             .HasMaxLength(1024);
 
         // Configure JSON storage for language lists

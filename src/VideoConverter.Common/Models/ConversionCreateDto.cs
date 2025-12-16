@@ -9,4 +9,5 @@ public record ConversionCreateDto(
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
-    string? OutputFilenameTemplate = null);
+    string? OutputFilenameTemplate = null,
+    string? OutputPathTemplate = null);

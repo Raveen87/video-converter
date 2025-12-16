@@ -29,7 +29,8 @@ internal static class ConversionsApiHelpers
             c.SelectedAudioStreamIndicesCsv,
             c.SelectedSubtitleStreamIndicesCsv,
             c.SelectedExternalSubtitlePathsCsv,
-            c.DetectedCrop);
+            c.DetectedCrop,
+            c.OutputPathTemplate);
     }
 
     public static void ThrowConversionStartError(ConversionStartResult result)

@@ -20,4 +20,5 @@ public record ConversionDto(
     string? SelectedAudioStreamIndicesCsv,
     string? SelectedSubtitleStreamIndicesCsv,
     string? SelectedExternalSubtitlePathsCsv,
-    string? DetectedCrop);
+    string? DetectedCrop,
+    string? OutputPathTemplate = null);

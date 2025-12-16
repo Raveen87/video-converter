@@ -10,4 +10,5 @@ public record ProfileDirectoryQueueRequestDto(
     int? Resolution,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
-    string? OutputFilenameTemplate);
+    string? OutputFilenameTemplate,
+    string? OutputPathTemplate);

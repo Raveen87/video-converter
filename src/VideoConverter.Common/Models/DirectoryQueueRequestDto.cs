@@ -10,4 +10,5 @@ public record DirectoryQueueRequestDto(
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate,
+    string? OutputPathTemplate,
     IEnumerable<string>? Extensions);

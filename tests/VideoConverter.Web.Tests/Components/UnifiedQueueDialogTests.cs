@@ -55,9 +55,10 @@ public sealed class UnifiedQueueDialogTests
             AudioBitrateKbps: 128,
             AudioChannels: AudioChannels.Stereo20,
             Resolution: 1080,
+            OutputFilenameTemplate: "{title}",
+            OutputPathTemplate: null,
             AudioLanguages: new[] { "eng", "jpn" },
-            SubtitleLanguages: new[] { "eng" },
-            OutputFilenameTemplate: "{title}");
+            SubtitleLanguages: new[] { "eng" });
 
         var formModel = new UnifiedQueueFormModel();
 

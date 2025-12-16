@@ -53,6 +53,11 @@ public sealed class UnifiedQueueFormModel
     public string? OutputFilenameTemplate { get; set; }
 
     /// <summary>
+    /// Gets or sets the output path template for dynamic directory structure.
+    /// </summary>
+    public string? OutputPathTemplate { get; set; }
+
+    /// <summary>
     /// Gets or sets the audio languages (comma-separated).
     /// </summary>
     public string? AudioLanguagesString { get; set; }

@@ -80,6 +80,7 @@ public sealed class ProfileConversionsEndpoints(
             AudioLanguages: request.AudioLanguages ?? profile.AudioLanguages,
             SubtitleLanguages: request.SubtitleLanguages ?? profile.SubtitleLanguages,
             OutputFilenameTemplate: request.OutputFilenameTemplate ?? profile.OutputFilenameTemplate,
+            OutputPathTemplate: request.OutputPathTemplate ?? profile.OutputPathTemplate,
             Extensions: request.Extensions);
 
         var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);

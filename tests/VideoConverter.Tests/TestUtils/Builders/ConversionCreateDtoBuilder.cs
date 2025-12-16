@@ -12,6 +12,8 @@ public sealed class ConversionCreateDtoBuilder
     private int? _resolution;
     private IReadOnlyList<string>? _audioLanguages;
     private IReadOnlyList<string>? _subtitleLanguages;
+    private string? _outputFilenameTemplate;
+    private string? _outputPathTemplate;
 
     public ConversionCreateDtoBuilder WithInputPath(string path)
     {
@@ -61,6 +63,18 @@ public sealed class ConversionCreateDtoBuilder
         return this;
     }
 
+    public ConversionCreateDtoBuilder WithOutputFilenameTemplate(string? template)
+    {
+        _outputFilenameTemplate = template;
+        return this;
+    }
+
+    public ConversionCreateDtoBuilder WithOutputPathTemplate(string? template)
+    {
+        _outputPathTemplate = template;
+        return this;
+    }
+
     public ConversionCreateDto Build()
     {
         return new ConversionCreateDto(
@@ -71,6 +85,8 @@ public sealed class ConversionCreateDtoBuilder
             _audioChannels,
             _resolution,
             _audioLanguages,
-            _subtitleLanguages);
+            _subtitleLanguages,
+            _outputFilenameTemplate,
+            _outputPathTemplate);
     }
 }

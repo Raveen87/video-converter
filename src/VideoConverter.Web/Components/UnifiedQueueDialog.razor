@@ -130,6 +130,7 @@
             </MudSelect>
             <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
         </div>
@@ -304,6 +305,7 @@
                 _formModel.AudioChannels = profile.AudioChannels;
                 _formModel.Resolution = profile.Resolution;
                 _formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
+                _formModel.OutputPathTemplate = profile.OutputPathTemplate;
                 _formModel.AudioLanguagesString = profile.AudioLanguages is not null ? string.Join(", ", profile.AudioLanguages) : null;
                 _formModel.SubtitleLanguagesString = profile.SubtitleLanguages is not null ? string.Join(", ", profile.SubtitleLanguages) : null;
                 StateHasChanged();
@@ -407,7 +409,8 @@
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
-                _formModel.OutputFilenameTemplate);
+                _formModel.OutputFilenameTemplate,
+                _formModel.OutputPathTemplate);
 
             await OnFileSubmit.InvokeAsync(request).ConfigureAwait(false);
         }
@@ -429,7 +432,8 @@
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
-                _formModel.OutputFilenameTemplate);
+                _formModel.OutputFilenameTemplate,
+                _formModel.OutputPathTemplate);
 
             await OnDirectorySubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
         }
@@ -445,6 +449,7 @@
                 audioLanguages,
                 subtitleLanguages,
                 _formModel.OutputFilenameTemplate,
+                _formModel.OutputPathTemplate,
                 extensions);
 
             await OnDirectorySubmit.InvokeAsync(request).ConfigureAwait(false);

@@ -9,5 +9,6 @@ public record ProfileDto(
     AudioChannels? AudioChannels,
     int? Resolution,
     string? OutputFilenameTemplate,
+    string? OutputPathTemplate,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages);

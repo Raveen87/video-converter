@@ -47,6 +47,7 @@ public sealed class ProfilesEndpoints(
             AudioChannels = request.AudioChannels,
             Resolution = request.Resolution,
             OutputFilenameTemplate = request.OutputFilenameTemplate,
+            OutputPathTemplate = request.OutputPathTemplate,
             AudioLanguages = request.AudioLanguages?.ToList(),
             SubtitleLanguages = request.SubtitleLanguages?.ToList(),
         };
@@ -129,6 +130,7 @@ public sealed class ProfilesEndpoints(
             AudioChannels = profile.AudioChannels,
             Resolution = profile.Resolution,
             OutputFilenameTemplate = profile.OutputFilenameTemplate,
+            OutputPathTemplate = profile.OutputPathTemplate,
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
         };
@@ -145,6 +147,7 @@ public sealed class ProfilesEndpoints(
             profile.AudioChannels,
             profile.Resolution,
             profile.OutputFilenameTemplate,
+            profile.OutputPathTemplate,
             profile.AudioLanguages,
             profile.SubtitleLanguages);
     }
@@ -162,6 +165,7 @@ public sealed class ProfilesEndpoints(
         profile.AudioChannels = patchModel.AudioChannels;
         profile.Resolution = patchModel.Resolution;
         profile.OutputFilenameTemplate = patchModel.OutputFilenameTemplate;
+        profile.OutputPathTemplate = patchModel.OutputPathTemplate;
         profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
         profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
     }
