@@ -58,7 +58,7 @@ public sealed class VmafCalculator(
     /// <param name="duration">Duration in seconds for the segment.</param>
     /// <param name="distortedWidth">Width of the distorted video in pixels, or null if unknown.</param>
     /// <param name="distortedHeight">Height of the distorted video in pixels, or null if unknown.</param>
-    /// <param name="logFilePath">Path to the temp file where VMAF JSON output will be written.</param>
+    /// <param name="logFilePath">Filename of the temp file where VMAF JSON output will be written. This must be a filename only (no directory path); the working directory is set to the temp path.</param>
     /// <returns>List of FFmpeg arguments for VMAF calculation.</returns>
     internal static List<string> BuildVmafArguments(
         string referencePath,
