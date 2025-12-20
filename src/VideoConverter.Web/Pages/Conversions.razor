@@ -130,28 +130,39 @@
                     }
                 </MudTd>
                 <MudTd DataLabel="VMAF">
-                    @if (context.VmafEnabled)
+                    @if (context.VmafScore.HasValue)
                     {
-                        @if (context.VmafScore.HasValue)
+                        <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(context.VmafScore.Value)">
+                            @context.VmafScore.Value.ToString("F1")
+                        </MudChip>
+                    }
+                    else if (context.Status == ConversionStatus.Pending)
+                    {
+                        @if (context.VmafEnabled)
                         {
-                            <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(context.VmafScore.Value)">
-                                @context.VmafScore.Value.ToString("F1")
-                            </MudChip>
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Default" />
                         }
-                        else if (context.Status == ConversionStatus.Completed)
+                        else
                         {
-                            <MudTooltip Text="VMAF calculation failed">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
-                            </MudTooltip>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
                         }
-                        else if (context.Status == ConversionStatus.Running)
+                    }
+                    else if (context.Status == ConversionStatus.Running)
+                    {
+                        @if (context.VmafEnabled)
                         {
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Pending</MudText>
                         }
                         else
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Default" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
                         }
+                    }
+                    else if (context.Status == ConversionStatus.Completed && context.VmafEnabled)
+                    {
+                        <MudTooltip Text="VMAF calculation failed">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                        </MudTooltip>
                     }
                     else
                     {
