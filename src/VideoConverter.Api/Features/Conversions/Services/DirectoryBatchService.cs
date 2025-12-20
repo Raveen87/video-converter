@@ -6,7 +6,6 @@ namespace VideoConverter.Api.Features.Conversions.Services;
 public sealed class DirectoryBatchService(
     AppDbContext db,
     IRequestValidator<DirectoryQueueRequestDto> directoryQueueRequestValidator,
-    IFileSystemValidator fileSystemValidator,
     ILogger<DirectoryBatchService> logger) : IDirectoryBatchService
 {
     public async Task<int> CreateBatchAsync(DirectoryQueueRequestDto request, int? profileId, CancellationToken ct)
@@ -15,12 +14,6 @@ public sealed class DirectoryBatchService(
 
         await ValidateRequestOrThrowAsync(request, ct).ConfigureAwait(false);
         var extensions = NormalizeExtensions(request.Extensions);
-
-        var failedBatch = await CreateFailedBatchIfDirectoryInvalidAsync(request, profileId, ct).ConfigureAwait(false);
-        if (failedBatch is not null)
-        {
-            return failedBatch.Value;
-        }
 
         var allFiles = EnumerateCandidateFiles(request.DirectoryPath, extensions);
         logger.LogInformation("Found {Count} candidate files for batch", allFiles.Count);
@@ -105,30 +98,5 @@ public sealed class DirectoryBatchService(
             "Validation failed.",
             "The request contains invalid data.",
             validation.ToDictionary());
-    }
-
-    private async Task<int?> CreateFailedBatchIfDirectoryInvalidAsync(DirectoryQueueRequestDto request, int? profileId, CancellationToken ct)
-    {
-        _ = fileSystemValidator.IsValidDirectory(request.DirectoryPath, out var directoryError);
-        if (directoryError is null)
-        {
-            return null;
-        }
-
-        logger.LogWarning("Directory validation failed: {Error}", directoryError);
-
-        var failed = new DirectoryQueueBatch
-        {
-            CreatedAtUtc = DateTime.UtcNow,
-            Status = "Failed",
-            TotalItems = 0,
-            ProcessedItems = 0,
-            ErrorMessage = directoryError,
-            ProfileId = profileId,
-            RequestJson = SerializeRequest(request),
-        };
-        _ = db.DirectoryQueueBatches.Add(failed);
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return failed.Id;
     }
 }
