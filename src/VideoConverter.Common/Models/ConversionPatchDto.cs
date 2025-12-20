@@ -17,4 +17,6 @@ public class ConversionPatchDto
     public IEnumerable<string>? AudioLanguages { get; init; }
 
     public IEnumerable<string>? SubtitleLanguages { get; init; }
+
+    public bool? VmafEnabled { get; set; }
 }
