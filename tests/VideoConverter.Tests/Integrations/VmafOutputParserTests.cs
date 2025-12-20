@@ -181,4 +181,84 @@ public sealed class VmafOutputParserTests
 
         result.Should().BeNull();
     }
+
+    /// <summary>
+    /// Verifies that print_summary text output with "VMAF score:" format is parsed correctly.
+    /// This is the cross-platform format that works on Windows.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void Parse_PrintSummaryWithColonFormat_ReturnsScore()
+    {
+        var output = """
+            [libvmaf @ 0000019275ac3c40] VMAF score: 92.123456
+            frame=  100 fps=25.0 q=28.0 size=    1024kB
+            """;
+
+        var result = _parser.Parse(output);
+
+        result.Should().BeApproximately(92.123456, 0.000001);
+    }
+
+    /// <summary>
+    /// Verifies that print_summary text output with "VMAF score =" format is parsed correctly.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void Parse_PrintSummaryWithEqualsFormat_ReturnsScore()
+    {
+        var output = """
+            [libvmaf @ 0x12345] VMAF score = 88.5
+            """;
+
+        var result = _parser.Parse(output);
+
+        result.Should().BeApproximately(88.5, 0.001);
+    }
+
+    /// <summary>
+    /// Verifies that print_summary text output with integer score is parsed correctly.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void Parse_PrintSummaryWithIntegerScore_ReturnsScore()
+    {
+        var output = "[libvmaf] VMAF score: 95";
+
+        var result = _parser.Parse(output);
+
+        result.Should().Be(95.0);
+    }
+
+    /// <summary>
+    /// Verifies that text parsing is case-insensitive.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void Parse_PrintSummaryCaseInsensitive_ReturnsScore()
+    {
+        var output = "[libvmaf] vmaf SCORE: 91.5";
+
+        var result = _parser.Parse(output);
+
+        result.Should().BeApproximately(91.5, 0.001);
+    }
+
+    /// <summary>
+    /// Verifies that text output is preferred over JSON when both are present.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void Parse_BothTextAndJsonPresent_PrefersTextOutput()
+    {
+        var output = """
+            [libvmaf] VMAF score: 92.0
+            {"pooled_metrics": {"vmaf": {"mean": 91.0}}}
+            """;
+
+        var result = _parser.Parse(output);
+
+        // Text output (92.0) should be preferred over JSON (91.0)
+        result.Should().BeApproximately(92.0, 0.001);
+    }
 }

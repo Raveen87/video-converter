@@ -23,6 +23,13 @@
                 <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
                 <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
                 <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+                <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring" Color="Color.Primary" Class="mb-3" />
+                @if (_formModel.VmafEnabled)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                        VMAF will calculate a quality score (0-100) after conversion completes by comparing the output to the source.
+                    </MudAlert>
+                }
                 <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
                     @if (_isSubmitting)
                     {
@@ -95,6 +102,7 @@
         _formModel.OutputFilenameTemplate = null; // We don't store the template, only the MetadataBasedFilename result
         _formModel.AudioLanguagesString = null; // Cannot restore from entity
         _formModel.SubtitleLanguagesString = null; // Cannot restore from entity
+        _formModel.VmafEnabled = Conversion.VmafEnabled;
     }
 
     private async Task HandleValidSubmit()
@@ -132,6 +140,7 @@
                 OutputFilenameTemplate = _formModel.OutputFilenameTemplate,
                 AudioLanguages = audioLanguages,
                 SubtitleLanguages = subtitleLanguages,
+                VmafEnabled = _formModel.VmafEnabled,
             };
 
             await OnSubmit.InvokeAsync(patch);
@@ -214,6 +223,8 @@
         public string? AudioLanguagesString { get; set; }
 
         public string? SubtitleLanguagesString { get; set; }
+
+        public bool VmafEnabled { get; set; }
     }
 }
 

@@ -41,6 +41,7 @@
                 <MudTh>Output Directory</MudTh>
                 <MudTh>Created</MudTh>
                 <MudTh>Status</MudTh>
+                <MudTh>VMAF</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -126,6 +127,35 @@
                         <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(effectiveStatus)">
                             @effectiveStatus
                         </MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="VMAF">
+                    @if (context.VmafEnabled)
+                    {
+                        @if (context.VmafScore.HasValue)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(context.VmafScore.Value)">
+                                @context.VmafScore.Value.ToString("F1")
+                            </MudChip>
+                        }
+                        else if (context.Status == ConversionStatus.Completed)
+                        {
+                            <MudTooltip Text="VMAF calculation failed">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                            </MudTooltip>
+                        }
+                        else if (context.Status == ConversionStatus.Running)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Pending</MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Default" />
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
                     }
                 </MudTd>
                 <MudTd DataLabel="Actions">
@@ -330,6 +360,14 @@
             _ => "",
         };
     }
+
+    private static Color GetVmafScoreColor(double score) => score switch
+    {
+        >= 93 => Color.Success,
+        >= 80 => Color.Info,
+        >= 60 => Color.Warning,
+        _ => Color.Error
+    };
 
     private static string GetTmdbLink(ConversionDto item)
     {

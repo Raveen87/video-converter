@@ -63,6 +63,32 @@
                             <td><b>Detected Crop</b></td>
                             <td>@(string.IsNullOrEmpty(Conversion.DetectedCrop) ? "None/Auto" : Conversion.DetectedCrop)</td>
                         </tr>
+                        <tr>
+                            <td><b>VMAF Enabled</b></td>
+                            <td>@(Conversion.VmafEnabled ? "Yes" : "No")</td>
+                        </tr>
+                        @if (Conversion.VmafEnabled)
+                        {
+                            <tr>
+                                <td><b>VMAF Score</b></td>
+                                <td>
+                                    @if (Conversion.VmafScore.HasValue)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(Conversion.VmafScore.Value)">
+                                            @Conversion.VmafScore.Value.ToString("F1")
+                                        </MudChip>
+                                    }
+                                    else if (Conversion.Status == ConversionStatus.Completed)
+                                    {
+                                        <MudText Color="Color.Warning">Calculation failed</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary">Pending</MudText>
+                                    }
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </MudSimpleTable>
             </MudItem>
@@ -145,5 +171,13 @@
         ConversionStatus.Failed => Color.Error,
         ConversionStatus.Deleted => Color.Dark,
         _ => Color.Default
+    };
+
+    private static Color GetVmafScoreColor(double score) => score switch
+    {
+        >= 93 => Color.Success,
+        >= 80 => Color.Info,
+        >= 60 => Color.Warning,
+        _ => Color.Error
     };
 }

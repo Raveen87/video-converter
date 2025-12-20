@@ -1,3 +1,5 @@
+using VideoConverter.Api.Shared.Domain.ValueObjects;
+
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 /// <summary>
@@ -46,12 +48,31 @@ public sealed class VmafCalculator(
         }
     }
 
-    private static List<string> BuildVmafArguments(
+    /// <summary>
+    /// Builds the FFmpeg arguments for VMAF calculation.
+    /// Scales the reference video to match the distorted video's resolution since VMAF requires matching dimensions.
+    /// </summary>
+    /// <param name="referencePath">Path to the reference (source) video.</param>
+    /// <param name="distortedPath">Path to the distorted (encoded) video.</param>
+    /// <param name="startTime">Start time in seconds for the segment.</param>
+    /// <param name="duration">Duration in seconds for the segment.</param>
+    /// <param name="distortedWidth">Width of the distorted video in pixels, or null if unknown.</param>
+    /// <param name="distortedHeight">Height of the distorted video in pixels, or null if unknown.</param>
+    /// <param name="logFilePath">Path to the temp file where VMAF JSON output will be written.</param>
+    /// <returns>List of FFmpeg arguments for VMAF calculation.</returns>
+    internal static List<string> BuildVmafArguments(
         string referencePath,
         string distortedPath,
         double startTime,
-        double duration)
+        double duration,
+        int? distortedWidth,
+        int? distortedHeight,
+        string logFilePath)
     {
+        // Build the filter chain: scale reference to match distorted, then run VMAF
+        // VMAF requires both inputs to have the same resolution
+        var filterChain = BuildVmafFilterChain(distortedWidth, distortedHeight, logFilePath);
+
         return
         [
             "-hide_banner",
@@ -62,10 +83,35 @@ public sealed class VmafCalculator(
             "-ss", startTime.ToString("F3", CultureInfo.InvariantCulture),
             "-t", duration.ToString("F3", CultureInfo.InvariantCulture),
             "-i", distortedPath,
-            "-lavfi", "[0:v][1:v]libvmaf=log_fmt=json:log_path=/dev/stdout",
+            "-lavfi", filterChain,
             "-f", "null",
             "-",
         ];
+    }
+
+    /// <summary>
+    /// Builds the VMAF filter chain, optionally scaling the reference video to match the distorted video's resolution.
+    /// </summary>
+    /// <param name="distortedWidth">Width of the distorted video in pixels, or null if unknown.</param>
+    /// <param name="distortedHeight">Height of the distorted video in pixels, or null if unknown.</param>
+    /// <param name="logFilePath">Filename (not full path) for the VMAF JSON output file.</param>
+    /// <returns>The FFmpeg filter chain string for VMAF calculation.</returns>
+    internal static string BuildVmafFilterChain(int? distortedWidth, int? distortedHeight, string logFilePath)
+    {
+        // Use n_subsample=5 to speed up calculation (sample every 5th frame)
+        // Write JSON output to a file in the working directory (avoids Windows path escaping issues)
+        var vmafOptions = $"n_subsample=5:log_fmt=json:log_path={logFilePath}";
+
+        // If we have the distorted video's dimensions, scale the reference to match
+        // This is necessary because VMAF requires both inputs to have identical dimensions
+        if (distortedWidth is > 0 && distortedHeight is > 0)
+        {
+            // Scale reference (input 0) to match distorted (input 1) dimensions, then run VMAF
+            return $"[0:v]scale={distortedWidth}:{distortedHeight}:flags=bicubic[ref];[ref][1:v]libvmaf={vmafOptions}";
+        }
+
+        // Fallback: no scaling, assume dimensions match (may fail if they don't)
+        return $"[0:v][1:v]libvmaf={vmafOptions}";
     }
 
     private bool ValidateInputPaths(string referencePath, string distortedPath)
@@ -109,6 +155,19 @@ public sealed class VmafCalculator(
             return null;
         }
 
+        // Probe the distorted video to get its resolution for scaling
+        var distortedProbe = await ProbeVideoAsync(distortedPath, ct).ConfigureAwait(false);
+        if (distortedProbe is null)
+        {
+            _logger.LogWarning("Could not probe distorted video for VMAF calculation");
+            return null;
+        }
+
+        _logger.LogDebug(
+            "Distorted video resolution: {Width}x{Height}",
+            distortedProbe.VideoWidth,
+            distortedProbe.VideoHeight);
+
         var segmentStartTimes = _segmentCalculator.CalculateSegmentStartTimes(
             duration.Value,
             _vmafOptions.SegmentCount,
@@ -126,9 +185,28 @@ public sealed class VmafCalculator(
             _vmafOptions.SegmentDurationSeconds);
 
         var segmentScores = await CalculateAllSegmentScoresAsync(
-            referencePath, distortedPath, segmentStartTimes, duration.Value, ct).ConfigureAwait(false);
+            referencePath,
+            distortedPath,
+            segmentStartTimes,
+            duration.Value,
+            distortedProbe.VideoWidth,
+            distortedProbe.VideoHeight,
+            ct).ConfigureAwait(false);
 
         return AggregateAndLogResult(segmentScores);
+    }
+
+    private async Task<MediaProbeResult?> ProbeVideoAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            return await _mediaProber.ProbeAsync(path, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to probe video: {Path}", path);
+            return null;
+        }
     }
 
     private async Task<List<double?>> CalculateAllSegmentScoresAsync(
@@ -136,6 +214,8 @@ public sealed class VmafCalculator(
         string distortedPath,
         IReadOnlyList<double> segmentStartTimes,
         double totalDuration,
+        int? distortedWidth,
+        int? distortedHeight,
         CancellationToken ct)
     {
         var segmentScores = new List<double?>(segmentStartTimes.Count);
@@ -146,7 +226,13 @@ public sealed class VmafCalculator(
 
             var segmentDuration = CalculateSegmentDuration(startTime, totalDuration);
             var score = await CalculateSegmentVmafAsync(
-                referencePath, distortedPath, startTime, segmentDuration, ct).ConfigureAwait(false);
+                referencePath,
+                distortedPath,
+                startTime,
+                segmentDuration,
+                distortedWidth,
+                distortedHeight,
+                ct).ConfigureAwait(false);
 
             segmentScores.Add(score);
 
@@ -200,37 +286,29 @@ public sealed class VmafCalculator(
         string distortedPath,
         double startTime,
         double duration,
+        int? distortedWidth,
+        int? distortedHeight,
         CancellationToken ct)
     {
-        var args = BuildVmafArguments(referencePath, distortedPath, startTime, duration);
-
-        var request = new ProcessRequest
-        {
-            ExecutablePath = _ffmpegOptions.Path ?? "ffmpeg",
-            Arguments = args,
-            CaptureOutput = true,
-            Timeout = TimeSpan.FromSeconds(_vmafOptions.TimeoutSeconds),
-        };
+        // Create a temp file for VMAF JSON output
+        // Use just the filename for FFmpeg (avoids Windows drive letter colon issues in filter syntax)
+        // but track the full path for reading and cleanup
+        var tempFileName = $"vmaf_{Guid.NewGuid():N}.json";
+        var tempLogFile = Path.Combine(Path.GetTempPath(), tempFileName);
 
         try
         {
-            var result = await _processManager.RunAsync(request, ct).ConfigureAwait(false);
+            // Pass just the filename to FFmpeg - it will write to current working directory
+            // We'll set the working directory to the temp path
+            var result = await RunVmafProcessAsync(
+                referencePath, distortedPath, startTime, duration, distortedWidth, distortedHeight, tempFileName, ct).ConfigureAwait(false);
 
-            if (!result.IsSuccess)
+            if (result is null)
             {
-                _logger.LogWarning(
-                    "FFmpeg VMAF calculation failed for segment at {StartTime}s. Exit code: {ExitCode}, Error: {Error}",
-                    startTime,
-                    result.ExitCode,
-                    result.ErrorMessage);
                 return null;
             }
 
-            var output = !string.IsNullOrWhiteSpace(result.StandardOutput)
-                ? result.StandardOutput
-                : result.StandardError;
-
-            return _outputParser.Parse(output);
+            return await ReadVmafResultAsync(tempLogFile, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -240,6 +318,73 @@ public sealed class VmafCalculator(
         {
             _logger.LogWarning(ex, "Failed to calculate VMAF for segment at {StartTime}s", startTime);
             return null;
+        }
+        finally
+        {
+            CleanupTempFile(tempLogFile);
+        }
+    }
+
+    private async Task<ProcessResult?> RunVmafProcessAsync(
+        string referencePath,
+        string distortedPath,
+        double startTime,
+        double duration,
+        int? distortedWidth,
+        int? distortedHeight,
+        string tempLogFileName,
+        CancellationToken ct)
+    {
+        var args = BuildVmafArguments(referencePath, distortedPath, startTime, duration, distortedWidth, distortedHeight, tempLogFileName);
+
+        var request = new ProcessRequest
+        {
+            ExecutablePath = _ffmpegOptions.Path ?? "ffmpeg",
+            Arguments = args,
+            CaptureOutput = true,
+            Timeout = TimeSpan.FromSeconds(_vmafOptions.TimeoutSeconds),
+            WorkingDirectory = Path.GetTempPath(), // Run in temp directory so relative log path works
+        };
+
+        var result = await _processManager.RunAsync(request, ct).ConfigureAwait(false);
+
+        if (!result.IsSuccess)
+        {
+            _logger.LogWarning(
+                "FFmpeg VMAF calculation failed for segment at {StartTime}s. Exit code: {ExitCode}, Error: {Error}",
+                startTime,
+                result.ExitCode,
+                result.ErrorMessage);
+            return null;
+        }
+
+        return result;
+    }
+
+    private async Task<double?> ReadVmafResultAsync(string tempLogFile, CancellationToken ct)
+    {
+        if (!File.Exists(tempLogFile))
+        {
+            _logger.LogWarning("VMAF log file was not created at {Path}", tempLogFile);
+            return null;
+        }
+
+        var jsonOutput = await File.ReadAllTextAsync(tempLogFile, ct).ConfigureAwait(false);
+        return _outputParser.Parse(jsonOutput);
+    }
+
+    private void CleanupTempFile(string tempLogFile)
+    {
+        try
+        {
+            if (File.Exists(tempLogFile))
+            {
+                File.Delete(tempLogFile);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to delete temp VMAF log file: {Path}", tempLogFile);
         }
     }
 }

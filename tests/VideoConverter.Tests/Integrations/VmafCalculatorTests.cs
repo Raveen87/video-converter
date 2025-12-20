@@ -71,7 +71,10 @@ public sealed class VmafCalculatorTests : IDisposable
     public async Task CalculateAsync_ValidInputs_ReturnsAggregatedScore()
     {
         _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0 });
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1920, VideoHeight = 1080 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1280, VideoHeight = 720 });
 
         _ = _mockSegmentCalculator.Setup(x => x.CalculateSegmentStartTimes(120.0, 3, 10))
             .Returns(new List<double> { 0.0, 55.0, 110.0 });
@@ -150,7 +153,10 @@ public sealed class VmafCalculatorTests : IDisposable
     public async Task CalculateAsync_FfmpegProcessFails_ReturnsNull()
     {
         _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0 });
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1920, VideoHeight = 1080 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1280, VideoHeight = 720 });
 
         _ = _mockSegmentCalculator.Setup(x => x.CalculateSegmentStartTimes(120.0, 3, 10))
             .Returns(new List<double> { 0.0, 55.0, 110.0 });
@@ -203,7 +209,10 @@ public sealed class VmafCalculatorTests : IDisposable
     public async Task CalculateAsync_Cancelled_ThrowsOperationCanceledException()
     {
         _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0 });
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1920, VideoHeight = 1080 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1280, VideoHeight = 720 });
 
         _ = _mockSegmentCalculator.Setup(x => x.CalculateSegmentStartTimes(120.0, 3, 10))
             .Returns(new List<double> { 0.0, 55.0, 110.0 });
@@ -223,7 +232,10 @@ public sealed class VmafCalculatorTests : IDisposable
     public async Task CalculateAsync_PartialSegmentFailures_ReturnsAggregatedValidScores()
     {
         _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0 });
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1920, VideoHeight = 1080 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1280, VideoHeight = 720 });
 
         _ = _mockSegmentCalculator.Setup(x => x.CalculateSegmentStartTimes(120.0, 3, 10))
             .Returns(new List<double> { 0.0, 55.0, 110.0 });
@@ -259,6 +271,156 @@ public sealed class VmafCalculatorTests : IDisposable
     public async Task CalculateAsync_MediaProbeThrows_ReturnsNull()
     {
         _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Probe failed"));
+
+        var result = await _calculator.CalculateAsync(_referenceFile, _distortedFile, CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Verifies that the filter chain includes scaling when distorted video has different resolution.
+    /// This test would have caught the resolution mismatch bug where VMAF failed with "input width must match".
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafFilterChain_WithDistortedDimensions_IncludesScaleFilter()
+    {
+        var filterChain = VmafCalculator.BuildVmafFilterChain(1280, 720, "/tmp/vmaf.json");
+
+        filterChain.Should().Contain("scale=1280:720");
+        filterChain.Should().Contain("flags=bicubic");
+        filterChain.Should().Contain("[ref]");
+        filterChain.Should().Contain("libvmaf");
+        filterChain.Should().Contain("log_fmt=json");
+        filterChain.Should().Contain("log_path=");
+    }
+
+    /// <summary>
+    /// Verifies that the filter chain falls back to no scaling when dimensions are unknown.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafFilterChain_WithNullDimensions_ReturnsBasicFilter()
+    {
+        var filterChain = VmafCalculator.BuildVmafFilterChain(null, null, "/tmp/vmaf.json");
+
+        filterChain.Should().NotContain("scale=");
+        filterChain.Should().Contain("[0:v][1:v]libvmaf");
+        filterChain.Should().Contain("log_fmt=json");
+    }
+
+    /// <summary>
+    /// Verifies that the filter chain falls back to no scaling when width is zero.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafFilterChain_WithZeroWidth_ReturnsBasicFilter()
+    {
+        var filterChain = VmafCalculator.BuildVmafFilterChain(0, 720, "/tmp/vmaf.json");
+
+        filterChain.Should().NotContain("scale=");
+        filterChain.Should().Contain("[0:v][1:v]libvmaf");
+    }
+
+    /// <summary>
+    /// Verifies that the filter chain falls back to no scaling when height is zero.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafFilterChain_WithZeroHeight_ReturnsBasicFilter()
+    {
+        var filterChain = VmafCalculator.BuildVmafFilterChain(1280, 0, "/tmp/vmaf.json");
+
+        filterChain.Should().NotContain("scale=");
+        filterChain.Should().Contain("[0:v][1:v]libvmaf");
+    }
+
+    /// <summary>
+    /// Verifies that BuildVmafArguments includes the scale filter in the lavfi argument.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafArguments_WithDistortedDimensions_IncludesScaleInLavfi()
+    {
+        var args = VmafCalculator.BuildVmafArguments(
+            "reference.mp4",
+            "distorted.mp4",
+            startTime: 0.0,
+            duration: 10.0,
+            distortedWidth: 405,
+            distortedHeight: 720,
+            logFilePath: "/tmp/vmaf.json");
+
+        var lavfiIndex = args.IndexOf("-lavfi");
+        lavfiIndex.Should().BeGreaterThan(-1);
+
+        var filterChain = args[lavfiIndex + 1];
+        filterChain.Should().Contain("scale=405:720");
+        filterChain.Should().Contain("log_fmt=json");
+    }
+
+    /// <summary>
+    /// Verifies that simple filenames work in the filter chain (no path escaping needed).
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public void BuildVmafFilterChain_WithSimpleFilename_NoEscaping()
+    {
+        var filterChain = VmafCalculator.BuildVmafFilterChain(1280, 720, "vmaf_output.json");
+
+        // Simple filename should be used directly without escaping
+        filterChain.Should().Contain("log_path=vmaf_output.json");
+    }
+
+    /// <summary>
+    /// Verifies that VMAF calculation probes the distorted video for resolution.
+    /// This ensures the fix for resolution mismatch is properly integrated.
+    /// Validates: Requirements 2.1.
+    /// </summary>
+    [Fact]
+    public async Task CalculateAsync_ProbesDistortedVideoForResolution()
+    {
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1920, VideoHeight = 1080 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0, VideoWidth = 1280, VideoHeight = 720 });
+
+        _ = _mockSegmentCalculator.Setup(x => x.CalculateSegmentStartTimes(120.0, 3, 10))
+            .Returns(new List<double> { 0.0 });
+
+        _ = _mockProcessManager.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessResult
+            {
+                IsSuccess = true,
+                ExitCode = 0,
+                StandardOutput = """{"pooled_metrics": {"vmaf": {"mean": 92.5}}}""",
+            });
+
+        _ = _mockOutputParser.Setup(x => x.Parse(It.IsAny<string>()))
+            .Returns(92.5);
+
+        _ = _mockScoreAggregator.Setup(x => x.Aggregate(It.IsAny<IReadOnlyList<double?>>()))
+            .Returns(92.5);
+
+        _ = await _calculator.CalculateAsync(_referenceFile, _distortedFile, CancellationToken.None);
+
+        // Verify that the distorted file was probed for resolution
+        _mockMediaProber.Verify(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that VMAF calculation returns null when distorted video probe fails.
+    /// Validates: Requirements 7.2.
+    /// </summary>
+    [Fact]
+    public async Task CalculateAsync_DistortedProbeFails_ReturnsNull()
+    {
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_referenceFile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult { Streams = [], DurationSeconds = 120.0 });
+
+        _ = _mockMediaProber.Setup(x => x.ProbeAsync(_distortedFile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Probe failed"));
 
         var result = await _calculator.CalculateAsync(_referenceFile, _distortedFile, CancellationToken.None);
