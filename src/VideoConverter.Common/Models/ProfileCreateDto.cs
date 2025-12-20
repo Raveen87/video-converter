@@ -10,4 +10,5 @@ public record ProfileCreateDto(
     IReadOnlyList<string>? AudioLanguages,
     IReadOnlyList<string>? SubtitleLanguages,
     string? OutputFilenameTemplate = null,
-    string? OutputPathTemplate = null);
+    string? OutputPathTemplate = null,
+    bool VmafEnabled = false);

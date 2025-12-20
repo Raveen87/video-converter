@@ -51,6 +51,13 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
 
         var result = await ExecuteConversionAsync(conversion, CancellationToken.None).ConfigureAwait(false);
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
+
+        // Persist VMAF score if calculated (Requirement 2.1)
+        if (result.VmafScore is not null)
+        {
+            conversion.VmafScore = result.VmafScore;
+        }
+
         _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
         await AddNotificationForConversionAsync(conversion, result, CancellationToken.None).ConfigureAwait(false);
@@ -107,6 +114,13 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
 
         var result = await ExecuteConversionAsync(conversion, CancellationToken.None).ConfigureAwait(false);
         conversion.Status = result.IsSuccess ? ConversionStatus.Completed : ConversionStatus.Failed;
+
+        // Persist VMAF score if calculated (Requirement 2.1)
+        if (result.VmafScore is not null)
+        {
+            conversion.VmafScore = result.VmafScore;
+        }
+
         _ = await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
         await AddNotificationForConversionAsync(conversion, result, CancellationToken.None).ConfigureAwait(false);

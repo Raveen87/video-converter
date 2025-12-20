@@ -46,7 +46,7 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionDto_RoundTrips_WithValues()
     {
-        var dto = new ConversionDto(1, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, 23, 128, AudioChannels.Stereo20, 1080, "Name.mp4", null, null, null, null, null, null, null, null, null, null);
+        var dto = new ConversionDto(1, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, 23, 128, AudioChannels.Stereo20, 1080, "Name.mp4", null, null, null, null, null, null, null, null, null, null, null, VmafEnabled: true, VmafScore: 94.5);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionDto>(json);
         _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
@@ -56,11 +56,46 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionDto_RoundTrips_WithNullables()
     {
-        var dto = new ConversionDto(2, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, Crf: 30, AudioBitrateKbps: null, Resolution: null, MetadataBasedFilename: null, AudioChannels: null, DeletedAtUtc: null, TmdbId: null, MatchedTitle: null, MatchedYear: null, MatchedSeason: null, MatchedEpisode: null, SelectedAudioStreamIndicesCsv: null, SelectedSubtitleStreamIndicesCsv: null, SelectedExternalSubtitlePathsCsv: null, DetectedCrop: null);
+        var dto = new ConversionDto(2, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, Crf: 30, AudioBitrateKbps: null, Resolution: null, MetadataBasedFilename: null, AudioChannels: null, DeletedAtUtc: null, TmdbId: null, MatchedTitle: null, MatchedYear: null, MatchedSeason: null, MatchedEpisode: null, SelectedAudioStreamIndicesCsv: null, SelectedSubtitleStreamIndicesCsv: null, SelectedExternalSubtitlePathsCsv: null, DetectedCrop: null, OutputPathTemplate: null, VmafEnabled: false, VmafScore: null);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionDto>(json);
         _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
         _ = back!.CreatedAtUtc.Should().BeCloseTo(dto.CreatedAtUtc, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void ConversionDto_RoundTrips_WithVmafFields()
+    {
+        var dto = new ConversionDto(
+            Id: 3,
+            InputPath: "test.mp4",
+            OutputDirectory: "output",
+            CreatedAtUtc: DateTime.UtcNow,
+            Status: ConversionStatus.Completed,
+            Crf: 23,
+            AudioBitrateKbps: 128,
+            AudioChannels: AudioChannels.Stereo20,
+            Resolution: 1080,
+            MetadataBasedFilename: "Name.mp4",
+            DeletedAtUtc: null,
+            TmdbId: 12345,
+            MatchedTitle: "Test Movie",
+            MatchedYear: 2024,
+            MatchedSeason: null,
+            MatchedEpisode: null,
+            SelectedAudioStreamIndicesCsv: "0,1",
+            SelectedSubtitleStreamIndicesCsv: "2",
+            SelectedExternalSubtitlePathsCsv: null,
+            DetectedCrop: "1920:800:0:140",
+            OutputPathTemplate: "{Type}/{Title}",
+            VmafEnabled: true,
+            VmafScore: 92.75);
+        var json = JsonSerializer.Serialize(dto);
+        var back = JsonSerializer.Deserialize<ConversionDto>(json);
+        _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
+        _ = back!.CreatedAtUtc.Should().BeCloseTo(dto.CreatedAtUtc, TimeSpan.FromSeconds(2));
+        _ = back.VmafEnabled.Should().BeTrue();
+        _ = back.VmafScore.Should().Be(92.75);
     }
 
     [Fact]

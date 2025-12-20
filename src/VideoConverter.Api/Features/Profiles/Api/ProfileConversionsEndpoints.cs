@@ -109,7 +109,10 @@ public sealed class ProfileConversionsEndpoints(
             c.SelectedAudioStreamIndicesCsv,
             c.SelectedSubtitleStreamIndicesCsv,
             c.SelectedExternalSubtitlePathsCsv,
-            c.DetectedCrop);
+            c.DetectedCrop,
+            c.OutputPathTemplate,
+            c.VmafEnabled,
+            c.VmafScore);
     }
 
     private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)

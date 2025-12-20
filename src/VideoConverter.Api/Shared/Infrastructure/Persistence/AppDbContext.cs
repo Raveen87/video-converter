@@ -66,6 +66,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = entity.Property(c => c.OutputPathTemplate)
             .HasMaxLength(1024);
 
+        _ = entity.Property(c => c.VmafEnabled);
+        _ = entity.Property(c => c.VmafScore);
+
         _ = entity.HasIndex(c => new { c.Status, c.Rank });
     }
 
@@ -100,6 +103,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096)
             .Metadata;
         subtitleLangProp.SetValueComparer(listComparer);
+
+        _ = profileEntity.Property(p => p.VmafEnabled);
     }
 
     private static void ConfigureManualResolutionQueue(ModelBuilder modelBuilder)

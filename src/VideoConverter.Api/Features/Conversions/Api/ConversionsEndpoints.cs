@@ -84,7 +84,10 @@ public sealed class ConversionsEndpoints(
             conversion.SelectedAudioStreamIndicesCsv,
             conversion.SelectedSubtitleStreamIndicesCsv,
             conversion.SelectedExternalSubtitlePathsCsv,
-            conversion.DetectedCrop);
+            conversion.DetectedCrop,
+            conversion.OutputPathTemplate,
+            conversion.VmafEnabled,
+            conversion.VmafScore);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)

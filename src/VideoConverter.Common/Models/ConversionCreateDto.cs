@@ -10,4 +10,5 @@ public record ConversionCreateDto(
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate = null,
-    string? OutputPathTemplate = null);
+    string? OutputPathTemplate = null,
+    bool? VmafEnabled = null);

@@ -23,4 +23,6 @@ public class Profile
     public IEnumerable<string>? AudioLanguages { get; set; }
 
     public IEnumerable<string>? SubtitleLanguages { get; set; }
+
+    public bool VmafEnabled { get; set; }
 }

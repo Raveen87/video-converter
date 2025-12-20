@@ -45,4 +45,8 @@ public class Conversion
     public int? MatchedEpisode { get; set; }
 
     public string? OutputPathTemplate { get; set; }
+
+    public bool VmafEnabled { get; set; }
+
+    public double? VmafScore { get; set; }
 }

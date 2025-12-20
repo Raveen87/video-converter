@@ -17,6 +17,10 @@ public static class ServiceCollectionExtensions
         _ = services.AddSingleton<ICommandDisplayFormatter, DefaultCommandDisplayFormatter>();
         _ = services.AddSingleton<Conversions.Services.IConversionRunCoordinator, Conversions.Services.ConversionRunCoordinator>();
         _ = services.AddSingleton<ICropDetector, FfmpegCropDetector>();
+        _ = services.AddSingleton<IVmafOutputParser, VmafOutputParser>();
+        _ = services.AddSingleton<IVmafSegmentCalculator, VmafSegmentCalculator>();
+        _ = services.AddSingleton<IVmafScoreAggregator, VmafScoreAggregator>();
+        _ = services.AddSingleton<IVmafCalculator, VmafCalculator>();
         return services;
     }
 }
