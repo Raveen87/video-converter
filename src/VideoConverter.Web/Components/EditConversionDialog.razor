@@ -89,7 +89,7 @@
 
     private readonly ConversionFormModel _formModel = new();
     private bool _isSubmitting;
-    private Dictionary<string, string[]>? _validationErrors;
+    private IDictionary<string, string[]>? _validationErrors;
 
     protected override void OnInitialized()
     {
@@ -165,7 +165,7 @@
             var validation = await ConversionPatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
             if (!validation.IsValid)
             {
-                _validationErrors = validation.ToDictionary().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                _validationErrors = validation.ToDictionary();
                 return;
             }
 
