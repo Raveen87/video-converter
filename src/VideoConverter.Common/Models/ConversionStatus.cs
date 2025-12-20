@@ -10,4 +10,5 @@ public enum ConversionStatus
     Completed,
     Failed,
     Deleted,
+    Canceled,
 }
