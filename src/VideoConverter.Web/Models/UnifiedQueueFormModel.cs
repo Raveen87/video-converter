@@ -66,4 +66,9 @@ public sealed class UnifiedQueueFormModel
     /// Gets or sets the subtitle languages (comma-separated).
     /// </summary>
     public string? SubtitleLanguagesString { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether VMAF quality scoring is enabled.
+    /// </summary>
+    public bool VmafEnabled { get; set; }
 }

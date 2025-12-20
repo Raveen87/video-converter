@@ -105,6 +105,7 @@ public sealed class ConversionsEndpoints(
             OutputFilenameTemplate = null, // We don't store the template, only the MetadataBasedFilename result
             AudioLanguages = null, // Cannot restore from entity
             SubtitleLanguages = null, // Cannot restore from entity
+            VmafEnabled = conversion.VmafEnabled,
         };
     }
 
@@ -151,6 +152,13 @@ public sealed class ConversionsEndpoints(
             var oldValue = conversion.Resolution;
             conversion.Resolution = patchModel.Resolution;
             _logger.LogDebug("Updated Resolution: {OldValue} -> {NewValue}", oldValue, patchModel.Resolution);
+        }
+
+        if (patchModel.VmafEnabled is not null)
+        {
+            var oldValue = conversion.VmafEnabled;
+            conversion.VmafEnabled = patchModel.VmafEnabled.Value;
+            _logger.LogDebug("Updated VmafEnabled: {OldValue} -> {NewValue}", oldValue, patchModel.VmafEnabled);
         }
 
         // Note: OutputFilenameTemplate changes would require re-processing metadata, which we don't do on update

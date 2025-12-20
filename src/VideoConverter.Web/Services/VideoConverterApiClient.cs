@@ -1002,6 +1002,11 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/SubtitleLanguages", Value = patch.SubtitleLanguages });
         }
 
+        if (patch.VmafEnabled is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/VmafEnabled", Value = patch.VmafEnabled });
+        }
+
         return patchOperations;
     }
 

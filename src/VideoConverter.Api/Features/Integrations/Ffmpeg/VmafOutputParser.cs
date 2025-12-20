@@ -1,9 +1,10 @@
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 /// <summary>
-/// Parses VMAF score from FFmpeg libvmaf filter JSON output.
+/// Parses VMAF score from FFmpeg libvmaf filter output.
+/// Supports both JSON format (log_path output) and text format (print_summary output).
 /// </summary>
-public sealed class VmafOutputParser(ILogger<VmafOutputParser> logger) : IVmafOutputParser
+public sealed partial class VmafOutputParser(ILogger<VmafOutputParser> logger) : IVmafOutputParser
 {
     private readonly ILogger<VmafOutputParser> _logger = logger;
 
@@ -16,6 +17,35 @@ public sealed class VmafOutputParser(ILogger<VmafOutputParser> logger) : IVmafOu
             return null;
         }
 
+        // First try to parse from print_summary text output (cross-platform, works on Windows)
+        var textScore = ParseFromTextOutput(ffmpegOutput);
+        if (textScore is not null)
+        {
+            return textScore;
+        }
+
+        // Fall back to JSON parsing (for log_path output on Linux/Mac)
+        return ParseFromJsonOutput(ffmpegOutput);
+    }
+
+    // Regex to match "VMAF score: 92.123456" or "VMAF score = 92.123456" from print_summary output
+    [GeneratedRegex(@"VMAF\s+score[:\s=]+(\d+\.?\d*)", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex VmafScoreRegex();
+
+    private double? ParseFromTextOutput(string output)
+    {
+        var match = VmafScoreRegex().Match(output);
+        if (match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var score))
+        {
+            _logger.LogDebug("Parsed VMAF score from text output: {Score}", score);
+            return score;
+        }
+
+        return null;
+    }
+
+    private double? ParseFromJsonOutput(string ffmpegOutput)
+    {
         try
         {
             var jsonStart = ffmpegOutput.IndexOf('{');
