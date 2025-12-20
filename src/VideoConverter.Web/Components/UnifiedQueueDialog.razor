@@ -389,7 +389,7 @@
         var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
         {
-            _validationErrors = validation.ToDictionary().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            _validationErrors = new Dictionary<string, string[]>(validation.ToDictionary());
             return false;
         }
 
