@@ -11,4 +11,9 @@ public sealed class ConversionStartResult
     public string? ErrorMessage { get; init; }
 
     public IDictionary<string, object>? ErrorDetails { get; init; }
+
+    /// <summary>
+    /// Gets the calculated VMAF score (0-100), or null if VMAF was not enabled or calculation failed.
+    /// </summary>
+    public double? VmafScore { get; init; }
 }

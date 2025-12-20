@@ -99,6 +99,12 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<int?>("TmdbId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("VmafEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("VmafScore")
+                        .HasColumnType("REAL");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Status", "Rank");
@@ -347,6 +353,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<string>("SubtitleLanguages")
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("VmafEnabled")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

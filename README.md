@@ -31,7 +31,8 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "audioLanguages": ["English", "Swedish"],
       "subtitleLanguages": ["English", "Swedish"],
       "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}",
-      "outputPathTemplate": "{Type}/{Title}"
+      "outputPathTemplate": "{Type}/{Title}",
+      "vmafEnabled": false
     }
     ```
   - Profiles cannot be used with this endpoint anymore.
@@ -61,7 +62,9 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "deletedAtUtc": null,
         "tmdbId": 27205,
         "matchedTitle": "Inception",
-        "matchedYear": 2010
+        "matchedYear": 2010,
+        "vmafEnabled": false,
+        "vmafScore": null
       }
     ]
     ```
@@ -549,6 +552,33 @@ Environment variable overrides follow ASP.NET Core’s standard mapping. For exa
 - `Ffmpeg__Preset=6`
 - `Ffmpeg__DefaultAudioBitrateKbps=192`
 
+VMAF quality scoring options (appsettings.json):
+
+```json
+"Vmaf": {
+  "SegmentCount": 5,
+  "SegmentDurationSeconds": 10,
+  "TimeoutSeconds": 300
+}
+```
+
+- `Vmaf:SegmentCount`: Number of segments to sample for VMAF calculation (default `5`)
+- `Vmaf:SegmentDurationSeconds`: Duration of each sample segment in seconds (default `10`)
+- `Vmaf:TimeoutSeconds`: Timeout for VMAF calculation in seconds (default `300`)
+
+VMAF (Video Multi-Method Assessment Fusion) is a perceptual video quality metric that compares the original source video with the converted output to produce a quality score from 0-100. Higher scores indicate better quality (93+ is excellent, 80-93 is good, below 80 may have noticeable quality loss).
+
+To enable VMAF scoring:
+- Set `vmafEnabled: true` when creating a conversion or in a profile
+- After conversion completes, the `vmafScore` field will contain the calculated score (or `null` if calculation failed)
+- For long videos, VMAF uses segment-based sampling to reduce calculation time
+
+Environment variable overrides:
+
+- `Vmaf__SegmentCount=5`
+- `Vmaf__SegmentDurationSeconds=10`
+- `Vmaf__TimeoutSeconds=300`
+
 ### Validation
 - `inputPath` must be a non-empty string and point to an existing file (not a directory).
 - `outputDirectory` must be a non-empty string. If it does not exist, the service attempts to create it. It must be writable by the process user.
@@ -578,6 +608,7 @@ Environment variable overrides follow ASP.NET Core’s standard mapping. For exa
       - Arabic: `ar`, `ara`, `arabic`, `arab`
       - And many more languages with their respective tags
     - When found, external subtitles are added as inputs and mapped to the output and copied (`-c:s copy`).
+- `vmafEnabled` (optional): boolean. When `true`, VMAF quality scoring is calculated after conversion completes. If omitted, defaults to `false`. Can also be set via profiles.
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.

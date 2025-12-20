@@ -30,7 +30,9 @@ internal static class ConversionsApiHelpers
             c.SelectedSubtitleStreamIndicesCsv,
             c.SelectedExternalSubtitlePathsCsv,
             c.DetectedCrop,
-            c.OutputPathTemplate);
+            c.OutputPathTemplate,
+            c.VmafEnabled,
+            c.VmafScore);
     }
 
     public static void ThrowConversionStartError(ConversionStartResult result)

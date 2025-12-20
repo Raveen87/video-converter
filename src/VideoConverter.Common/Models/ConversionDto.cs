@@ -21,4 +21,6 @@ public record ConversionDto(
     string? SelectedSubtitleStreamIndicesCsv,
     string? SelectedExternalSubtitlePathsCsv,
     string? DetectedCrop,
-    string? OutputPathTemplate = null);
+    string? OutputPathTemplate = null,
+    bool VmafEnabled = false,
+    double? VmafScore = null);

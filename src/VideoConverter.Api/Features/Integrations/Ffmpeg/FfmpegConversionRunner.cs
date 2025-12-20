@@ -13,6 +13,7 @@ public sealed class FfmpegConversionRunner(
     IMediaDurationProvider durationProvider,
     IOptions<FfmpegOptions> options,
     ILogger<FfmpegConversionRunner> logger,
+    IVmafCalculator? vmafCalculator = null,
     IFfmpegArgumentsBuilder? argumentsBuilder = null,
     ICommandDisplayFormatter? commandFormatter = null) : IConversionRunner
 {
@@ -120,19 +121,34 @@ public sealed class FfmpegConversionRunner(
         runCoordinator.Stop(key);
         progressTracker.StopTracking(conversion.Id);
 
-        if (result.IsSuccess)
+        return result.IsSuccess
+            ? await BuildSuccessResultAsync(conversion, result, outputFile, cmdString).ConfigureAwait(false)
+            : BuildFailureResult(result, cmdString, conversion, outputFile);
+    }
+
+    private async Task<ConversionStartResult> BuildSuccessResultAsync(Conversion conversion, ProcessResult result, string outputFile, string cmdString)
+    {
+        var finalProgress = progressTracker.GetProgress(conversion.Id);
+        logger.LogInformation(
+            "Conversion ID {ConversionId} completed successfully. Input: {InputPath}, Output: {OutputFile}, PID: {ProcessId}, FinalProgress: {Percentage:F1}%",
+            conversion.Id,
+            conversion.InputPath,
+            outputFile,
+            result.ProcessId,
+            finalProgress?.PercentageComplete ?? 0);
+
+        // Calculate VMAF score if enabled
+        double? vmafScore = null;
+        if (conversion.VmafEnabled && vmafCalculator is not null)
         {
-            var finalProgress = progressTracker.GetProgress(conversion.Id);
-            logger.LogInformation(
-                "Conversion ID {ConversionId} completed successfully. Input: {InputPath}, Output: {OutputFile}, PID: {ProcessId}, FinalProgress: {Percentage:F1}%",
-                conversion.Id,
-                conversion.InputPath,
-                outputFile,
-                result.ProcessId,
-                finalProgress?.PercentageComplete ?? 0);
-            return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString };
+            vmafScore = await CalculateVmafScoreAsync(conversion, outputFile).ConfigureAwait(false);
         }
 
+        return new ConversionStartResult { IsSuccess = true, ProcessId = result.ProcessId, Command = cmdString, VmafScore = vmafScore };
+    }
+
+    private ConversionStartResult BuildFailureResult(ProcessResult result, string cmdString, Conversion conversion, string outputFile)
+    {
         var (errorMessage, errorDetails) = BuildErrorDetails(result, cmdString, conversion, outputFile);
         logger.LogError(
             "FFmpeg conversion failed for conversion ID {ConversionId}. Input: {InputPath}, Output: {OutputFile}, ExitCode: {ExitCode}, Command: {Command}, Error: {Error}, Stderr: {Stderr}",
@@ -203,5 +219,50 @@ public sealed class FfmpegConversionRunner(
                 }
             },
         };
+    }
+
+    private async Task<double?> CalculateVmafScoreAsync(Conversion conversion, string outputFile)
+    {
+        if (vmafCalculator is null || string.IsNullOrWhiteSpace(conversion.InputPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            logger.LogInformation(
+                "Starting VMAF calculation for conversion ID {ConversionId}. Reference: {InputPath}, Distorted: {OutputFile}",
+                conversion.Id,
+                conversion.InputPath,
+                outputFile);
+
+            var vmafScore = await vmafCalculator.CalculateAsync(conversion.InputPath, outputFile, CancellationToken.None).ConfigureAwait(false);
+
+            if (vmafScore is not null)
+            {
+                logger.LogInformation(
+                    "VMAF calculation completed for conversion ID {ConversionId}. Score: {VmafScore}",
+                    conversion.Id,
+                    vmafScore.Value);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "VMAF calculation returned null for conversion ID {ConversionId}",
+                    conversion.Id);
+            }
+
+            return vmafScore;
+        }
+        catch (Exception ex)
+        {
+            // VMAF calculation failure should not fail the conversion (Requirement 2.4)
+            logger.LogError(
+                ex,
+                "VMAF calculation failed for conversion ID {ConversionId}. Error: {ErrorMessage}",
+                conversion.Id,
+                ex.Message);
+            return null;
+        }
     }
 }

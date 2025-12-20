@@ -50,6 +50,7 @@ public sealed class ProfilesEndpoints(
             OutputPathTemplate = request.OutputPathTemplate,
             AudioLanguages = request.AudioLanguages?.ToList(),
             SubtitleLanguages = request.SubtitleLanguages?.ToList(),
+            VmafEnabled = request.VmafEnabled,
         };
 
         _ = _db.Profiles.Add(profile);
@@ -133,6 +134,7 @@ public sealed class ProfilesEndpoints(
             OutputPathTemplate = profile.OutputPathTemplate,
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
+            VmafEnabled = profile.VmafEnabled,
         };
     }
 
@@ -149,7 +151,8 @@ public sealed class ProfilesEndpoints(
             profile.OutputFilenameTemplate,
             profile.OutputPathTemplate,
             profile.AudioLanguages,
-            profile.SubtitleLanguages);
+            profile.SubtitleLanguages,
+            profile.VmafEnabled);
     }
 
     private static void UpdateProfileFromPatch(Profile profile, ProfilePatchDto patchModel)
@@ -168,6 +171,11 @@ public sealed class ProfilesEndpoints(
         profile.OutputPathTemplate = patchModel.OutputPathTemplate;
         profile.AudioLanguages = patchModel.AudioLanguages?.ToList();
         profile.SubtitleLanguages = patchModel.SubtitleLanguages?.ToList();
+
+        if (patchModel.VmafEnabled is not null)
+        {
+            profile.VmafEnabled = patchModel.VmafEnabled.Value;
+        }
     }
 
     private void ApplyPatchOrThrow(JsonPatchDocument<ProfilePatchDto> patchDocument, ProfilePatchDto patchModel, int id)

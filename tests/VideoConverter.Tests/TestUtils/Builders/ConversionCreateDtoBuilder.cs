@@ -14,6 +14,7 @@ public sealed class ConversionCreateDtoBuilder
     private IReadOnlyList<string>? _subtitleLanguages;
     private string? _outputFilenameTemplate;
     private string? _outputPathTemplate;
+    private bool? _vmafEnabled;
 
     public ConversionCreateDtoBuilder WithInputPath(string path)
     {
@@ -75,6 +76,12 @@ public sealed class ConversionCreateDtoBuilder
         return this;
     }
 
+    public ConversionCreateDtoBuilder WithVmafEnabled(bool? enabled)
+    {
+        _vmafEnabled = enabled;
+        return this;
+    }
+
     public ConversionCreateDto Build()
     {
         return new ConversionCreateDto(
@@ -87,6 +94,7 @@ public sealed class ConversionCreateDtoBuilder
             _audioLanguages,
             _subtitleLanguages,
             _outputFilenameTemplate,
-            _outputPathTemplate);
+            _outputPathTemplate,
+            _vmafEnabled);
     }
 }
