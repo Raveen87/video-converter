@@ -222,7 +222,7 @@
     private readonly List<ProfileDto> _profiles = new();
     private int? _selectedProfileId;
     private bool _isSubmitting;
-    private Dictionary<string, string[]>? _validationErrors;
+    private IDictionary<string, string[]>? _validationErrors;
 
     // File browser state
     private string? _currentPath;
@@ -389,7 +389,7 @@
         var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
         if (!validation.IsValid)
         {
-            _validationErrors = validation.ToDictionary().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            _validationErrors = validation.ToDictionary();
             return false;
         }
 
