@@ -21,7 +21,6 @@ public static class ServiceCollectionExtensions
         _ = services.AddScoped<IRequestValidator<ConversionPatchDto>, ConversionPatchValidator>();
         _ = services.AddScoped<IRequestValidator<DirectoryQueueRequestDto>, DirectoryQueueRequestValidator>();
         _ = services.AddScoped<IRequestValidator<ProfileDirectoryQueueRequestDto>, ProfileDirectoryQueueRequestValidator>();
-        _ = services.AddScoped<IRequestValidator<ProfileConversionCreateDto>, ProfileConversionCreateValidator>();
         _ = services.AddScoped<ConversionExistsValidator>();
         _ = services.AddScoped<ConversionsEndpoints>();
         return services;
