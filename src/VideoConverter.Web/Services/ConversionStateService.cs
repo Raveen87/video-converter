@@ -53,7 +53,7 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
 
     public ConversionStatus GetEffectiveStatus(ConversionDto conversion)
     {
-        if (conversion.Status is ConversionStatus.Completed or ConversionStatus.Failed or ConversionStatus.Deleted)
+        if (conversion.Status is ConversionStatus.Completed or ConversionStatus.Failed or ConversionStatus.Deleted or ConversionStatus.Canceled)
         {
             return conversion.Status;
         }

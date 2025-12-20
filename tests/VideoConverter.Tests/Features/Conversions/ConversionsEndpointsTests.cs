@@ -95,6 +95,53 @@ public class ConversionsEndpointsTests
     }
 
     [Fact]
+    public async Task UpdateConversionAsync_WithFailedStatus_ThrowsApiError()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Failed,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Replace(x => x.OutputDirectory, "new-output");
+
+        var endpoints = CreateEndpoints(db);
+        var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+            endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None));
+        _ = ex.ErrorCode.Should().Be(ErrorCode.InvalidConversionState);
+    }
+
+    [Fact]
+    public async Task UpdateConversionAsync_WithCanceledStatus_ThrowsApiError()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Canceled,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Replace(x => x.OutputDirectory, "new-output");
+
+        var endpoints = CreateEndpoints(db);
+        var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+            endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None));
+        _ = ex.ErrorCode.Should().Be(ErrorCode.InvalidConversionState);
+        _ = ex.UserFriendlyMessage.Should().Contain("canceled");
+    }
+
+    [Fact]
     public async Task UpdateConversionAsync_WithNotFound_ThrowsApiError()
     {
         await using var db = DbContextTestFactory.CreateInMemory();

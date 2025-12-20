@@ -112,6 +112,25 @@ public class ConversionExistsValidatorTests
     }
 
     [Fact]
+    public async Task GetConversionForUpdateAsync_CanceledStatus_ThrowsApiError()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var c = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Canceled,
+        };
+        _ = db.Conversions.Add(c);
+        _ = await db.SaveChangesAsync();
+        var validator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
+        var ex = await Assert.ThrowsAsync<ApiErrorException>(() => validator.GetConversionForUpdateAsync(c.Id, db, CancellationToken.None));
+        _ = ex.ErrorCode.Should().Be(ErrorCode.InvalidConversionState);
+        _ = ex.UserFriendlyMessage.Should().Contain("canceled");
+    }
+
+    [Fact]
     public async Task GetConversionForUpdateAsync_NotFound_ThrowsApiError()
     {
         await using var db = DbContextTestFactory.CreateInMemory();

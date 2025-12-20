@@ -184,11 +184,11 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.EditLocation" OnClick="@(() => OpenResolveMetadataDialog(context))" Size="Size.Small" Color="Color.Default" />
                             </MudTooltip>
                         }
-                    }
 
-                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Disabled="@(context.Status == ConversionStatus.Deleted)">
-                        Edit
-                    </MudButton>
+                        <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditConversionDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                            Edit
+                        </MudButton>
+                    }
                     <MudButton StartIcon="@Icons.Material.Filled.Info" OnClick="@(() => OpenDetailsDialog(context))" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
                         Details
                     </MudButton>
@@ -368,6 +368,7 @@
             ConversionStatus.Completed => "status-completed",
             ConversionStatus.Failed => "status-failed",
             ConversionStatus.Deleted => "status-deleted",
+            ConversionStatus.Canceled => "status-deleted",
             _ => "",
         };
     }
