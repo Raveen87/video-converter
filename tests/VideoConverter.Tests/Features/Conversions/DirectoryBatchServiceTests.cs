@@ -24,7 +24,7 @@ public class DirectoryBatchServiceTests
             NullLogger<DirectoryQueueRequestValidator>.Instance,
             fileValidator,
             new RequestPropertyValidator());
-        var svc = new DirectoryBatchService(db, requestValidator, fileValidator, NullLogger<DirectoryBatchService>.Instance);
+        var svc = new DirectoryBatchService(db, requestValidator, NullLogger<DirectoryBatchService>.Instance);
 
         var dto = new DirectoryQueueRequestDto(
             DirectoryPath: inputDir,
