@@ -1,7 +1,6 @@
 using VideoConverter.Api.Features.Conversions.Dtos;
 using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
-using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 
@@ -9,7 +8,7 @@ public sealed class DirectoryQueueService(
     AppDbContext db,
     IConversionService conversionService,
     IRequestValidator<ConversionCreateDto> conversionValidator,
-    IFileSystemValidator fileSystemValidator,
+    IRequestValidator<DirectoryQueueRequestDto> directoryRequestValidator,
     INotificationService notificationService,
     ILogger<DirectoryQueueService> logger) : IDirectoryQueueService
 {
@@ -17,16 +16,16 @@ public sealed class DirectoryQueueService(
     {
         logger.LogInformation("Queueing directory: {Directory} to output {Output}", request.DirectoryPath, request.OutputDirectory);
 
-        var extensions = NormalizeExtensions(request.Extensions);
-
-        _ = fileSystemValidator.IsValidDirectory(request.DirectoryPath, out var directoryError);
-        if (directoryError is not null)
+        var validation = await directoryRequestValidator.ValidateAsync(request, ct).ConfigureAwait(false);
+        if (!validation.IsValid)
         {
-            logger.LogWarning("Directory validation failed: {Error}", directoryError);
-            var outcome = new FileQueueOutcome(InputPath: request.DirectoryPath, Status: "invalid", Reason: directoryError, ConversionId: null);
-            return new DirectoryQueueResultDto(0, 0, 0, 0, new[] { outcome });
+            var reason = BuildValidationReason(validation);
+            logger.LogWarning("Directory validation failed: {Error}", reason);
+            var outcome = new FileQueueOutcome(InputPath: request.DirectoryPath, Status: "invalid", Reason: reason, ConversionId: null);
+            return new DirectoryQueueResultDto(0, 0, 0, 1, new[] { outcome });
         }
 
+        var extensions = NormalizeExtensions(request.Extensions);
         var allFiles = EnumerateCandidateFiles(request.DirectoryPath, extensions);
         logger.LogInformation("Found {Count} candidate files", allFiles.Count);
 

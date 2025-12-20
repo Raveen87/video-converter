@@ -1,6 +1,6 @@
 using FluentAssertions;
 
-using VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Validation;
 
 namespace VideoConverter.Tests.Validation;
 

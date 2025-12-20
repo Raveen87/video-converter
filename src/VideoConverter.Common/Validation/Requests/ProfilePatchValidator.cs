@@ -1,8 +1,13 @@
-using VideoConverter.Api.Shared.Validation;
+using Microsoft.Extensions.Logging;
 
-namespace VideoConverter.Api.Features.Profiles.Validation;
+using VideoConverter.Common.Models;
 
-public sealed class ProfilePatchValidator(ILogger<ProfilePatchValidator> logger, IFileSystemValidator fileSystemValidator, IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ProfilePatchDto>
+namespace VideoConverter.Common.Validation.Requests;
+
+public sealed class ProfilePatchValidator(
+    ILogger<ProfilePatchValidator> logger,
+    IFileSystemValidator fileSystemValidator,
+    IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ProfilePatchDto>
 {
     public Task<DomainValidationResult> ValidateAsync(ProfilePatchDto request, CancellationToken cancellationToken)
     {

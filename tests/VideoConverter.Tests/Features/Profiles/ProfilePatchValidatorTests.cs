@@ -1,8 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
+using VideoConverter.Common.Validation;
+using VideoConverter.Common.Validation.Requests;
 
 namespace VideoConverter.Tests.Features.Profiles;
 

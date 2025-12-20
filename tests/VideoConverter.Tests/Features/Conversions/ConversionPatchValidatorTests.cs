@@ -1,6 +1,7 @@
-using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
+using VideoConverter.Common.Validation;
+using VideoConverter.Common.Validation.Requests;
 
 namespace VideoConverter.Tests.Features.Conversions;
 

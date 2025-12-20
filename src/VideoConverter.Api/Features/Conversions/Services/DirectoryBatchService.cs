@@ -1,11 +1,11 @@
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
-using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Api.Features.Conversions.Services;
 
 public sealed class DirectoryBatchService(
     AppDbContext db,
+    IRequestValidator<DirectoryQueueRequestDto> directoryQueueRequestValidator,
     IFileSystemValidator fileSystemValidator,
     ILogger<DirectoryBatchService> logger) : IDirectoryBatchService
 {
@@ -13,32 +13,27 @@ public sealed class DirectoryBatchService(
     {
         logger.LogInformation("Creating directory queue batch for {Directory} -> {Output}", request.DirectoryPath, request.OutputDirectory);
 
+        await ValidateRequestOrThrowAsync(request, ct).ConfigureAwait(false);
         var extensions = NormalizeExtensions(request.Extensions);
 
-        _ = fileSystemValidator.IsValidDirectory(request.DirectoryPath, out var directoryError);
-        if (directoryError is not null)
+        var failedBatch = await CreateFailedBatchIfDirectoryInvalidAsync(request, profileId, ct).ConfigureAwait(false);
+        if (failedBatch is not null)
         {
-            logger.LogWarning("Directory validation failed: {Error}", directoryError);
-
-            // Create a failed batch immediately to report error
-            var failed = new DirectoryQueueBatch
-            {
-                CreatedAtUtc = DateTime.UtcNow,
-                Status = "Failed",
-                TotalItems = 0,
-                ProcessedItems = 0,
-                ErrorMessage = directoryError,
-                ProfileId = profileId,
-                RequestJson = SerializeRequest(request),
-            };
-            _ = db.DirectoryQueueBatches.Add(failed);
-            _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
-            return failed.Id;
+            return failedBatch.Value;
         }
 
         var allFiles = EnumerateCandidateFiles(request.DirectoryPath, extensions);
         logger.LogInformation("Found {Count} candidate files for batch", allFiles.Count);
 
+        var batch = CreateBatchEntity(request, profileId, allFiles);
+
+        _ = db.DirectoryQueueBatches.Add(batch);
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        return batch.Id;
+    }
+
+    private static DirectoryQueueBatch CreateBatchEntity(DirectoryQueueRequestDto request, int? profileId, IReadOnlyList<string> allFiles)
+    {
         var batch = new DirectoryQueueBatch
         {
             CreatedAtUtc = DateTime.UtcNow,
@@ -61,9 +56,7 @@ public sealed class DirectoryBatchService(
             }
         }
 
-        _ = db.DirectoryQueueBatches.Add(batch);
-        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return batch.Id;
+        return batch;
     }
 
     private static string SerializeRequest(DirectoryQueueRequestDto request)
@@ -94,5 +87,48 @@ public sealed class DirectoryBatchService(
                 .Where(p => extensions.Contains(Path.GetExtension(p), comparer: StringComparer.OrdinalIgnoreCase))
                 .Order(comparer: StringComparer.OrdinalIgnoreCase),
         ];
+    }
+
+    private async Task ValidateRequestOrThrowAsync(DirectoryQueueRequestDto request, CancellationToken ct)
+    {
+        var validation = await directoryQueueRequestValidator.ValidateAsync(request, ct).ConfigureAwait(false);
+        if (validation.IsValid)
+        {
+            return;
+        }
+
+        var reason = string.Join(
+            "; ",
+            validation.ToDictionary().SelectMany(static kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}")));
+        logger.LogWarning("Directory batch validation failed: {Error}", reason);
+        throw new DomainValidationException(
+            "Validation failed.",
+            "The request contains invalid data.",
+            validation.ToDictionary());
+    }
+
+    private async Task<int?> CreateFailedBatchIfDirectoryInvalidAsync(DirectoryQueueRequestDto request, int? profileId, CancellationToken ct)
+    {
+        _ = fileSystemValidator.IsValidDirectory(request.DirectoryPath, out var directoryError);
+        if (directoryError is null)
+        {
+            return null;
+        }
+
+        logger.LogWarning("Directory validation failed: {Error}", directoryError);
+
+        var failed = new DirectoryQueueBatch
+        {
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = "Failed",
+            TotalItems = 0,
+            ProcessedItems = 0,
+            ErrorMessage = directoryError,
+            ProfileId = profileId,
+            RequestJson = SerializeRequest(request),
+        };
+        _ = db.DirectoryQueueBatches.Add(failed);
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        return failed.Id;
     }
 }

@@ -12,4 +12,7 @@ global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Options;
 
+global using VideoConverter.Common.Errors;
 global using VideoConverter.Common.Models;
+global using VideoConverter.Common.Validation;
+global using VideoConverter.Common.Validation.Requests;
