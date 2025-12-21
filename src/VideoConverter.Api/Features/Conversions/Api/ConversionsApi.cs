@@ -63,7 +63,10 @@ public sealed class ConversionsApi(
 
         var items = await db.Conversions
             .AsNoTracking()
-            .OrderBy(c => c.Status == ConversionStatus.Deleted)
+            .OrderBy(c => c.Status == ConversionStatus.Completed ||
+                          c.Status == ConversionStatus.Failed ||
+                          c.Status == ConversionStatus.Canceled ||
+                          c.Status == ConversionStatus.Deleted)
             .ThenBy(c => c.Status)
             .ThenBy(c => c.Rank)
             .ThenBy(c => c.CreatedAtUtc)
