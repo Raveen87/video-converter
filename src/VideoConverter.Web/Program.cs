@@ -3,8 +3,12 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 using MudBlazor.Services;
 
+using VideoConverter.Common.Models;
+using VideoConverter.Common.Validation;
+using VideoConverter.Common.Validation.Requests;
 using VideoConverter.Web;
 using VideoConverter.Web.Services;
+using VideoConverter.Web.Validation;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -39,6 +43,15 @@ _ = builder.Services.AddScoped<ConversionStateService>();
 _ = builder.Services.AddScoped<IFileBrowserService, FileBrowserService>();
 _ = builder.Services.AddScoped<IJSInteropWrapper, JSInteropWrapper>();
 _ = builder.Services.AddScoped<IThemeService, ThemeService>();
+_ = builder.Services.AddSingleton<IFileSystemValidator, ClientFileSystemValidator>();
+_ = builder.Services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ConversionCreateDto>, ConversionCreateValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ConversionPatchDto>, ConversionPatchValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ProfileCreateDto>, ProfileCreateValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ProfilePatchDto>, ProfilePatchValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<DirectoryQueueRequestDto>, DirectoryQueueRequestValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ProfileDirectoryQueueRequestDto>, ProfileDirectoryQueueRequestValidator>();
+_ = builder.Services.AddScoped<IRequestValidator<ProfileConversionCreateDto>, ProfileConversionCreateValidator>();
 builder.Services.AddMudServices();
 
 var host = builder.Build();

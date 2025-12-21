@@ -1,3 +1,5 @@
+@using VideoConverter.Common.Validation
+
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Edit Profile</MudText>
@@ -5,6 +7,20 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
+            @if (_validationErrors is not null && _validationErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Class="mb-3">
+                    <ul class="mb-0">
+                        @foreach (var kvp in _validationErrors)
+                        {
+                            foreach (var message in kvp.Value)
+                            {
+                                <li><strong>@kvp.Key:</strong> @message</li>
+                            }
+                        }
+                    </ul>
+                </MudAlert>
+            }
             <MudTextField @bind-Value="_formModel.Name" Label="Name" Required="true" Variant="Variant.Outlined" Class="mb-3" />
             <div class="d-flex align-center mb-3">
                 <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Variant="Variant.Outlined" Class="flex-grow-1" />
@@ -61,8 +77,12 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    [Inject]
+    private IRequestValidator<ProfilePatchDto> ProfilePatchValidator { get; set; } = null!;
+
     private readonly ProfileFormModel _formModel = new();
     private bool _isSubmitting;
+    private IDictionary<string, string[]>? _validationErrors;
 
     protected override void OnInitialized()
     {
@@ -133,6 +153,14 @@
                 SubtitleLanguages = subtitleLanguages,
             };
 
+            var validation = await ProfilePatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
+            if (!validation.IsValid)
+            {
+                _validationErrors = validation.ToDictionary();
+                return;
+            }
+
+            _validationErrors = null;
             await OnSubmit.InvokeAsync(patch);
             Logger.LogInformation("Form submission completed successfully");
         }
@@ -144,6 +172,7 @@
         finally
         {
             _isSubmitting = false;
+            StateHasChanged();
         }
     }
 

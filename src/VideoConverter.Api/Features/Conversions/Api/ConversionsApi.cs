@@ -1,7 +1,6 @@
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
-using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
 

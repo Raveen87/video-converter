@@ -6,6 +6,20 @@
         <div @onkeydown="HandleFormKeyDown">
             <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
                 <DataAnnotationsValidator />
+                @if (_validationErrors is not null && _validationErrors.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Class="mb-3">
+                        <ul class="mb-0">
+                            @foreach (var kvp in _validationErrors)
+                            {
+                                foreach (var message in kvp.Value)
+                                {
+                                    <li><strong>@kvp.Key:</strong> @message</li>
+                                }
+                            }
+                        </ul>
+                    </MudAlert>
+                }
                 <div class="d-flex align-center mb-3">
                     <MudTextField @bind-Value="_formModel.OutputDirectory" Label="Output Directory" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
                     <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FolderOpen" OnClick="OpenDirectoryBrowser" Class="ml-2" Style="height: 56px;">
@@ -48,6 +62,7 @@
 </MudDialog>
 
 @using VideoConverter.Common.Models
+@using VideoConverter.Common.Validation
 @using VideoConverter.Web.Models
 
 @code {
@@ -69,8 +84,12 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    [Inject]
+    private IRequestValidator<ConversionPatchDto> ConversionPatchValidator { get; set; } = null!;
+
     private readonly ConversionFormModel _formModel = new();
     private bool _isSubmitting;
+    private IDictionary<string, string[]>? _validationErrors;
 
     protected override void OnInitialized()
     {
@@ -143,6 +162,14 @@
                 VmafEnabled = _formModel.VmafEnabled,
             };
 
+            var validation = await ConversionPatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
+            if (!validation.IsValid)
+            {
+                _validationErrors = validation.ToDictionary();
+                return;
+            }
+
+            _validationErrors = null;
             await OnSubmit.InvokeAsync(patch);
             Logger.LogInformation("Form submission completed successfully");
         }
@@ -154,6 +181,7 @@
         finally
         {
             _isSubmitting = false;
+            StateHasChanged();
         }
     }
 
@@ -227,4 +255,3 @@
         public bool VmafEnabled { get; set; }
     }
 }
-

@@ -427,8 +427,15 @@ await using var inMemDb = DbContextTestFactory.CreateInMemory();
   - `Services/`: Business logic services (conversion, media probing, language matching, etc.)
   - `Data/`: Entity Framework models and database context
   - `Dtos/`: Data transfer objects for API requests/responses
-  - `Validation/`: Input validation logic and helpers
+  - `Validation/`: API-specific infrastructure (e.g., file system validator). Shared rules live in `VideoConverter.Common/Validation`.
+- `src/VideoConverter.Common`: Shared DTOs, enums, and validation (rules, validators, `DomainValidationException`, `ErrorCode`, payload helpers)
 - `tests/VideoConverter.Tests`: xUnit test project with unit tests for core functionality
+
+### Validation
+- All validation rules live in `src/VideoConverter.Common/Validation` (property-level and request-level validators, `DomainValidationException`, `ValidationErrorPayload`).
+- API registers these validators with the real `FileSystemValidator` for existence/writability checks and maps errors via the shared payloads in `ApiErrorMapper`.
+- Web registers the same validators with a client-side `ClientFileSystemValidator` that performs syntactic checks only; the backend remains authoritative and re-validates every request.
+- Request validators cover conversions, profiles, directory queueing (with and without profiles), and profile-based conversions, keeping error messages consistent across API and UI.
 
 ### Config
 Environment/app settings:
@@ -878,7 +885,7 @@ The codebase has been refactored to improve maintainability and reduce complexit
 
 - **Service Layer**: Business logic extracted from API controllers into dedicated services (`ConversionService`, `ProcessManager`)
 - **Separation of Concerns**: Audio and subtitle language matching split into separate services
-- **Validation Helpers**: Common validation logic centralized in reusable helper methods
+- **Validation Helpers**: Validation rules moved to `VideoConverter.Common/Validation` and reused by both API and Web with shared payloads (`DomainValidationException`/`ValidationErrorPayload`)
 - **Process Management**: Unified process execution and output handling across FFmpeg operations
 - **Test Organization**: Tests split into focused unit test classes for better maintainability
 

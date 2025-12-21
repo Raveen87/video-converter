@@ -1,4 +1,4 @@
-namespace VideoConverter.Api.Common.Exceptions;
+namespace VideoConverter.Common.Errors;
 
 /// <summary>
 /// Enumeration of error codes that can be used programmatically to identify specific errors.

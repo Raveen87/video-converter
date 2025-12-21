@@ -1,4 +1,4 @@
-namespace VideoConverter.Api.Shared.Validation;
+namespace VideoConverter.Common.Validation;
 
 public interface IFileSystemValidator
 {

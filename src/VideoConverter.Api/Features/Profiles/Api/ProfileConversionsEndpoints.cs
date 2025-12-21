@@ -3,7 +3,6 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
-using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Api.Features.Profiles.Api;
 

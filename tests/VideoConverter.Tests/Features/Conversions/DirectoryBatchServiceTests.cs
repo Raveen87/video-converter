@@ -20,7 +20,11 @@ public class DirectoryBatchServiceTests
 
         await using var db = DbContextTestFactory.CreateInMemory();
         var fileValidator = new FileSystemValidator();
-        var svc = new DirectoryBatchService(db, fileValidator, NullLogger<DirectoryBatchService>.Instance);
+        var requestValidator = new DirectoryQueueRequestValidator(
+            NullLogger<DirectoryQueueRequestValidator>.Instance,
+            fileValidator,
+            new RequestPropertyValidator());
+        var svc = new DirectoryBatchService(db, requestValidator, NullLogger<DirectoryBatchService>.Instance);
 
         var dto = new DirectoryQueueRequestDto(
             DirectoryPath: inputDir,

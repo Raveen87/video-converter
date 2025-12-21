@@ -1,4 +1,6 @@
-namespace VideoConverter.Api.Shared.Validation;
+using Microsoft.Extensions.Logging;
+
+namespace VideoConverter.Common.Validation;
 
 public static class ValidationResultExtensions
 {

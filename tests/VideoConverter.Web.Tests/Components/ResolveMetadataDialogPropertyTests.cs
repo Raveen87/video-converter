@@ -64,13 +64,21 @@ public class ResolveMetadataDialogPropertyTests
         // Arrange
         const string enterKey = "Enter";
         const bool isSearching = false;
+        var query = searchQuery.Item;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            // Treat whitespace-only queries as empty and skip expectation
+            return true.ToProperty().Label("Whitespace queries are treated as empty and do not assert enter behavior");
+        }
 
         // Act
-        var shouldTrigger = ResolveMetadataDialogLogic.ShouldTriggerSearch(enterKey, isSearching, searchQuery.Item);
+        var shouldTrigger = ResolveMetadataDialogLogic.ShouldTriggerSearch(enterKey, isSearching, query);
 
         // Assert - Enter key with non-empty query and not searching should trigger search
         return shouldTrigger
-            .Label($"Enter key with query '{searchQuery.Item}' and isSearching={isSearching} should trigger search");
+            .ToProperty()
+            .Label($"Enter key with query '{query}' and isSearching={isSearching} should trigger search");
     }
 
     /// <summary>

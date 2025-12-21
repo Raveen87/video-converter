@@ -10,3 +10,7 @@ global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Logging.Abstractions;
 global using Microsoft.Extensions.Options;
 global using Moq;
+global using VideoConverter.Common.Errors;
+global using VideoConverter.Common.Models;
+global using VideoConverter.Common.Validation;
+global using VideoConverter.Common.Validation.Requests;

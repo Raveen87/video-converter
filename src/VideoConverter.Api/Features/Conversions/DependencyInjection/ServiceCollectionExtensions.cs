@@ -2,7 +2,6 @@ using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Services.Conversion;
-using VideoConverter.Api.Shared.Validation;
 
 namespace VideoConverter.Api.Features.Conversions.DependencyInjection;
 
@@ -20,6 +19,8 @@ public static class ServiceCollectionExtensions
         _ = services.AddScoped<IConversionExecutionService, ConversionExecutionService>();
         _ = services.AddScoped<IRequestValidator<ConversionCreateDto>, ConversionCreateValidator>();
         _ = services.AddScoped<IRequestValidator<ConversionPatchDto>, ConversionPatchValidator>();
+        _ = services.AddScoped<IRequestValidator<DirectoryQueueRequestDto>, DirectoryQueueRequestValidator>();
+        _ = services.AddScoped<IRequestValidator<ProfileDirectoryQueueRequestDto>, ProfileDirectoryQueueRequestValidator>();
         _ = services.AddScoped<ConversionExistsValidator>();
         _ = services.AddScoped<ConversionsEndpoints>();
         return services;

@@ -1,6 +1,8 @@
-using VideoConverter.Api.Shared.Validation;
+using Microsoft.Extensions.Logging;
 
-namespace VideoConverter.Api.Features.Profiles.Validation;
+using VideoConverter.Common.Models;
+
+namespace VideoConverter.Common.Validation.Requests;
 
 internal static class ProfileValidationHelper
 {

@@ -1,4 +1,5 @@
 @using VideoConverter.Common.Models
+@using VideoConverter.Common.Validation
 @using VideoConverter.Web.Models
 @using VideoConverter.Web.Services
 
@@ -140,6 +141,21 @@
                     VMAF will calculate a quality score (0-100) after conversion completes by comparing the output to the source.
                 </MudAlert>
             }
+
+            @if (_validationErrors is not null && _validationErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Class="mb-3">
+                    <ul class="mb-0">
+                        @foreach (var kvp in _validationErrors)
+                        {
+                            foreach (var message in kvp.Value)
+                            {
+                                <li><strong>@kvp.Key:</strong> @message</li>
+                            }
+                        }
+                    </ul>
+                </MudAlert>
+            }
         </div>
     </DialogContent>
     <DialogActions>
@@ -190,10 +206,23 @@
     [Inject]
     private IFileBrowserService FileBrowserService { get; set; } = null!;
 
+    [Inject]
+    private IRequestValidator<ConversionCreateDto> ConversionCreateValidator { get; set; } = null!;
+
+    [Inject]
+    private IRequestValidator<DirectoryQueueRequestDto> DirectoryQueueValidator { get; set; } = null!;
+
+    [Inject]
+    private IRequestValidator<ProfileConversionCreateDto> ProfileConversionCreateValidator { get; set; } = null!;
+
+    [Inject]
+    private IRequestValidator<ProfileDirectoryQueueRequestDto> ProfileDirectoryQueueValidator { get; set; } = null!;
+
     private readonly UnifiedQueueFormModel _formModel = new();
     private readonly List<ProfileDto> _profiles = new();
     private int? _selectedProfileId;
     private bool _isSubmitting;
+    private IDictionary<string, string[]>? _validationErrors;
 
     // File browser state
     private string? _currentPath;
@@ -355,6 +384,19 @@
         dialogRef = await DialogService.ShowAsync<FileBrowser>("Select Output Directory", parameters, options).ConfigureAwait(false);
     }
 
+    private async Task<bool> ValidateAndSetErrorsAsync<TRequest>(IRequestValidator<TRequest> validator, TRequest request)
+    {
+        var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
+        if (!validation.IsValid)
+        {
+            _validationErrors = validation.ToDictionary();
+            return false;
+        }
+
+        _validationErrors = null;
+        return true;
+    }
+
     private async Task HandleSubmit()
     {
         if (!CanSubmit)
@@ -366,20 +408,99 @@
             _formModel.SelectedPath, _formModel.SelectionType, _selectedProfileId);
 
         _isSubmitting = true;
+        _validationErrors = null;
         StateHasChanged();
 
         try
         {
             var audioLanguages = ParseCommaSeparatedString(_formModel.AudioLanguagesString);
             var subtitleLanguages = ParseCommaSeparatedString(_formModel.SubtitleLanguagesString);
+            var extensions = ParseCommaSeparatedString(_formModel.ExtensionsString);
 
             if (_formModel.SelectionType == SelectionType.File)
             {
-                await SubmitFileConversionAsync(audioLanguages, subtitleLanguages).ConfigureAwait(false);
+                if (_selectedProfileId.HasValue)
+                {
+                    var profileRequest = new ProfileConversionCreateDto(
+                        _formModel.SelectedPath!,
+                        _formModel.OutputDirectory);
+
+                    if (!await ValidateAndSetErrorsAsync(ProfileConversionCreateValidator, profileRequest).ConfigureAwait(false))
+                    {
+                        return;
+                    }
+
+                    await SubmitFileConversionAsync(profileRequest).ConfigureAwait(false);
+                }
+                else
+                {
+                    var request = new ConversionCreateDto(
+                        _formModel.SelectedPath!,
+                        _formModel.OutputDirectory,
+                        _formModel.Crf,
+                        _formModel.AudioBitrateKbps,
+                        _formModel.AudioChannels,
+                        _formModel.Resolution,
+                        audioLanguages,
+                        subtitleLanguages,
+                        _formModel.OutputFilenameTemplate,
+                        _formModel.OutputPathTemplate,
+                        _formModel.VmafEnabled);
+
+                    if (!await ValidateAndSetErrorsAsync(ConversionCreateValidator, request).ConfigureAwait(false))
+                    {
+                        return;
+                    }
+
+                    await SubmitFileConversionAsync(request).ConfigureAwait(false);
+                }
             }
             else if (_formModel.SelectionType == SelectionType.Directory)
             {
-                await SubmitDirectoryQueueAsync(audioLanguages, subtitleLanguages).ConfigureAwait(false);
+                if (_selectedProfileId.HasValue)
+                {
+                    var profileRequest = new ProfileDirectoryQueueRequestDto(
+                        _formModel.SelectedPath!,
+                        _formModel.OutputDirectory,
+                        extensions,
+                        _formModel.Crf,
+                        _formModel.AudioBitrateKbps,
+                        _formModel.AudioChannels,
+                        _formModel.Resolution,
+                        audioLanguages,
+                        subtitleLanguages,
+                        _formModel.OutputFilenameTemplate,
+                        _formModel.OutputPathTemplate);
+
+                    if (!await ValidateAndSetErrorsAsync(ProfileDirectoryQueueValidator, profileRequest).ConfigureAwait(false))
+                    {
+                        return;
+                    }
+
+                    await SubmitDirectoryQueueAsync(profileRequest).ConfigureAwait(false);
+                }
+                else
+                {
+                    var request = new DirectoryQueueRequestDto(
+                        _formModel.SelectedPath!,
+                        _formModel.OutputDirectory,
+                        _formModel.Crf,
+                        _formModel.AudioBitrateKbps,
+                        _formModel.AudioChannels,
+                        _formModel.Resolution,
+                        audioLanguages,
+                        subtitleLanguages,
+                        _formModel.OutputFilenameTemplate,
+                        _formModel.OutputPathTemplate,
+                        extensions);
+
+                    if (!await ValidateAndSetErrorsAsync(DirectoryQueueValidator, request).ConfigureAwait(false))
+                    {
+                        return;
+                    }
+
+                    await SubmitDirectoryQueueAsync(request).ConfigureAwait(false);
+                }
             }
 
             Logger.LogInformation("Form submission completed successfully");
@@ -396,73 +517,24 @@
         }
     }
 
-    private async Task SubmitFileConversionAsync(string[]? audioLanguages, string[]? subtitleLanguages)
+    private Task SubmitFileConversionAsync(ConversionCreateDto request)
     {
-        if (_selectedProfileId.HasValue)
-        {
-            var profileRequest = new ProfileConversionCreateDto(
-                _formModel.SelectedPath!,
-                _formModel.OutputDirectory);
-
-            await OnFileSubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
-        }
-        else
-        {
-            var request = new ConversionCreateDto(
-                _formModel.SelectedPath!,
-                _formModel.OutputDirectory,
-                _formModel.Crf,
-                _formModel.AudioBitrateKbps,
-                _formModel.AudioChannels,
-                _formModel.Resolution,
-                audioLanguages,
-                subtitleLanguages,
-                _formModel.OutputFilenameTemplate,
-                _formModel.OutputPathTemplate,
-                _formModel.VmafEnabled);
-
-            await OnFileSubmit.InvokeAsync(request).ConfigureAwait(false);
-        }
+        return OnFileSubmit.InvokeAsync(request);
     }
 
-    private async Task SubmitDirectoryQueueAsync(string[]? audioLanguages, string[]? subtitleLanguages)
+    private Task SubmitFileConversionAsync(ProfileConversionCreateDto request)
     {
-        var extensions = ParseCommaSeparatedString(_formModel.ExtensionsString);
+        return OnFileSubmitWithProfile.InvokeAsync((_selectedProfileId!.Value, request));
+    }
 
-        if (_selectedProfileId.HasValue)
-        {
-            var profileRequest = new ProfileDirectoryQueueRequestDto(
-                _formModel.SelectedPath!,
-                _formModel.OutputDirectory,
-                extensions,
-                _formModel.Crf,
-                _formModel.AudioBitrateKbps,
-                _formModel.AudioChannels,
-                _formModel.Resolution,
-                audioLanguages,
-                subtitleLanguages,
-                _formModel.OutputFilenameTemplate,
-                _formModel.OutputPathTemplate);
+    private Task SubmitDirectoryQueueAsync(DirectoryQueueRequestDto request)
+    {
+        return OnDirectorySubmit.InvokeAsync(request);
+    }
 
-            await OnDirectorySubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
-        }
-        else
-        {
-            var request = new DirectoryQueueRequestDto(
-                _formModel.SelectedPath!,
-                _formModel.OutputDirectory,
-                _formModel.Crf,
-                _formModel.AudioBitrateKbps,
-                _formModel.AudioChannels,
-                _formModel.Resolution,
-                audioLanguages,
-                subtitleLanguages,
-                _formModel.OutputFilenameTemplate,
-                _formModel.OutputPathTemplate,
-                extensions);
-
-            await OnDirectorySubmit.InvokeAsync(request).ConfigureAwait(false);
-        }
+    private Task SubmitDirectoryQueueAsync(ProfileDirectoryQueueRequestDto request)
+    {
+        return OnDirectorySubmitWithProfile.InvokeAsync((_selectedProfileId!.Value, request));
     }
 
     private async Task HandleCancel()

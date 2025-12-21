@@ -1,4 +1,6 @@
-namespace VideoConverter.Api.Shared.Validation;
+using VideoConverter.Common.Models;
+
+namespace VideoConverter.Common.Validation;
 
 public sealed class RequestPropertyValidator : IRequestPropertyValidator
 {

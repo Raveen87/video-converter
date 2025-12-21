@@ -5,6 +5,20 @@
     <DialogContent>
         <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
+            @if (_validationErrors is not null && _validationErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Class="mb-3">
+                    <ul class="mb-0">
+                        @foreach (var kvp in _validationErrors)
+                        {
+                            foreach (var message in kvp.Value)
+                            {
+                                <li><strong>@kvp.Key:</strong> @message</li>
+                            }
+                        }
+                    </ul>
+                </MudAlert>
+            }
             <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
                 <MudSelectItem T="int?" Value="@((int?)null)">None (use manual settings)</MudSelectItem>
                 @foreach (var profile in _profiles)
@@ -83,10 +97,17 @@
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
 
+    [Inject]
+    private IRequestValidator<DirectoryQueueRequestDto> DirectoryQueueValidator { get; set; } = null!;
+
+    [Inject]
+    private IRequestValidator<ProfileDirectoryQueueRequestDto> ProfileDirectoryQueueValidator { get; set; } = null!;
+
     private readonly DirectoryFormModel _formModel = new();
     private bool _isSubmitting;
     private List<ProfileDto> _profiles = [];
     private int? _selectedProfileId;
+    private IDictionary<string, string[]>? _validationErrors;
 
     protected override async Task OnInitializedAsync()
     {
@@ -126,6 +147,19 @@
             Logger.LogError(ex, "Error loading profiles");
             _profiles = [];
         }
+    }
+
+    private async Task<bool> ValidateAndSetErrorsAsync<TRequest>(IRequestValidator<TRequest> validator, TRequest request)
+    {
+        var validation = await validator.ValidateAsync(request, CancellationToken.None).ConfigureAwait(false);
+        if (!validation.IsValid)
+        {
+            _validationErrors = validation.ToDictionary();
+            return false;
+        }
+
+        _validationErrors = null;
+        return true;
     }
 
     private async Task HandleValidSubmit()
@@ -168,6 +202,11 @@
                     _formModel.OutputFilenameTemplate,
                     _formModel.OutputPathTemplate);
 
+                if (!await ValidateAndSetErrorsAsync(ProfileDirectoryQueueValidator, profileRequest).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 await OnSubmitWithProfile.InvokeAsync((_selectedProfileId.Value, profileRequest)).ConfigureAwait(false);
             }
             else
@@ -198,6 +237,11 @@
                     _formModel.OutputPathTemplate,
                     extensions);
 
+                if (!await ValidateAndSetErrorsAsync(DirectoryQueueValidator, request).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 await OnSubmit.InvokeAsync(request).ConfigureAwait(false);
             }
 
@@ -211,6 +255,7 @@
         finally
         {
             _isSubmitting = false;
+            StateHasChanged();
         }
     }
 

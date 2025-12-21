@@ -1,6 +1,7 @@
 using System.Net;
 
 using VideoConverter.Api.Common.Exceptions;
+using VideoConverter.Common.Errors;
 
 namespace VideoConverter.Tests.Exceptions;
 
