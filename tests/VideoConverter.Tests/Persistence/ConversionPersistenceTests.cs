@@ -64,6 +64,8 @@ public class ConversionPersistenceTests
         await using var context = DbContextTestFactory.CreateInMemory();
         var conversions = new[]
         {
+            new Conversion { InputPath = "480p.mp4", OutputDirectory = "out", Resolution = 480 },
+            new Conversion { InputPath = "576p.mp4", OutputDirectory = "out", Resolution = 576 },
             new Conversion { InputPath = "720p.mp4", OutputDirectory = "out", Resolution = 720 },
             new Conversion { InputPath = "1080p.mp4", OutputDirectory = "out", Resolution = 1080 },
             new Conversion { InputPath = "2160p.mp4", OutputDirectory = "out", Resolution = 2160 },
@@ -75,7 +77,7 @@ public class ConversionPersistenceTests
         var allResolutions = await context.Conversions.Where(c => c.Resolution != null).Select(c => c.Resolution!.Value).Distinct().OrderBy(r => r).ToListAsync();
         _ = hdConversions.Should().HaveCount(1);
         _ = hdConversions[0].InputPath.Should().Be("1080p.mp4");
-        _ = allResolutions.Should().BeEquivalentTo([720, 1080, 2160]);
+        _ = allResolutions.Should().BeEquivalentTo([480, 576, 720, 1080, 2160]);
     }
 
     [Fact]

@@ -592,7 +592,7 @@ Environment variable overrides:
 - `crf` (optional): integer 0–63. If omitted, defaults to 40.
 - `audioBitrateKbps` (optional): integer 1–450. If omitted, defaults to 128 for 2.0 audio or 192 for 5.1 audio.
 - `audioChannels` (optional): string enum value. Valid values: `"Stereo20"` (Stereo 2.0) or `"Surround51"` (Surround 5.1). If omitted, defaults to `"Stereo20"`.
-- `resolution` (optional): one of 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
+- `resolution` (optional): one of 480, 576, 720, 1080, 2160. If specified higher than source height, API returns 400. If omitted, defaults to 720p scaling.
 - `profileId` (optional): ID of a saved profile. When set, profile values override same-named request fields; if a profile field is null, the request value is used.
 - `audioLanguages` (optional): array of full language names (e.g., "English", "Swedish", "Spanish", "Hindi").
   - When provided, the service probes the input with ffprobe and attempts to match each requested language using:

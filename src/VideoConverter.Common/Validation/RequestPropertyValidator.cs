@@ -4,7 +4,7 @@ namespace VideoConverter.Common.Validation;
 
 public sealed class RequestPropertyValidator : IRequestPropertyValidator
 {
-    private static readonly int[] SourceResolutions = [720, 1080, 2160];
+    private static readonly int[] SourceResolutions = [480, 576, 720, 1080, 2160];
 
     public bool IsValidCrf(int? crf, out string? errorMessage)
     {
@@ -38,7 +38,7 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
 
         if (resolution is not null && !SourceResolutions.Contains(resolution.Value))
         {
-            errorMessage = "Resolution must be one of: 720, 1080, 2160.";
+            errorMessage = "Resolution must be one of: 480, 576, 720, 1080, 2160.";
             return false;
         }
 
