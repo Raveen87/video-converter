@@ -37,7 +37,7 @@
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
-            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 480, 576, 720, 1080, 2160" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />

@@ -51,6 +51,10 @@ public class RequestPropertyValidatorTests
     [Fact]
     public void IsValidResolution_ReturnsTrueForValidValues()
     {
+        _ = _validator.IsValidResolution(480, out var e0).Should().BeTrue();
+        _ = e0.Should().BeNull();
+        _ = _validator.IsValidResolution(576, out var e05).Should().BeTrue();
+        _ = e05.Should().BeNull();
         _ = _validator.IsValidResolution(720, out var e1).Should().BeTrue();
         _ = e1.Should().BeNull();
         _ = _validator.IsValidResolution(1080, out var e2).Should().BeTrue();
@@ -64,10 +68,10 @@ public class RequestPropertyValidatorTests
     [Fact]
     public void IsValidResolution_ReturnsFalseForInvalidValues()
     {
-        _ = _validator.IsValidResolution(480, out var e1).Should().BeFalse();
-        _ = e1.Should().Be("Resolution must be one of: 720, 1080, 2160.");
-        _ = _validator.IsValidResolution(1440, out var e2).Should().BeFalse();
-        _ = e2.Should().Be("Resolution must be one of: 720, 1080, 2160.");
+        _ = _validator.IsValidResolution(1440, out var e1).Should().BeFalse();
+        _ = e1.Should().Be("Resolution must be one of: 480, 576, 720, 1080, 2160.");
+        _ = _validator.IsValidResolution(999, out var e2).Should().BeFalse();
+        _ = e2.Should().Be("Resolution must be one of: 480, 576, 720, 1080, 2160.");
     }
 
     [Fact]

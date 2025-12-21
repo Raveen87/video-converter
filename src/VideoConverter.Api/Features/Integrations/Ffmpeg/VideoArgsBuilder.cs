@@ -7,7 +7,15 @@ internal static class VideoArgsBuilder
     public static (int Width, int Height) GetTargetDimensions(int? targetHeight)
     {
         var height = targetHeight ?? 720;
-        var width = height switch { 2160 => 3840, 1080 => 1920, 720 => 1280, _ => 1280 };
+        var width = height switch
+        {
+            2160 => 3840,
+            1080 => 1920,
+            720 => 1280,
+            576 => 1024,
+            480 => 854,
+            _ => 1280,
+        };
         return (width, height);
     }
 

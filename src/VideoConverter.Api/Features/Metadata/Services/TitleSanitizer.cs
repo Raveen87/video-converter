@@ -3,7 +3,7 @@ namespace VideoConverter.Api.Features.Metadata.Services;
 public sealed partial class TitleSanitizer : ITitleSanitizer
 {
     private static readonly string[] QualityPatterns = [
-        "1080p", "720p", "480p", "2160p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc",
+        "2160p", "1080p", "720p", "576p", "480p", "4k", "hdtv", "bluray", "dvdrip", "webrip", "h264", "x264", "x265", "hevc",
     ];
 
     private static readonly string[] SourcePatterns = [
