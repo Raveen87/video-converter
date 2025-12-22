@@ -31,7 +31,7 @@ public static class UnifiedQueueDialogLogic
         formModel.Crf = profile.Crf;
         formModel.AudioBitrateKbps = profile.AudioBitrateKbps;
         formModel.AudioChannels = profile.AudioChannels;
-        formModel.Resolution = profile.Resolution;
+        formModel.Resolution = profile.Resolution ?? formModel.Resolution;
         formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
         formModel.AudioLanguagesString = profile.AudioLanguages is not null
             ? string.Join(", ", profile.AudioLanguages)

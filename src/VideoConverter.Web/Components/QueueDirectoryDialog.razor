@@ -1,3 +1,5 @@
+@using VideoConverter.Common.Constants
+
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Queue Directory for Conversion</MudText>
@@ -52,7 +54,13 @@
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
-            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="int?" @bind-Value="_formModel.Resolution" Label="Resolution" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="int?" Value="@((int?)null)">Keep source</MudSelectItem>
+                @foreach (var resolution in ResolutionOptions.Allowed)
+                {
+                    <MudSelectItem T="int?" Value="@resolution">@($"{resolution}p")</MudSelectItem>
+                }
+            </MudSelect>
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
@@ -121,7 +129,7 @@
             _formModel.Crf = InitialModel.Crf;
             _formModel.AudioBitrateKbps = InitialModel.AudioBitrateKbps;
             _formModel.AudioChannels = InitialModel.AudioChannels;
-            _formModel.Resolution = InitialModel.Resolution;
+            _formModel.Resolution = InitialModel.Resolution ?? _formModel.Resolution;
             _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
             _formModel.OutputPathTemplate = InitialModel.OutputPathTemplate;
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
@@ -367,10 +375,7 @@
                     _formModel.AudioChannels = profile.AudioChannels;
                 }
 
-                if (!_formModel.Resolution.HasValue && profile.Resolution.HasValue)
-                {
-                    _formModel.Resolution = profile.Resolution;
-                }
+                _formModel.Resolution = profile.Resolution ?? _formModel.Resolution;
 
                 if (string.IsNullOrWhiteSpace(_formModel.OutputFilenameTemplate) && !string.IsNullOrWhiteSpace(profile.OutputFilenameTemplate))
                 {
@@ -411,7 +416,7 @@
 
         public AudioChannels? AudioChannels { get; set; }
 
-        public int? Resolution { get; set; }
+        public int? Resolution { get; set; } = ResolutionOptions.Default;
 
         public string? OutputFilenameTemplate { get; set; }
 
