@@ -111,7 +111,7 @@ public class FfmpegArgumentsBuilderTests
         _ = vfIdx.Should().BeGreaterThan(0);
         var vf = args[vfIdx + 1];
         _ = vf.Should().Contain("crop=100:100:10:10");
-        _ = vf.Should().Contain("scale=w=1280:h=720");
+        _ = vf.Should().Contain("scale=w='min(1280,iw)':h='min(720,ih)'");
     }
 
     [Fact]

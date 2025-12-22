@@ -17,6 +17,13 @@ dotnet test
 dotnet ef database update --project src/VideoConverter.Api --startup-project src/VideoConverter.Api
 ```
 
+### FFmpeg scaling best practices
+- Keep aspect ratio: use scale with a bounding box plus `force_original_aspect_ratio=decrease`.
+- Use dynamic expressions to avoid odd dimensions and upscaling: `scale=w='min(1280,iw)':h='min(720,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos,setsar=1` (swap 1280/720 for the requested box, e.g., 1920/1080).
+- `force_divisible_by=2` (used together with `force_original_aspect_ratio=decrease` as above) ensures both output dimensions are even as required by most encoders; `setsar=1` resets storage aspect to square pixels. FFmpeg’s `-2` shorthand (e.g., `scale=1280:-2`) is a different, simpler technique for auto-calculating one axis and is not used in this implementation.
+- Apply crop before scale; only pad after scale if you explicitly need letterboxing.
+- Avoid accidental upscaling by bounding each axis with `min(target,input)`; prefer Lanczos for downscale quality.
+
 ### API
 - POST `/api/conversions` (no profiles)
   - Body:
