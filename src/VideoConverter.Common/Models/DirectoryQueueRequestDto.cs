@@ -11,4 +11,5 @@ public record DirectoryQueueRequestDto(
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate,
     string? OutputPathTemplate,
-    IEnumerable<string>? Extensions);
+    IEnumerable<string>? Extensions,
+    bool? VmafEnabled = null);

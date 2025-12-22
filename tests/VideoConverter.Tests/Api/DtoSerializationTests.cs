@@ -112,7 +112,8 @@ public class DtoSerializationTests
             SubtitleLanguages: new[] { "English" },
             OutputFilenameTemplate: "{Title}",
             OutputPathTemplate: "{Type}/{Title}",
-            Extensions: new[] { ".mkv", ".mp4" });
+            Extensions: new[] { ".mkv", ".mp4" },
+            VmafEnabled: true);
 
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<DirectoryQueueRequestDto>(json);

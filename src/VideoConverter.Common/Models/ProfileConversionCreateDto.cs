@@ -2,4 +2,5 @@ namespace VideoConverter.Common.Models;
 
 public record ProfileConversionCreateDto(
     string InputPath,
-    string OutputDirectory);
+    string OutputDirectory,
+    bool? VmafEnabled = null);

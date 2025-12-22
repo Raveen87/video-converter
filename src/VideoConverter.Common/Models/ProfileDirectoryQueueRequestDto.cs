@@ -11,4 +11,5 @@ public record ProfileDirectoryQueueRequestDto(
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate,
-    string? OutputPathTemplate);
+    string? OutputPathTemplate,
+    bool? VmafEnabled = null);

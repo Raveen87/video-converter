@@ -355,6 +355,12 @@
                 StateHasChanged();
             }
         }
+        else
+        {
+            // Reset VMAF toggle when no profile is selected to match default dialog state
+            _formModel.VmafEnabled = false;
+            StateHasChanged();
+        }
     }
 
     private string GetSelectedProfileName()
@@ -430,7 +436,8 @@
                 {
                     var profileRequest = new ProfileConversionCreateDto(
                         _formModel.SelectedPath!,
-                        _formModel.OutputDirectory);
+                        _formModel.OutputDirectory,
+                        _formModel.VmafEnabled);
 
                     if (!await ValidateAndSetErrorsAsync(ProfileConversionCreateValidator, profileRequest).ConfigureAwait(false))
                     {
@@ -477,7 +484,8 @@
                         audioLanguages,
                         subtitleLanguages,
                         _formModel.OutputFilenameTemplate,
-                        _formModel.OutputPathTemplate);
+                        _formModel.OutputPathTemplate,
+                        _formModel.VmafEnabled);
 
                     if (!await ValidateAndSetErrorsAsync(ProfileDirectoryQueueValidator, profileRequest).ConfigureAwait(false))
                     {
@@ -499,7 +507,8 @@
                         subtitleLanguages,
                         _formModel.OutputFilenameTemplate,
                         _formModel.OutputPathTemplate,
-                        extensions);
+                        extensions,
+                        _formModel.VmafEnabled);
 
                     if (!await ValidateAndSetErrorsAsync(DirectoryQueueValidator, request).ConfigureAwait(false))
                     {

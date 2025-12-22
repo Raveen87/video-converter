@@ -586,6 +586,8 @@ To enable VMAF scoring:
 - Set `vmafEnabled: true` when creating a conversion or in a profile
 - After conversion completes, the `vmafScore` field will contain the calculated score (or `null` if calculation failed)
 - For long videos, VMAF uses segment-based sampling to reduce calculation time
+- Profiles now carry the default VMAF flag; queueing a conversion or directory with a profile pre-fills the dialog based on the profile, but you can still turn VMAF off before submitting.
+- Directory queue requests inherit the same VMAF flag so every queued item uses the selected default/override.
 
 Environment variable overrides:
 

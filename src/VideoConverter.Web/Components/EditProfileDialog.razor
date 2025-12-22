@@ -40,6 +40,7 @@
             <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring by Default" Color="Color.Primary" Class="mb-3" />
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
                 @if (_isSubmitting)
                 {
@@ -114,6 +115,7 @@
         _formModel.OutputPathTemplate = Profile.OutputPathTemplate;
         _formModel.AudioLanguagesString = Profile.AudioLanguages is not null ? string.Join(", ", Profile.AudioLanguages) : null;
         _formModel.SubtitleLanguagesString = Profile.SubtitleLanguages is not null ? string.Join(", ", Profile.SubtitleLanguages) : null;
+        _formModel.VmafEnabled = Profile.VmafEnabled;
     }
 
     private async Task HandleValidSubmit()
@@ -151,6 +153,7 @@
                 OutputPathTemplate = _formModel.OutputPathTemplate,
                 AudioLanguages = audioLanguages,
                 SubtitleLanguages = subtitleLanguages,
+                VmafEnabled = _formModel.VmafEnabled,
             };
 
             var validation = await ProfilePatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
@@ -237,5 +240,7 @@
         public string? AudioLanguagesString { get; set; }
 
         public string? SubtitleLanguagesString { get; set; }
+
+        public bool VmafEnabled { get; set; }
     }
 }
