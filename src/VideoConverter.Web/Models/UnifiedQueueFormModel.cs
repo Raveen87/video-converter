@@ -1,3 +1,4 @@
+using VideoConverter.Common.Constants;
 using VideoConverter.Common.Models;
 
 namespace VideoConverter.Web.Models;
@@ -45,7 +46,7 @@ public sealed class UnifiedQueueFormModel
     /// <summary>
     /// Gets or sets the target resolution (e.g., 1080, 720).
     /// </summary>
-    public int? Resolution { get; set; }
+    public int? Resolution { get; set; } = ResolutionOptions.Default;
 
     /// <summary>
     /// Gets or sets the output filename template.
