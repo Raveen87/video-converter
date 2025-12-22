@@ -18,6 +18,8 @@ public interface IVideoConverterApiClient
 
     Task<IReadOnlyList<DirectoryBatchStatusDto>> GetAllBatchesAsync(string? status = null, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<BatchConversionDto>> GetBatchConversionsAsync(int batchId, CancellationToken cancellationToken = default);
+
     Task StartQueueAsync(CancellationToken cancellationToken = default);
 
     Task PauseQueueAsync(CancellationToken cancellationToken = default);

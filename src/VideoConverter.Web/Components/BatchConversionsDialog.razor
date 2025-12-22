@@ -1,0 +1,126 @@
+@using VideoConverter.Common.Models
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Batch @BatchId Conversions</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Items.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No conversions were created for this batch.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="Items" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Item ID</MudTh>
+                    <MudTh>Item Status</MudTh>
+                    <MudTh>Reason</MudTh>
+                    <MudTh>Input Path</MudTh>
+                    <MudTh>Conversion ID</MudTh>
+                    <MudTh>Conversion Status</MudTh>
+                    <MudTh>Output Directory</MudTh>
+                    <MudTh>Created</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Item ID">@context.BatchItemId</MudTd>
+                    <MudTd DataLabel="Item Status">
+                        <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(context.BatchItemStatus)">
+                            @context.BatchItemStatus
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Reason">
+                        @if (!string.IsNullOrWhiteSpace(context.Reason))
+                        {
+                            @context.Reason
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Input Path">
+                        <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 320px;">@context.InputPath</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Conversion ID">
+                        @if (context.ConversionId.HasValue)
+                        {
+                            @context.ConversionId
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Conversion Status">
+                        @if (context.ConversionStatus is not null)
+                        {
+                            <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(context.ConversionStatus.Value.ToString())">
+                                @context.ConversionStatus
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Output Directory">
+                        @if (!string.IsNullOrWhiteSpace(context.OutputDirectory))
+                        {
+                            <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 240px;">@context.OutputDirectory</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Created">
+                        <MudText Typo="Typo.caption">@FormatDate(context.ConversionCreatedAtUtc)</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog" Color="Color.Primary" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IDialogReference? DialogReference { get; set; }
+
+    [Parameter]
+    public int BatchId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<BatchConversionDto> Items { get; set; } = Array.Empty<BatchConversionDto>();
+
+    private void CloseDialog()
+    {
+        DialogReference?.Close(DialogResult.Ok(true));
+    }
+
+    private static string FormatDate(DateTime? dateTime)
+    {
+        return dateTime?.ToLocalTime().ToString("g") ?? "—";
+    }
+
+    private static string GetStatusCssClass(string status)
+    {
+        return status switch
+        {
+            "Pending" => "status-pending",
+            "Running" => "status-running",
+            "Completed" => "status-completed",
+            "Failed" => "status-failed",
+            "Queued" => "status-pending",
+            "Skipped" => "status-failed",
+            "Invalid" => "status-failed",
+            _ => string.Empty,
+        };
+    }
+}
+
