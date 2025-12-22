@@ -28,7 +28,10 @@ internal static class VideoArgsBuilder
             logger.LogDebug("Using detected crop: {DetectedCrop}", detectedCrop);
         }
 
-        filters.Add($"scale=w={targetWidth}:h={targetHeight}:force_original_aspect_ratio=decrease:flags=lanczos");
+        var boundedWidth = $"min({targetWidth},iw)";
+        var boundedHeight = $"min({targetHeight},ih)";
+        filters.Add($"scale=w='{boundedWidth}':h='{boundedHeight}':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos");
+        filters.Add("setsar=1");
         var vf = string.Join(',', filters);
         logger.LogDebug("Video filters: {VideoFilters}", vf);
         return vf;
