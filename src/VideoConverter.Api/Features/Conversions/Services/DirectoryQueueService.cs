@@ -88,7 +88,9 @@ public sealed class DirectoryQueueService(
             request.Resolution,
             request.AudioLanguages,
             request.SubtitleLanguages,
-            request.OutputFilenameTemplate);
+            request.OutputFilenameTemplate,
+            request.OutputPathTemplate,
+            request.VmafEnabled);
 
         return perFileRequest;
     }

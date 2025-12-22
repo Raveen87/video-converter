@@ -297,7 +297,9 @@ public sealed class DirectoryBatchWorker(
                 request.Resolution,
                 request.AudioLanguages,
                 request.SubtitleLanguages,
-                request.OutputFilenameTemplate);
+                request.OutputFilenameTemplate,
+                request.OutputPathTemplate,
+                request.VmafEnabled);
         }
 
         public static string BuildValidationReason(DomainValidationResult validation)

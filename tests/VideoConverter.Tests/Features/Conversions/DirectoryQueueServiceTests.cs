@@ -79,6 +79,37 @@ public class DirectoryQueueServiceTests
         _ = (await db.Conversions.CountAsync()).Should().Be(2);
     }
 
+    [Fact]
+    public async Task QueueDirectoryAsync_AppliesVmafFlagToQueuedConversions()
+    {
+        using var tempRoot = new TempDir();
+        var inputDir = tempRoot.CreateSubdir("in");
+        var outputDir = tempRoot.CreateSubdir("out");
+        var mkv = Path.Combine(inputDir, "a.mkv");
+        await File.WriteAllTextAsync(mkv, "x");
+
+        var (db, svc) = CreateSut();
+        var req = new DirectoryQueueRequestDto(
+            inputDir,
+            outputDir,
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            VmafEnabled: true);
+
+        var result = await svc.QueueDirectoryAsync(req, CancellationToken.None);
+
+        _ = result.Queued.Should().Be(1);
+        var conversion = await db.Conversions.SingleAsync();
+        _ = conversion.VmafEnabled.Should().BeTrue();
+    }
+
     private static (AppDbContext Db, IDirectoryQueueService Svc) CreateSut()
     {
         var db = DbContextTestFactory.CreateInMemory();

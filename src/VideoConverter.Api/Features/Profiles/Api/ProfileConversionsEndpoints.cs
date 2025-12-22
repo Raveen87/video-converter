@@ -31,7 +31,9 @@ public sealed class ProfileConversionsEndpoints(
             profile.Resolution,
             profile.AudioLanguages,
             profile.SubtitleLanguages,
-            profile.OutputFilenameTemplate);
+            profile.OutputFilenameTemplate,
+            profile.OutputPathTemplate,
+            request.VmafEnabled);
 
         // Ensure request-specified output directory takes precedence
         var effective = effectiveRequestBuilder.Build(baseRequest, profile) with { OutputDirectory = request.OutputDirectory };
@@ -80,7 +82,8 @@ public sealed class ProfileConversionsEndpoints(
             SubtitleLanguages: request.SubtitleLanguages ?? profile.SubtitleLanguages,
             OutputFilenameTemplate: request.OutputFilenameTemplate ?? profile.OutputFilenameTemplate,
             OutputPathTemplate: request.OutputPathTemplate ?? profile.OutputPathTemplate,
-            Extensions: request.Extensions);
+            Extensions: request.Extensions,
+            VmafEnabled: request.VmafEnabled ?? profile.VmafEnabled);
 
         var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);
         return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });

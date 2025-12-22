@@ -20,6 +20,7 @@
                     Browse
                 </MudButton>
             </div>
+            <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring" Color="Color.Primary" Class="mb-3" />
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
                 @if (_isSubmitting)
                 {
@@ -64,6 +65,7 @@
     {
         Logger.LogDebug("ProfileQueueConversionDialog initializing for profile {ProfileId}", Profile.Id);
         _formModel.OutputDirectory = Profile.OutputDirectory ?? string.Empty;
+        _formModel.VmafEnabled = Profile.VmafEnabled;
     }
 
     private async Task HandleValidSubmit()
@@ -75,7 +77,8 @@
         {
             var request = new ProfileConversionCreateDto(
                 _formModel.InputPath,
-                _formModel.OutputDirectory);
+                _formModel.OutputDirectory,
+                _formModel.VmafEnabled);
 
             await OnSubmit.InvokeAsync(request);
             Logger.LogInformation("Form submission completed successfully");
@@ -170,6 +173,8 @@
         public string InputPath { get; set; } = string.Empty;
 
         public string OutputDirectory { get; set; } = string.Empty;
+
+        public bool VmafEnabled { get; set; }
     }
 }
 

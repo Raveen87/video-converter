@@ -17,6 +17,7 @@ internal sealed class StubConversionService : IConversionService
             Crf = request.Crf,
             AudioBitrateKbps = request.AudioBitrateKbps,
             Resolution = request.Resolution,
+            VmafEnabled = request.VmafEnabled ?? false,
         };
         return Task.FromResult(c);
     }
