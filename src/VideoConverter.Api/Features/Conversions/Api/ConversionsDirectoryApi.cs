@@ -53,6 +53,59 @@ public sealed class ConversionsDirectoryApi(
         return Results.Ok(dto);
     }
 
+    [HttpGet("queue-directory/batches/{id:int}/conversions")]
+    public async Task<IResult> GetDirectoryBatchConversionsAsync(
+        int id,
+        CancellationToken ct)
+    {
+        var batch = await db.DirectoryQueueBatches.AsNoTracking()
+            .Include(b => b.Items)
+            .FirstOrDefaultAsync(b => b.Id == id, ct)
+            .ConfigureAwait(false)
+            ?? throw ApiErrorException.NotFound(
+                ErrorCode.InvalidInput,
+                $"Batch {id} not found",
+                "The requested batch could not be found.");
+
+        var conversionIds = batch.Items
+            .Where(i => i.ConversionId is not null)
+            .Select(i => i.ConversionId!.Value)
+            .Distinct()
+            .ToList();
+
+        var conversionsById = conversionIds.Count is 0
+            ? []
+            : await db.Conversions.AsNoTracking()
+                .Where(c => conversionIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, ct)
+                .ConfigureAwait(false);
+
+        var dtos = batch.Items
+            .OrderBy(i => i.Id)
+            .Select(item =>
+            {
+                var conversion = item.ConversionId is not null && conversionsById.TryGetValue(item.ConversionId.Value, out var c)
+                    ? c
+                    : null;
+
+                return new BatchConversionDto(
+                    item.Id,
+                    item.Status,
+                    item.InputPath,
+                    item.Reason,
+                    item.ConversionId,
+                    conversion?.Status,
+                    conversion?.OutputDirectory,
+                    conversion?.CreatedAtUtc);
+            })
+            .ToList();
+
+        loggerFactory.CreateLogger<ConversionsDirectoryApi>()
+            .LogDebug("Retrieved {Count} conversions for batch {BatchId}", dtos.Count, id);
+
+        return Results.Ok(dtos);
+    }
+
     [HttpGet("queue-directory/batches")]
     public async Task<IResult> GetAllDirectoryBatchesAsync(
         [FromQuery] string? status,

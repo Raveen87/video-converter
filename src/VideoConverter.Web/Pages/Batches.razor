@@ -4,6 +4,7 @@
 @inject ILogger<Batches> Logger
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 @implements IDisposable
 
 <PageTitle>Directory Batches</PageTitle>
@@ -59,6 +60,7 @@
                 <MudTh>Current Item</MudTh>
                 <MudTh>Created</MudTh>
                 <MudTh>Profile</MudTh>
+                <MudTh>Items</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Batch ID">
@@ -113,6 +115,15 @@
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
                     }
+                </MudTd>
+                <MudTd DataLabel="Items">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="async () => await OpenBatchConversionsDialogAsync(context)"
+                               StartIcon="@Icons.Material.Filled.List">
+                        View items
+                    </MudButton>
                 </MudTd>
             </RowTemplate>
         </MudTable>
@@ -220,6 +231,34 @@
     {
         Logger.LogInformation("Batches page disposing");
         StopPolling();
+    }
+
+    private async Task OpenBatchConversionsDialogAsync(DirectoryBatchStatusDto batch)
+    {
+        Logger.LogInformation("Opening batch conversions dialog for batch {BatchId}", batch.BatchId);
+        try
+        {
+            var items = await ApiClient.GetBatchConversionsAsync(batch.BatchId).ConfigureAwait(false);
+            var parameters = new DialogParameters
+            {
+                { nameof(BatchConversionsDialog.BatchId), batch.BatchId },
+                { nameof(BatchConversionsDialog.Items), items },
+            };
+
+            var options = new DialogOptions
+            {
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true,
+            };
+
+            _ = await DialogService.ShowAsync<BatchConversionsDialog>($"Batch {batch.BatchId} items", parameters, options);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading batch conversions for batch {BatchId}", batch.BatchId);
+            Snackbar.Add($"Error loading batch items: {ex.Message}", Severity.Error);
+        }
     }
 }
 

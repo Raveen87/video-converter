@@ -216,6 +216,34 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
+    public async Task<IReadOnlyList<BatchConversionDto>> GetBatchConversionsAsync(int batchId, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting batch conversions for batch ID {BatchId}", batchId);
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<IReadOnlyList<BatchConversionDto>>(
+                $"api/conversions/queue-directory/batches/{batchId}/conversions",
+                _jsonOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            if (response is null)
+            {
+                _logger.LogError("Failed to deserialize batch conversions for batch ID {BatchId}", batchId);
+                throw new InvalidOperationException($"Failed to deserialize batch conversions for batch ID {batchId}");
+            }
+
+            _logger.LogInformation("Successfully retrieved {Count} batch conversions for batch ID {BatchId}", response.Count, batchId);
+            return response;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting batch conversions for batch ID {BatchId}", batchId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
     public async Task<IReadOnlyList<DirectoryBatchStatusDto>> GetAllBatchesAsync(string? status = null, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Getting all batches with status filter: {Status}", status ?? "none");
