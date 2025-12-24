@@ -29,7 +29,7 @@
                 <MudNumericField @bind-Value="_formModel.Crf" Label="CRF (Quality)" HelperText="Lower is higher quality (18-28 recommended)" Variant="Variant.Outlined" Class="mb-3" />
                 <MudNumericField @bind-Value="_formModel.AudioBitrateKbps" Label="Audio Bitrate (Kbps)" Variant="Variant.Outlined" Class="mb-3" />
                 <MudSelect T="AudioChannels?" @bind-Value="_formModel.AudioChannels" Label="Audio Channels" Variant="Variant.Outlined" Class="mb-3">
-                    <MudSelectItem T="AudioChannels?" Value="@((AudioChannels?)null)">Default</MudSelectItem>
+                    <MudSelectItem T="AudioChannels?" Value="@((AudioChannels?)null)">Keep source</MudSelectItem>
                     <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
                     <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
                 </MudSelect>
