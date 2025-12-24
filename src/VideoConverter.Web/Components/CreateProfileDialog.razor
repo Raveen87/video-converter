@@ -1,3 +1,4 @@
+@using VideoConverter.Common.Constants
 @using VideoConverter.Common.Validation
 
 <MudDialog>
@@ -35,7 +36,13 @@
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Stereo20">Stereo 2.0</MudSelectItem>
                 <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
             </MudSelect>
-            <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 1080, 720" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="int?" @bind-Value="_formModel.Resolution" Label="Resolution" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem T="int?" Value="@((int?)null)">Keep source</MudSelectItem>
+                @foreach (var resolution in ResolutionOptions.Allowed)
+                {
+                    <MudSelectItem T="int?" Value="@resolution">@($"{resolution}p")</MudSelectItem>
+                }
+            </MudSelect>
             <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
