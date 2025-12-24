@@ -23,17 +23,32 @@
     {
         <MudTable Items="@_conversions" MultiSelection="true" @bind-SelectedItems="_selectedItems" Hover="true" Dense="true" Striped="true" Breakpoint="Breakpoint.Sm">
             <ToolBarContent>
-                <MudSpacer />
+                <MudButton StartIcon="@Icons.Material.Filled.DeleteSweep"
+                           Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           Disabled="_isClearingFinished"
+                           OnClick="ClearFinishedAsync">
+                    Clear finished
+                </MudButton>
                 @if (_selectedItems.Count > 0)
                 {
-                     <MudButton StartIcon="@Icons.Material.Filled.EditLocation" 
-                               Variant="Variant.Filled" 
-                               Color="Color.Warning" 
-                               OnClick="OpenBatchResolveMetadataDialog"
+                    <MudButton StartIcon="@Icons.Material.Filled.Delete"
+                               Variant="Variant.Filled"
+                               Color="Color.Error"
+                               Disabled="_isDeletingSelected"
+                               OnClick="DeleteSelectedAsync"
                                Class="ml-2">
+                        Delete selected (@_selectedItems.Count)
+                    </MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.EditLocation" 
+                              Variant="Variant.Filled" 
+                              Color="Color.Warning" 
+                              OnClick="OpenBatchResolveMetadataDialog"
+                              Class="ml-2">
                         Fix Match (@_selectedItems.Count)
                     </MudButton>
                 }
+                <MudSpacer />
             </ToolBarContent>
             <HeaderContent>
                 <MudTh>ID</MudTh>
@@ -203,6 +218,8 @@
 @code {
     private IReadOnlyList<ConversionDto> _conversions = Array.Empty<ConversionDto>();
     private HashSet<ConversionDto> _selectedItems = new();
+    private bool _isDeletingSelected;
+    private bool _isClearingFinished;
 
     [Inject]
     private ConversionStateService _stateService { get; set; } = null!;
@@ -340,6 +357,74 @@
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         dialogRef = await DialogService.ShowAsync<ResolveMetadataDialog>("Resolve Batch Metadata", parameters, options);
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (_selectedItems.Count == 0)
+        {
+            return;
+        }
+
+        _isDeletingSelected = true;
+        StateHasChanged();
+
+        try
+        {
+            var ids = _selectedItems.Select(x => x.Id).ToList();
+            Logger.LogInformation("User action: deleting {Count} selected conversions", ids.Count);
+
+            var result = await ApiClient.DeleteConversionsAsync(ids).ConfigureAwait(false);
+
+            foreach (var id in ids)
+            {
+                _stateService.RemoveConversion(id);
+            }
+
+            _selectedItems.Clear();
+
+            Snackbar.Add($"Deleted {result.Deleted} conversion{(result.Deleted == 1 ? string.Empty : "s")}", Severity.Success);
+
+            if (result.MissingIds.Count > 0)
+            {
+                Snackbar.Add($"{result.MissingIds.Count} conversions were already removed.", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting selected conversions");
+            Snackbar.Add($"Error deleting conversions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isDeletingSelected = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearFinishedAsync()
+    {
+        _isClearingFinished = true;
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogInformation("User action: clearing finished conversions");
+            var deleted = await ApiClient.ClearFinishedConversionsAsync().ConfigureAwait(false);
+            await _stateService.LoadConversionsAsync().ConfigureAwait(false);
+            _selectedItems.Clear();
+            Snackbar.Add($"Cleared {deleted} finished conversion{(deleted == 1 ? string.Empty : "s")}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error clearing finished conversions");
+            Snackbar.Add($"Error clearing finished conversions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isClearingFinished = false;
+            StateHasChanged();
+        }
     }
 
     private async Task UpdateConversionAsync(int id, ConversionPatchDto patch)

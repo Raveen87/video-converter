@@ -12,6 +12,10 @@ public interface IVideoConverterApiClient
 
     Task<ConversionDto> DeleteConversionAsync(int id, CancellationToken cancellationToken = default);
 
+    Task<DeletionResultDto> DeleteConversionsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
+    Task<int> ClearFinishedConversionsAsync(int? olderThanDays = null, CancellationToken cancellationToken = default);
+
     Task<int> QueueDirectoryAsync(DirectoryQueueRequestDto request, CancellationToken cancellationToken = default);
 
     Task<DirectoryBatchStatusDto> GetBatchStatusAsync(int batchId, CancellationToken cancellationToken = default);

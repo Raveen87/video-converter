@@ -1,5 +1,6 @@
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
@@ -15,7 +16,9 @@ public sealed class ConversionsApi(
     Notifications.Services.INotificationService notificationService,
     ILogger<ConversionsApi> logger,
     IProgressTracker progressTracker,
-    ConversionsEndpoints conversionsEndpoints) : ControllerBase
+    ConversionsEndpoints conversionsEndpoints,
+    IRunningProcessRegistry processRegistry,
+    IProcessController processController) : ControllerBase
 {
     [HttpPost]
     public async Task<IResult> CreateConversionAsync(
@@ -190,5 +193,63 @@ public sealed class ConversionsApi(
         await ConversionsApiHelpers.AddNotificationForConversionDeletedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
 
         return Results.Ok(ConversionsApiHelpers.ToDto(conversion));
+    }
+
+    [HttpDelete]
+    public async Task<IResult> DeleteConversionsAsync(
+        [FromBody] BulkDeleteConversionsRequestDto request,
+        CancellationToken ct)
+    {
+        if (request?.Ids is null)
+        {
+            logger.LogWarning("Bulk delete requested with null request body");
+            return Results.BadRequest(new { error = "Conversion IDs are required." });
+        }
+
+        var ids = request.Ids.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count is 0)
+        {
+            logger.LogWarning("Bulk delete requested with empty or invalid IDs");
+            return Results.BadRequest(new { error = "At least one valid conversion ID is required." });
+        }
+
+        logger.LogInformation("Bulk deleting conversions {@Ids}", ids);
+        var conversions = await db.Conversions
+            .Where(c => ids.Contains(c.Id))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var missingIds = ids.Except(conversions.Select(c => c.Id)).ToList();
+
+        var runningConversionIds = conversions
+            .Where(c => c.Status is ConversionStatus.Running)
+            .Select(c => c.Id)
+            .ToList();
+
+        foreach (var conversionId in runningConversionIds)
+        {
+            var key = $"conversion:{conversionId}";
+            if (processRegistry.TryGet(key, out var handle))
+            {
+                var (stopped, forced) = await processController.TryGracefulStopAsync(handle, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+                logger.LogInformation("Stopped running conversion {ConversionId} before deletion. Stopped={Stopped}, Forced={Forced}", conversionId, stopped, forced);
+            }
+            else
+            {
+                logger.LogWarning("Running conversion {ConversionId} not found in process registry during deletion", conversionId);
+            }
+        }
+
+        db.Conversions.RemoveRange(conversions);
+        var deletedCount = conversions.Count;
+        _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        foreach (var conversion in conversions)
+        {
+            await ConversionsApiHelpers.AddNotificationForConversionDeletedAsync(conversion: conversion, notificationService: notificationService, ct: ct).ConfigureAwait(false);
+        }
+
+        logger.LogInformation("Bulk deleted {DeletedCount} conversions. MissingIds: {MissingIds}", deletedCount, missingIds);
+        return Results.Ok(new DeletionResultDto(deletedCount, missingIds));
     }
 }
