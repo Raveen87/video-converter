@@ -1,3 +1,5 @@
+using System.Text;
+
 using VideoConverter.Common.Models;
 using VideoConverter.Web.Models;
 
@@ -148,6 +150,65 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting conversion {ConversionId}", id);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<DeletionResultDto> DeleteConversionsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids?.Where(id => id > 0).Distinct().ToList() ?? [];
+        _logger.LogDebug("Deleting {Count} conversions", idList.Count);
+
+        try
+        {
+            var payload = JsonSerializer.Serialize(new BulkDeleteConversionsRequestDto(idList), _jsonOptions);
+            using var message = new HttpRequestMessage(HttpMethod.Delete, "api/conversions")
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+            };
+
+            var response = await _httpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
+
+            await EnsureSuccessAsync(response, "Delete conversions", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<DeletionResultDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+                ?? new DeletionResultDto(0, Array.Empty<int>());
+            _logger.LogInformation("Successfully deleted {DeletedCount} conversions (missing: {MissingCount})", result.Deleted, result.MissingIds.Count);
+            return result;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting multiple conversions");
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    public async Task<int> ClearFinishedConversionsAsync(int? olderThanDays = null, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Clearing finished conversions olderThanDays={OlderThanDays}", olderThanDays);
+
+        try
+        {
+            var url = olderThanDays is int days
+                ? $"api/conversions/finished?olderThanDays={days}"
+                : "api/conversions/finished";
+
+            var response = await _httpClient.DeleteAsync(url, cancellationToken).ConfigureAwait(false);
+            await EnsureSuccessAsync(response, "Clear finished conversions", cancellationToken).ConfigureAwait(false);
+
+            var result = await response.Content.ReadFromJsonAsync<DeletedCountResponse>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+            var deleted = result?.Deleted ?? 0;
+
+            _logger.LogInformation("Successfully cleared {DeletedCount} finished conversions", deleted);
+            return deleted;
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing finished conversions");
             throw;
         }
 #pragma warning restore S2139
@@ -1045,7 +1106,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 
         // Manually construct JSON Patch document to ensure exact RFC 6902 format
         // ASP.NET Core's JsonPatchDocument model binder is very strict about the format
-        var jsonBuilder = new System.Text.StringBuilder();
+        var jsonBuilder = new StringBuilder();
         _ = jsonBuilder.Append('[');
         for (var i = 0; i < patchOperations.Count; i++)
         {
@@ -1078,7 +1139,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 
         var request = new HttpRequestMessage(HttpMethod.Patch, $"api/conversions/{id}")
         {
-            Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json-patch+json"),
+            Content = new StringContent(jsonContent, Encoding.UTF8, "application/json-patch+json"),
         };
 
         return (request, jsonContent);
@@ -1154,4 +1215,6 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         [JsonPropertyName("value")]
         public object? Value { get; set; }
     }
+
+    private sealed record DeletedCountResponse(int Deleted);
 }

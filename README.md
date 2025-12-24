@@ -135,6 +135,15 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     - 200 OK with the updated conversion (status: `Deleted`, `deletedAtUtc` set)
     - 400 if conversion is not in `Pending` status
     - 404 if conversion not found
+- DELETE `/api/conversions`
+  - Bulk delete conversions by ID, regardless of status. Running conversions are stopped before removal.
+  - Body:
+    ```json
+    { "ids": [1, 2, 3] }
+    ```
+  - Responses:
+    - 200 OK with `{ "deleted": <count>, "missingIds": [<ids>] }`
+    - 400 if payload is missing or invalid
 
 - PATCH `/api/conversions/{id:int}`
   - Updates a conversion's settings. Only conversions in `Pending` status can be updated.
@@ -274,9 +283,10 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
 - Only displays current and pending conversions
 
 #### Conversions View (`/conversions`)
-- Read-only browser of all conversions in the database
+- Full browser of all conversions in the database
 - Shows all conversions (current, pending, finished, deleted, failed)
 - Displays live progress for running conversions
+- Supports multi-select actions (batch metadata fix, bulk delete) and a one-click "Clear finished" action to remove completed/failed items
 - **Rich Metadata Display**: Shows matched movie/TV show titles, release years, season/episode numbers, and provides direct links to TMDb.
 - Allows editing conversion settings
 - Does not provide queue management controls (start/pause/stop)

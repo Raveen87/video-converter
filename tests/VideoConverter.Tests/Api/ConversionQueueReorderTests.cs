@@ -435,6 +435,8 @@ public sealed class ConversionQueueReorderTests
             new RequestPropertyValidator());
         var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
         var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
+        var processRegistry = new RunningProcessRegistry();
+        var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
 
         return new ConversionsApi(
             db,
@@ -443,6 +445,8 @@ public sealed class ConversionQueueReorderTests
             notificationService,
             loggerFactory.CreateLogger<ConversionsApi>(),
             progressTracker,
-            conversionsEndpoints);
+            conversionsEndpoints,
+            processRegistry,
+            processController);
     }
 }
