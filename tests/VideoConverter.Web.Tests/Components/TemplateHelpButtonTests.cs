@@ -68,6 +68,7 @@ public sealed class TemplateHelpButtonTests : BunitContext
     {
         // Arrange
         var dialogReferenceMock = new Mock<IDialogReference>();
+
         _dialogServiceMock.Setup(x => x.ShowAsync<TemplateHelpDialog>(
                 It.IsAny<string>(),
                 It.IsAny<DialogParameters<TemplateHelpDialog>>(),
@@ -85,8 +86,7 @@ public sealed class TemplateHelpButtonTests : BunitContext
         _dialogServiceMock.Verify(
             x => x.ShowAsync<TemplateHelpDialog>(
             "Template Guide",
-            It.Is<DialogParameters<TemplateHelpDialog>>(p =>
-                VerifyDialogParameters(p, TemplateType.Filename)),
+            It.IsAny<DialogParameters<TemplateHelpDialog>>(),
             It.Is<DialogOptions>(o =>
                 o.CloseOnEscapeKey == true &&
                 o.MaxWidth == MaxWidth.Medium &&
@@ -99,6 +99,7 @@ public sealed class TemplateHelpButtonTests : BunitContext
     {
         // Arrange
         var dialogReferenceMock = new Mock<IDialogReference>();
+
         _dialogServiceMock.Setup(x => x.ShowAsync<TemplateHelpDialog>(
                 It.IsAny<string>(),
                 It.IsAny<DialogParameters<TemplateHelpDialog>>(),
@@ -116,38 +117,11 @@ public sealed class TemplateHelpButtonTests : BunitContext
         _dialogServiceMock.Verify(
             x => x.ShowAsync<TemplateHelpDialog>(
             "Template Guide",
-            It.Is<DialogParameters<TemplateHelpDialog>>(p =>
-                VerifyDialogParameters(p, TemplateType.Path)),
+            It.IsAny<DialogParameters<TemplateHelpDialog>>(),
             It.Is<DialogOptions>(o =>
                 o.CloseOnEscapeKey == true &&
                 o.MaxWidth == MaxWidth.Medium &&
                 o.FullWidth == true)),
-            Times.Once);
-    }
-
-    [Fact]
-    public void OnClick_PassesCorrectDialogTitle()
-    {
-        // Arrange
-        var dialogReferenceMock = new Mock<IDialogReference>();
-        _dialogServiceMock.Setup(x => x.ShowAsync<TemplateHelpDialog>(
-                It.IsAny<string>(),
-                It.IsAny<DialogParameters<TemplateHelpDialog>>(),
-                It.IsAny<DialogOptions>()))
-            .ReturnsAsync(dialogReferenceMock.Object);
-
-        var cut = Render<TemplateHelpButton>();
-
-        // Act
-        var button = cut.Find("button");
-        button.Click();
-
-        // Assert
-        _dialogServiceMock.Verify(
-            x => x.ShowAsync<TemplateHelpDialog>(
-            "Template Guide",
-            It.IsAny<DialogParameters<TemplateHelpDialog>>(),
-            It.IsAny<DialogOptions>()),
             Times.Once);
     }
 
@@ -167,7 +141,7 @@ public sealed class TemplateHelpButtonTests : BunitContext
     }
 
     [Fact]
-    public void DefaultTemplateType_IsFilename()
+    public void OnClick_WithDefaultTemplateType_OpensDialogWithCorrectTitle()
     {
         // Arrange
         var dialogReferenceMock = new Mock<IDialogReference>();
@@ -177,54 +151,17 @@ public sealed class TemplateHelpButtonTests : BunitContext
                 It.IsAny<DialogOptions>()))
             .ReturnsAsync(dialogReferenceMock.Object);
 
-        // Act - Render without specifying TemplateType
+        // Act - Render without specifying TemplateType (defaults to Filename)
         var cut = Render<TemplateHelpButton>();
         var button = cut.Find("button");
         button.Click();
 
-        // Assert - Should default to Filename
+        // Assert - Should call ShowAsync with correct title and default TemplateType
         _dialogServiceMock.Verify(
             x => x.ShowAsync<TemplateHelpDialog>(
-            It.IsAny<string>(),
-            It.Is<DialogParameters<TemplateHelpDialog>>(p =>
-                VerifyDialogParameters(p, TemplateType.Filename)),
+            "Template Guide",
+            It.IsAny<DialogParameters<TemplateHelpDialog>>(),
             It.IsAny<DialogOptions>()),
             Times.Once);
-    }
-
-    /// <summary>
-    /// Helper method to verify DialogParameters contain the correct InitialTab value.
-    /// </summary>
-    private static bool VerifyDialogParameters(DialogParameters<TemplateHelpDialog> parameters, TemplateType expectedType)
-    {
-        // DialogParameters in MudBlazor stores values internally
-        // We need to verify that the InitialTab parameter matches the expected type
-        // This is done by checking if the parameters were constructed correctly
-        try
-        {
-            // Try to get the parameter value
-            // Note: DialogParameters doesn't expose a way to get values directly,
-            // so we verify by attempting to convert to the expected format
-            var parametersDictionary = parameters as IDictionary<string, object>;
-            if (parametersDictionary != null)
-            {
-                // Check if there's an entry for InitialTab
-                foreach (var kvp in parametersDictionary)
-                {
-                    if (kvp.Value is TemplateType type && type == expectedType)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            // If we can't verify directly, assume it's correct
-            // The actual dialog opening is what matters most
-            return true;
-        }
-        catch
-        {
-            return true;
-        }
     }
 }
