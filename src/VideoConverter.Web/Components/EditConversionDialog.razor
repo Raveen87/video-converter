@@ -34,7 +34,10 @@
                     <MudSelectItem T="AudioChannels?" Value="@AudioChannels.Surround51">Surround 5.1</MudSelectItem>
                 </MudSelect>
                 <MudNumericField @bind-Value="_formModel.Resolution" Label="Resolution (p)" HelperText="e.g., 480, 576, 720, 1080, 2160" Variant="Variant.Outlined" Class="mb-3" />
-                <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+                <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <TemplateHelpButton TemplateType="TemplateHelpDialog.TemplateType.Filename" Class="ml-1" />
+            </div>
                 <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
                 <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
                 <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring" Color="Color.Primary" Class="mb-3" />

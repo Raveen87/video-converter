@@ -1,0 +1,38 @@
+@using static VideoConverter.Web.Components.TemplateHelpDialog
+
+<MudTooltip Text="Template Help">
+    <MudIconButton Icon="@Icons.Material.Filled.HelpOutline"
+                   Size="Size.Small"
+                   Color="Color.Default"
+                   OnClick="OpenHelpDialog"
+                   Class="@Class" />
+</MudTooltip>
+
+@code {
+    [Parameter]
+    public TemplateType TemplateType { get; set; } = TemplateType.Filename;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
+    private async Task OpenHelpDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        };
+
+        var parameters = new DialogParameters<TemplateHelpDialog>
+        {
+            { x => x.InitialTab, TemplateType },
+        };
+
+        await DialogService.ShowAsync<TemplateHelpDialog>("Template Guide", parameters, options).ConfigureAwait(false);
+    }
+}
+
