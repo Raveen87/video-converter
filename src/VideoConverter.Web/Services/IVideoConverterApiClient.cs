@@ -1,4 +1,5 @@
 using VideoConverter.Common.Models;
+using VideoConverter.Web.Models;
 
 namespace VideoConverter.Web.Services;
 
@@ -42,7 +43,7 @@ public interface IVideoConverterApiClient
 
     Task<ProfileDto> CreateProfileAsync(ProfileCreateDto request, CancellationToken cancellationToken = default);
 
-    Task<ProfileDto> UpdateProfileAsync(int id, ProfilePatchDto patch, CancellationToken cancellationToken = default);
+    Task<ProfileDto> UpdateProfileAsync(int id, ProfilePatchRequest patchRequest, CancellationToken cancellationToken = default);
 
     Task DeleteProfileAsync(int id, CancellationToken cancellationToken = default);
 

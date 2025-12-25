@@ -559,18 +559,28 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
 #pragma warning restore S2139
     }
 
-    public async Task<ProfileDto> UpdateProfileAsync(int id, ProfilePatchDto patch, CancellationToken cancellationToken = default)
+    public async Task<ProfileDto> UpdateProfileAsync(int id, ProfilePatchRequest patchRequest, CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Updating profile {ProfileId}", id);
         try
         {
-            var response = await _httpClient.PatchAsJsonAsync(
-                $"api/profiles/{id}",
-                patch,
-                _jsonOptions,
-                cancellationToken).ConfigureAwait(false);
+            if (patchRequest.ChangedFields.Count is 0)
+            {
+                throw new ArgumentException("No changes detected for profile update.", nameof(patchRequest));
+            }
 
-            await EnsureSuccessAsync(response, $"Update profile {id}", cancellationToken).ConfigureAwait(false);
+            var (request, jsonContent) = CreateProfileJsonPatchRequest(id, patchRequest, _logger);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
+                var statusCode = response.StatusCode;
+                _logger.LogError("Update profile {ProfileId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
+                _logger.LogError("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+
+                throw new HttpRequestException($"Error: {statusCode} - {errorMessage}");
+            }
 
             var result = await response.Content.ReadFromJsonAsync<ProfileDto>(_jsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Failed to deserialize profile response");
@@ -1097,6 +1107,83 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         }
 
         return patchOperations;
+    }
+
+    private static List<JsonPatchOperation> CreateProfileJsonPatchOperations(ProfilePatchRequest patchRequest)
+    {
+        var patch = patchRequest.Patch;
+        var changed = new HashSet<string>(patchRequest.ChangedFields, StringComparer.Ordinal);
+        var patchOperations = new List<JsonPatchOperation>();
+
+        void AddOperation(string propertyName, object? value)
+        {
+            if (!changed.Contains(propertyName))
+            {
+                return;
+            }
+
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = $"/{propertyName}", Value = value });
+        }
+
+        AddOperation(nameof(ProfilePatchDto.Name), patch.Name);
+        AddOperation(nameof(ProfilePatchDto.OutputDirectory), patch.OutputDirectory);
+        AddOperation(nameof(ProfilePatchDto.Crf), patch.Crf);
+        AddOperation(nameof(ProfilePatchDto.AudioBitrateKbps), patch.AudioBitrateKbps);
+        AddOperation(nameof(ProfilePatchDto.AudioChannels), patch.AudioChannels?.ToString());
+        AddOperation(nameof(ProfilePatchDto.Resolution), patch.Resolution);
+        AddOperation(nameof(ProfilePatchDto.OutputFilenameTemplate), patch.OutputFilenameTemplate);
+        AddOperation(nameof(ProfilePatchDto.OutputPathTemplate), patch.OutputPathTemplate);
+        AddOperation(nameof(ProfilePatchDto.AudioLanguages), patch.AudioLanguages);
+        AddOperation(nameof(ProfilePatchDto.SubtitleLanguages), patch.SubtitleLanguages);
+        AddOperation(nameof(ProfilePatchDto.VmafEnabled), patch.VmafEnabled);
+
+        return patchOperations;
+    }
+
+    private static (HttpRequestMessage Request, string JsonContent) CreateProfileJsonPatchRequest(int id, ProfilePatchRequest patchRequest, ILogger<VideoConverterApiClient> logger)
+    {
+        var patchOperations = CreateProfileJsonPatchOperations(patchRequest);
+        if (patchOperations.Count is 0)
+        {
+            throw new ArgumentException("No patch operations were generated for the profile update.", nameof(patchRequest));
+        }
+
+        var jsonBuilder = new StringBuilder();
+        _ = jsonBuilder.Append('[');
+        for (var i = 0; i < patchOperations.Count; i++)
+        {
+            var op = patchOperations[i];
+            if (i > 0)
+            {
+                _ = jsonBuilder.Append(',');
+            }
+
+            _ = jsonBuilder.Append('{');
+            _ = jsonBuilder.Append("\"op\":\"");
+            _ = jsonBuilder.Append(op.Op);
+            _ = jsonBuilder.Append("\",\"path\":\"");
+            _ = jsonBuilder.Append(op.Path);
+            _ = jsonBuilder.Append("\",\"value\":");
+
+            var valueJson = JsonSerializer.Serialize(op.Value);
+            _ = jsonBuilder.Append(valueJson);
+            _ = jsonBuilder.Append('}');
+        }
+
+        _ = jsonBuilder.Append(']');
+        var jsonContent = jsonBuilder.ToString();
+
+        logger.LogInformation("=== JSON Patch Document for profile {ProfileId} ===", id);
+        logger.LogInformation("JSON Content: {JsonContent}", jsonContent);
+        logger.LogInformation("JSON Length: {Length} bytes", jsonContent.Length);
+        logger.LogInformation("=== End JSON Patch Document ===");
+
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"api/profiles/{id}")
+        {
+            Content = new StringContent(jsonContent, Encoding.UTF8, "application/json-patch+json"),
+        };
+
+        return (request, jsonContent);
     }
 
     private static (HttpRequestMessage Request, string JsonContent) CreateJsonPatchRequest(int id, ConversionPatchDto patch, ILogger<VideoConverterApiClient> logger)

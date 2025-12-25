@@ -1,4 +1,8 @@
+@using System
+@using System.Collections.Generic
+@using System.Linq
 @using VideoConverter.Common.Validation
+@using VideoConverter.Web.Models
 
 <MudDialog>
     <TitleContent>
@@ -41,7 +45,7 @@
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring by Default" Color="Color.Primary" Class="mb-3" />
-            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSubmitting || !HasChanges)">
                 @if (_isSubmitting)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -67,7 +71,7 @@
     public ProfileDto Profile { get; set; } = default!;
 
     [Parameter]
-    public EventCallback<ProfilePatchDto> OnSubmit { get; set; }
+    public EventCallback<ProfilePatchRequest> OnSubmit { get; set; }
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
@@ -124,37 +128,21 @@
         _isSubmitting = true;
         try
         {
-            IReadOnlyList<string>? audioLanguages = null;
-            IReadOnlyList<string>? subtitleLanguages = null;
-
-            if (!string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString))
-            {
-                audioLanguages = _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-            }
-
-            if (!string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString))
-            {
-                subtitleLanguages = _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-            }
+            var (audioLanguages, subtitleLanguages) = ParseLanguageInputs();
 
             Logger.LogDebug("Form data converted. AudioLanguages: {AudioLanguages}, SubtitleLanguages: {SubtitleLanguages}",
                 audioLanguages != null ? string.Join(", ", audioLanguages) : "null",
                 subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
 
-            var patch = new ProfilePatchDto
+            var (patch, changedFields) = BuildPatch(Profile, audioLanguages, subtitleLanguages);
+            if (changedFields.Count == 0)
             {
-                Name = _formModel.Name,
-                OutputDirectory = _formModel.OutputDirectory,
-                Crf = _formModel.Crf,
-                AudioBitrateKbps = _formModel.AudioBitrateKbps,
-                AudioChannels = _formModel.AudioChannels,
-                Resolution = _formModel.Resolution,
-                OutputFilenameTemplate = _formModel.OutputFilenameTemplate,
-                OutputPathTemplate = _formModel.OutputPathTemplate,
-                AudioLanguages = audioLanguages,
-                SubtitleLanguages = subtitleLanguages,
-                VmafEnabled = _formModel.VmafEnabled,
-            };
+                _validationErrors = new Dictionary<string, string[]>
+                {
+                    { "General", new[] { "No changes to save." } },
+                };
+                return;
+            }
 
             var validation = await ProfilePatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
             if (!validation.IsValid)
@@ -164,7 +152,7 @@
             }
 
             _validationErrors = null;
-            await OnSubmit.InvokeAsync(patch);
+            await OnSubmit.InvokeAsync(new ProfilePatchRequest(patch, changedFields));
             Logger.LogInformation("Form submission completed successfully");
         }
         catch (Exception ex)
@@ -211,6 +199,124 @@
         Logger.LogInformation("Directory selected from browser: {Path}", path);
         _formModel.OutputDirectory = path;
         StateHasChanged();
+    }
+
+    private bool HasChanges
+    {
+        get
+        {
+            var (audioLanguages, subtitleLanguages) = ParseLanguageInputs();
+            var (_, changedFields) = BuildPatch(Profile, audioLanguages, subtitleLanguages);
+            return changedFields.Count > 0;
+        }
+    }
+
+    private (IReadOnlyList<string>? Audio, IReadOnlyList<string>? Subtitle) ParseLanguageInputs()
+    {
+        IReadOnlyList<string>? audioLanguages = null;
+        IReadOnlyList<string>? subtitleLanguages = null;
+
+        if (!string.IsNullOrWhiteSpace(_formModel.AudioLanguagesString))
+        {
+            audioLanguages = _formModel.AudioLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(_formModel.SubtitleLanguagesString))
+        {
+            subtitleLanguages = _formModel.SubtitleLanguagesString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        }
+
+        return (audioLanguages, subtitleLanguages);
+    }
+
+    private (ProfilePatchDto Patch, HashSet<string> ChangedFields) BuildPatch(ProfileDto original, IReadOnlyList<string>? audioLanguages, IReadOnlyList<string>? subtitleLanguages)
+    {
+        var patch = new ProfilePatchDto();
+        var changedFields = new HashSet<string>(StringComparer.Ordinal);
+
+        if (!string.Equals(_formModel.Name, original.Name, StringComparison.Ordinal))
+        {
+            patch.Name = _formModel.Name;
+            _ = changedFields.Add(nameof(ProfilePatchDto.Name));
+        }
+
+        var normalizedOutputDirectory = string.IsNullOrWhiteSpace(_formModel.OutputDirectory) ? null : _formModel.OutputDirectory;
+        if (!string.Equals(normalizedOutputDirectory, original.OutputDirectory, StringComparison.Ordinal))
+        {
+            patch.OutputDirectory = normalizedOutputDirectory;
+            _ = changedFields.Add(nameof(ProfilePatchDto.OutputDirectory));
+        }
+
+        if (_formModel.Crf != original.Crf)
+        {
+            patch.Crf = _formModel.Crf;
+            _ = changedFields.Add(nameof(ProfilePatchDto.Crf));
+        }
+
+        if (_formModel.AudioBitrateKbps != original.AudioBitrateKbps)
+        {
+            patch.AudioBitrateKbps = _formModel.AudioBitrateKbps;
+            _ = changedFields.Add(nameof(ProfilePatchDto.AudioBitrateKbps));
+        }
+
+        if (_formModel.AudioChannels != original.AudioChannels)
+        {
+            patch.AudioChannels = _formModel.AudioChannels;
+            _ = changedFields.Add(nameof(ProfilePatchDto.AudioChannels));
+        }
+
+        if (_formModel.Resolution != original.Resolution)
+        {
+            patch.Resolution = _formModel.Resolution;
+            _ = changedFields.Add(nameof(ProfilePatchDto.Resolution));
+        }
+
+        if (!string.Equals(_formModel.OutputFilenameTemplate, original.OutputFilenameTemplate, StringComparison.Ordinal))
+        {
+            patch.OutputFilenameTemplate = _formModel.OutputFilenameTemplate;
+            _ = changedFields.Add(nameof(ProfilePatchDto.OutputFilenameTemplate));
+        }
+
+        if (!string.Equals(_formModel.OutputPathTemplate, original.OutputPathTemplate, StringComparison.Ordinal))
+        {
+            patch.OutputPathTemplate = _formModel.OutputPathTemplate;
+            _ = changedFields.Add(nameof(ProfilePatchDto.OutputPathTemplate));
+        }
+
+        if (!AreListsEqual(audioLanguages, original.AudioLanguages))
+        {
+            patch.AudioLanguages = audioLanguages;
+            _ = changedFields.Add(nameof(ProfilePatchDto.AudioLanguages));
+        }
+
+        if (!AreListsEqual(subtitleLanguages, original.SubtitleLanguages))
+        {
+            patch.SubtitleLanguages = subtitleLanguages;
+            _ = changedFields.Add(nameof(ProfilePatchDto.SubtitleLanguages));
+        }
+
+        if (_formModel.VmafEnabled != original.VmafEnabled)
+        {
+            patch.VmafEnabled = _formModel.VmafEnabled;
+            _ = changedFields.Add(nameof(ProfilePatchDto.VmafEnabled));
+        }
+
+        return (patch, changedFields);
+    }
+
+    private static bool AreListsEqual(IEnumerable<string>? left, IEnumerable<string>? right)
+    {
+        if (left is null && right is null)
+        {
+            return true;
+        }
+
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        return left.SequenceEqual(right);
     }
 
     private async Task HandleCancel()

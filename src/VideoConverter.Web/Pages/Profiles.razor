@@ -46,7 +46,7 @@
                 </MudTd>
                 <MudTd DataLabel="CRF">@(context.Crf?.ToString() ?? "-")</MudTd>
                 <MudTd DataLabel="Audio Bitrate">@(context.AudioBitrateKbps?.ToString() ?? "-")</MudTd>
-                <MudTd DataLabel="Audio Channels">@(context.AudioChannels?.ToString() ?? "-")</MudTd>
+                <MudTd DataLabel="Audio Channels">@(context.AudioChannels?.ToString() ?? "Keep source")</MudTd>
                 <MudTd DataLabel="Resolution">@(context.Resolution?.ToString() ?? "-")</MudTd>
                 <MudTd DataLabel="Actions">
                     <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenEditProfileDialog(context))" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="mr-1">
@@ -68,6 +68,7 @@
 </MudContainer>
 
 @using VideoConverter.Common.Models
+@using VideoConverter.Web.Models
 @using VideoConverter.Web.Services
 
 @code {
@@ -148,7 +149,7 @@
         dialogRef = await DialogService.ShowAsync<EditProfileDialog>("Edit Profile", new DialogParameters<EditProfileDialog>
         {
             { x => x.Profile, profile },
-            { x => x.OnSubmit, EventCallback.Factory.Create<ProfilePatchDto>(this, async (patch) =>
+            { x => x.OnSubmit, EventCallback.Factory.Create<ProfilePatchRequest>(this, async (patch) =>
             {
                 await UpdateProfileAsync(profile.Id, patch).ConfigureAwait(false);
                 dialogRef?.Close();
@@ -241,12 +242,12 @@
         }
     }
 
-    private async Task UpdateProfileAsync(int id, ProfilePatchDto patch)
+    private async Task UpdateProfileAsync(int id, ProfilePatchRequest patchRequest)
     {
         Logger.LogInformation("Updating profile {ProfileId}", id);
         try
         {
-            _ = await ApiClient.UpdateProfileAsync(id, patch).ConfigureAwait(false);
+            _ = await ApiClient.UpdateProfileAsync(id, patchRequest).ConfigureAwait(false);
             Logger.LogInformation("Successfully updated profile {ProfileId}", id);
             Snackbar.Add("Profile updated successfully", Severity.Success);
             await LoadProfilesAsync().ConfigureAwait(false);
