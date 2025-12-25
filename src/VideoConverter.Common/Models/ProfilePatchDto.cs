@@ -18,9 +18,9 @@ public class ProfilePatchDto
 
     public string? OutputPathTemplate { get; set; }
 
-    public IEnumerable<string>? AudioLanguages { get; init; }
+    public IEnumerable<string>? AudioLanguages { get; set; }
 
-    public IEnumerable<string>? SubtitleLanguages { get; init; }
+    public IEnumerable<string>? SubtitleLanguages { get; set; }
 
     public bool? VmafEnabled { get; set; }
 }
