@@ -3,7 +3,8 @@
         <MudText Typo="Typo.h6">Create New Conversion</MudText>
     </TitleContent>
     <DialogContent>
-        <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+        <div @onkeydown="HandleKeyDown">
+            <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
             <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (Optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
                 <MudSelectItem T="int?" Value="@((int?)null)">None - Enter settings manually</MudSelectItem>
@@ -60,12 +61,14 @@
             </MudButton>
             <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
         </EditForm>
+        </div>
     </DialogContent>
 </MudDialog>
 
 @using VideoConverter.Common.Constants
 @using VideoConverter.Common.Models
 @using VideoConverter.Web.Services
+@using VideoConverter.Web.Models
 
 @code {
     [CascadingParameter]
@@ -280,6 +283,15 @@
     {
         Logger.LogDebug("Create conversion dialog cancelled");
         await OnCancel.InvokeAsync().ConfigureAwait(false);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting))
+        {
+            Logger.LogDebug("Enter key pressed, triggering form submission");
+            await HandleValidSubmit();
+        }
     }
 
     private string GetSelectedProfileName()

@@ -9,7 +9,8 @@
         <MudText Typo="Typo.h6">Edit Profile</MudText>
     </TitleContent>
     <DialogContent>
-        <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+        <div @onkeydown="HandleKeyDown">
+            <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
             @if (_validationErrors is not null && _validationErrors.Count > 0)
             {
@@ -58,6 +59,7 @@
             </MudButton>
             <MudButton Variant="Variant.Text" Disabled="@_isSubmitting" OnClick="HandleCancel">Cancel</MudButton>
         </EditForm>
+        </div>
     </DialogContent>
 </MudDialog>
 
@@ -323,6 +325,15 @@
     {
         Logger.LogDebug("Edit profile dialog cancelled");
         await OnCancel.InvokeAsync().ConfigureAwait(false);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting))
+        {
+            Logger.LogDebug("Enter key pressed, triggering form submission");
+            await HandleValidSubmit();
+        }
     }
 
     private sealed class ProfileFormModel

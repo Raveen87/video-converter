@@ -3,6 +3,7 @@
         <MudText Typo="Typo.h6">@GetTitle()</MudText>
     </TitleContent>
     <DialogContent>
+        <div @onkeydown="HandleDialogKeyDown">
         <MudGrid>
             <MudItem xs="12">
                 <MudText Typo="Typo.body2" Class="mb-2">
@@ -204,6 +205,7 @@
                 </MudPaper>
             }
         }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
@@ -678,6 +680,14 @@
         if (ResolveMetadataDialogLogic.ShouldTriggerSearch(e.Key, _isSearching, _searchQuery))
         {
             await SearchAsync();
+        }
+    }
+
+    private async Task HandleDialogKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isResolving) && _selectedResult != null)
+        {
+            await ResolveAsync();
         }
     }
 

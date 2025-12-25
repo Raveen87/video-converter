@@ -1,5 +1,6 @@
 @using VideoConverter.Common.Models
 @using VideoConverter.Web.Services
+@using VideoConverter.Web.Models
 @using MudBlazor
 @using System.Text.Json
 
@@ -8,6 +9,7 @@
         <MudText Typo="Typo.h6">Select Audio/Subtitle Streams</MudText>
     </TitleContent>
     <DialogContent>
+        <div @onkeydown="HandleKeyDown">
         <MudGrid>
             <MudItem xs="12">
                 <MudText Typo="Typo.body2" Class="mb-2">
@@ -83,6 +85,7 @@
                 </MudItem>
             }
         </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="@_isResolving">Cancel</MudButton>
@@ -178,4 +181,12 @@
     }
 
     private async Task Cancel() => await OnClose.InvokeAsync(false);
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isResolving) && _selectedAudioStreams.Count > 0)
+        {
+            await ResolveAsync();
+        }
+    }
 }

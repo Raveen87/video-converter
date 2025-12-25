@@ -1,8 +1,10 @@
 @using VideoConverter.Common.Models
+@using VideoConverter.Web.Models
 @using MudBlazor
 
 <MudDialog>
     <DialogContent>
+        <div @onkeydown="HandleKeyDown">
         <MudGrid Class="ma-0">
             <MudItem xs="12">
                 <MudText Typo="Typo.subtitle1" Class="mb-2"><b>File Information</b></MudText>
@@ -150,6 +152,7 @@
                 </MudItem>
             }
         </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Close</MudButton>
@@ -162,6 +165,14 @@
     [Parameter] public ConversionDto Conversion { get; set; } = null!;
 
     private void Cancel() => MudDialog.Close();
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, false))
+        {
+            Cancel();
+        }
+    }
 
     private static Color GetStatusColor(ConversionStatus status) => status switch
     {
