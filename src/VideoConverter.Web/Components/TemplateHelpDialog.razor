@@ -1,3 +1,4 @@
+@using VideoConverter.Web.Models
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -228,7 +229,7 @@
 
     protected override void OnInitialized()
     {
-        _activePanelIndex = InitialTab == TemplateType.Path ? 1 : 0;
+        _activePanelIndex = TemplateHelpDialogLogic.GetInitialActivePanelIndex(InitialTab);
     }
 
     private void Close()
