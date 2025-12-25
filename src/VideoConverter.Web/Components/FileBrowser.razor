@@ -8,6 +8,7 @@
         <MudText Typo="Typo.h6">@Title</MudText>
     </TitleContent>
     <DialogContent>
+        <div @onkeydown="HandleKeyDown">
         @if (_errorMessage is not null)
         {
             <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
@@ -88,6 +89,7 @@
                 }
             </div>
         }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" OnClick="HandleCancel">Cancel</MudButton>
@@ -256,6 +258,15 @@
 
         Logger.LogInformation("Path selected: {Path}", _selectedPath);
         await OnPathSelected.InvokeAsync(_selectedPath).ConfigureAwait(false);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isLoading) && _selectedPath is not null)
+        {
+            Logger.LogDebug("Enter key pressed, triggering selection");
+            await HandleSelect();
+        }
     }
 
     private static List<BreadcrumbItem> BuildBreadcrumbs(string? path)

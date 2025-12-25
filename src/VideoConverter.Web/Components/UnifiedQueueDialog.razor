@@ -9,7 +9,7 @@
         <MudText Typo="Typo.h6">Add to Queue</MudText>
     </TitleContent>
     <DialogContent>
-        <div class="unified-queue-dialog">
+        <div class="unified-queue-dialog" @onkeydown="HandleKeyDown">
             @* File Browser Section *@
             <MudPaper Class="pa-3 mb-4" Elevation="1">
                 <MudText Typo="Typo.subtitle1" Class="mb-2">Select File or Directory</MudText>
@@ -557,6 +557,15 @@
     {
         Logger.LogDebug("Unified queue dialog cancelled");
         await OnCancel.InvokeAsync().ConfigureAwait(false);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting) && CanSubmit)
+        {
+            Logger.LogDebug("Enter key pressed, triggering form submission");
+            await HandleSubmit();
+        }
     }
 
     private static string[]? ParseCommaSeparatedString(string? value)
