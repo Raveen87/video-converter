@@ -45,7 +45,10 @@
                     <MudSelectItem T="int?" Value="@resolution">@($"{resolution}p")</MudSelectItem>
                 }
             </MudSelect>
-            <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <TemplateHelpButton TemplateType="TemplateHelpDialog.TemplateType.Filename" Class="ml-1" />
+            </div>
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">

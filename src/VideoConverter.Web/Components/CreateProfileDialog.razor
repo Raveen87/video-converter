@@ -44,8 +44,14 @@
                     <MudSelectItem T="int?" Value="@resolution">@($"{resolution}p")</MudSelectItem>
                 }
             </MudSelect>
-            <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="mb-3" />
-            <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="mb-3" />
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputFilenameTemplate" Label="Output Filename Template" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <TemplateHelpButton TemplateType="TemplateHelpDialog.TemplateType.Filename" Class="ml-1" />
+            </div>
+            <div class="d-flex align-center mb-3">
+                <MudTextField @bind-Value="_formModel.OutputPathTemplate" Label="Output Path Template" HelperText="e.g., {Type}/{Title}/Season {Season:00}" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <TemplateHelpButton TemplateType="TemplateHelpDialog.TemplateType.Path" Class="ml-1" />
+            </div>
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring by Default" Color="Color.Primary" Class="mb-3" />
