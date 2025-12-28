@@ -1,0 +1,265 @@
+@using System.IO
+@using MudBlazor
+
+<div class="path-template-input" style="position: relative;">
+    <!-- Background layer for highlighting -->
+    <div class="path-highlight-layer">
+        <span class="dir-part">@VisualDirectory</span><span class="tpl-part">@VisualTemplate</span>
+    </div>
+
+    <!-- Foreground input -->
+    <MudTextField T="string"
+                  Value="@_text"
+                  ValueChanged="@OnFullTextChanged"
+                  Label="@Label"
+                  HelperText="@HelperText"
+                  Variant="Variant.Outlined"
+                  Immediate="true"
+                  Class="path-input-field transparent-text"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@Icons.Material.Filled.FolderOpen"
+                  OnAdornmentClick="OnBrowse" />
+</div>
+
+<style>
+    .path-template-input {
+        width: 100%;
+    }
+
+    .path-highlight-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px; /* Matches standard Outlined height, excludes helper text area */
+        /* Matches MudTextField Outlined padding approx. */
+        padding: 0 50px 0 14px; /* Right padding for adornment space */
+        pointer-events: none;
+        white-space: pre;
+        overflow: hidden;
+        z-index: 0;
+        /* Typography matching MudInput */
+        font-family: var(--mud-typography-body1-family);
+        font-size: var(--mud-typography-body1-size);
+        font-weight: var(--mud-typography-body1-weight);
+        line-height: var(--mud-typography-body1-lineheight);
+        letter-spacing: var(--mud-typography-body1-letterspacing);
+
+        display: flex;
+        align-items: center;
+    }
+
+    .dir-part {
+        background-color: rgba(33, 150, 243, 0.15);
+        color: var(--mud-palette-text-primary);
+        display: inline;
+    }
+
+    .tpl-part {
+        background-color: rgba(76, 175, 80, 0.15);
+        color: var(--mud-palette-text-primary);
+        display: inline;
+    }
+
+    /* Make the input text transparent so background shows through */
+    .transparent-text .mud-input-slot {
+        color: transparent !important;
+        background-color: transparent !important;
+        caret-color: var(--mud-palette-text-primary);
+        z-index: 1;
+        /* Ensure no text shadow or other effects bleed through */
+        text-shadow: none !important;
+    }
+
+    /* Fix visibility of trailing spaces/separators which might be trimmed by HTML whitespace collapsing */
+    .path-highlight-layer {
+        white-space: pre;
+    }
+</style>
+
+@code {
+    [Parameter] public string? Directory { get; set; }
+    [Parameter] public EventCallback<string?> DirectoryChanged { get; set; }
+
+    [Parameter] public string? PathTemplate { get; set; }
+    [Parameter] public EventCallback<string?> PathTemplateChanged { get; set; }
+
+    [Parameter] public string? FilenameTemplate { get; set; }
+    [Parameter] public EventCallback<string?> FilenameTemplateChanged { get; set; }
+
+    [Parameter] public string Label { get; set; } = "Output Path";
+    [Parameter] public string HelperText { get; set; } = "Directory part is blue, filename is green";
+    [Parameter] public EventCallback OnBrowse { get; set; }
+
+    private string _text = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        var reconstructed = ReconstructText();
+
+        if (!IsEffectivelySame(_text, Directory, PathTemplate, FilenameTemplate))
+        {
+            _text = reconstructed;
+        }
+    }
+
+    private string ReconstructText()
+    {
+        if (string.IsNullOrEmpty(PathTemplate) && string.IsNullOrEmpty(FilenameTemplate))
+            return Directory ?? string.Empty;
+
+        var fullTpl = string.Empty;
+        if (!string.IsNullOrEmpty(PathTemplate) && !string.IsNullOrEmpty(FilenameTemplate))
+        {
+             fullTpl = $"{PathTemplate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}{Path.DirectorySeparatorChar}{FilenameTemplate.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}";
+        }
+        else
+        {
+            fullTpl = (PathTemplate ?? string.Empty) + (FilenameTemplate ?? string.Empty);
+        }
+
+        if (string.IsNullOrEmpty(Directory))
+            return fullTpl;
+
+        var sep = Path.DirectorySeparatorChar;
+        var dir = Directory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var tpl = fullTpl.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return $"{dir}{sep}{tpl}";
+    }
+
+    private static bool IsEffectivelySame(string currentInput, string? dir, string? pTpl, string? fTpl)
+    {
+        var (parsedDir, parsedPTpl, parsedFTpl) = Parse(currentInput);
+
+        return string.Equals(parsedDir, dir) &&
+               string.Equals(parsedPTpl, pTpl) &&
+               string.Equals(parsedFTpl, fTpl);
+    }
+
+    private static (string? Dir, string? PTpl, string? FTpl) Parse(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return (null, null, null);
+
+        string? d = null, p = null, f = null;
+        var lastSepIndex = input.LastIndexOfAny(Separators);
+
+        if (lastSepIndex == -1)
+        {
+            f = input;
+        }
+        else
+        {
+            f = input.Substring(lastSepIndex + 1);
+            var remainder = input.Substring(0, lastSepIndex);
+
+            if (!string.IsNullOrEmpty(remainder))
+            {
+                var firstBrace = remainder.IndexOf('{');
+                if (firstBrace == -1)
+                {
+                    d = remainder;
+                }
+                else
+                {
+                    var sepBeforeBrace = remainder.LastIndexOfAny(Separators, firstBrace);
+                    if (sepBeforeBrace == -1)
+                    {
+                        p = remainder;
+                    }
+                    else
+                    {
+                        d = remainder.Substring(0, sepBeforeBrace);
+                        p = remainder.Substring(sepBeforeBrace + 1);
+                    }
+                }
+            }
+        }
+        return (d, p, f);
+    }
+
+
+    // Visual Splitting Properties
+    private string VisualDirectory
+    {
+        get
+        {
+            var full = _text;
+            if (string.IsNullOrEmpty(full)) return string.Empty;
+
+            var splitIndex = GetVisualSplitIndex(full);
+            if (splitIndex == -1) return string.Empty;
+            if (splitIndex == 0) return string.Empty;
+
+            return full.Substring(0, splitIndex);
+        }
+    }
+
+    private string VisualTemplate
+    {
+        get
+        {
+            var full = _text;
+            if (string.IsNullOrEmpty(full)) return string.Empty;
+
+            var splitIndex = GetVisualSplitIndex(full);
+            if (splitIndex == -1) return full;
+
+            return full.Substring(splitIndex);
+        }
+    }
+
+    private static readonly char[] Separators = { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, '/', '\\' };
+
+    private static int GetVisualSplitIndex(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return 0;
+
+        // Visual Split Logic:
+        // Always split at the LAST separator, so the filename part is Green, and the directory path is Blue.
+        // Even if there are templates in the directory path, they should be Blue.
+
+        var lastSep = text.LastIndexOfAny(Separators);
+
+        if (lastSep != -1)
+        {
+            // Everything up to and including the last separator is Directory (Blue).
+            // "C:\test\{Title}\" -> Blue
+            // "file.mkv" -> Green
+            return lastSep + 1;
+        }
+        else
+        {
+            // No separator. Everything is Filename (Green).
+            return 0;
+        }
+    }
+
+    private async Task OnFullTextChanged(string newValue)
+    {
+        _text = newValue;
+        // Parse from _text, not just newValue to be consistent
+        var (dir, pTpl, fTpl) = Parse(_text);
+        await UpdateValues(dir, pTpl, fTpl);
+    }
+
+    private async Task UpdateValues(string? dir, string? pTpl, string? fTpl)
+    {
+        if (Directory != dir)
+        {
+            Directory = dir;
+            await DirectoryChanged.InvokeAsync(dir);
+        }
+
+        if (PathTemplate != pTpl)
+        {
+            PathTemplate = pTpl;
+            await PathTemplateChanged.InvokeAsync(pTpl);
+        }
+
+        if (FilenameTemplate != fTpl)
+        {
+            FilenameTemplate = fTpl;
+            await FilenameTemplateChanged.InvokeAsync(fTpl);
+        }
+    }
+}
