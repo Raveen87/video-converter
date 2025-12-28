@@ -1,0 +1,60 @@
+@using VideoConverter.Common.Models
+
+<div class="d-flex align-center gap-1 flex-wrap">
+    @if (!string.IsNullOrEmpty(Item.MatchedTitle))
+    {
+        <MudText Typo="Typo.body2" Style="font-weight: 500;">
+            @Item.MatchedTitle
+            @if (Item.MatchedYear.HasValue)
+            {
+                <span class="ml-1">(@Item.MatchedYear)</span>
+            }
+        </MudText>
+        @if (Item.MatchedSeason.HasValue)
+        {
+            <MudText Typo="Typo.caption">S@(Item.MatchedSeason)E@(Item.MatchedEpisode)</MudText>
+        }
+        @if (Item.TmdbId.HasValue)
+        {
+            <MudLink Href="@GetTmdbLink(Item)" Target="_blank" Typo="Typo.caption" Class="ml-2">TMDb</MudLink>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
+            @Item.InputPath
+        </MudText>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Item.MatchedTitle))
+{
+    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;" Color="Color.Secondary">
+        @Item.InputPath
+    </MudText>
+}
+
+@if (ShowOutputFilename && !string.IsNullOrEmpty(Item.MetadataBasedFilename))
+{
+    <MudText Typo="Typo.caption" Color="Color.Primary">
+        Output: @Item.MetadataBasedFilename
+    </MudText>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversionDto Item { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowOutputFilename { get; set; } = true;
+
+    private static string GetTmdbLink(ConversionDto item)
+    {
+        if (item.MatchedSeason.HasValue)
+        {
+            return $"https://www.themoviedb.org/tv/{item.TmdbId}";
+        }
+        return $"https://www.themoviedb.org/movie/{item.TmdbId}";
+    }
+}
+

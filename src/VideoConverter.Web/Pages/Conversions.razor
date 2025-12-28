@@ -62,35 +62,7 @@
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.Id</MudTd>
                 <MudTd DataLabel="Input Path">
-                    @if (!string.IsNullOrEmpty(context.MatchedTitle))
-                    {
-                        <div class="d-flex align-center gap-1 flex-wrap">
-                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
-                                @context.MatchedTitle
-                                @if (context.MatchedYear.HasValue)
-                                {
-                                    <span class="ml-1">(@context.MatchedYear)</span>
-                                }
-                            </MudText>
-                            @if (context.MatchedSeason.HasValue)
-                            {
-                                <MudText Typo="Typo.caption">S@(context.MatchedSeason)E@(context.MatchedEpisode)</MudText>
-                            }
-                            @if (context.TmdbId.HasValue)
-                            {
-                                <MudLink Href="@GetTmdbLink(context)" Target="_blank" Typo="Typo.caption" Class="ml-2">TMDb</MudLink>
-                            }
-                        </div>
-                    }
-                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;" Color="@(string.IsNullOrEmpty(context.MatchedTitle) ? Color.Default : Color.Secondary)">
-                        @context.InputPath
-                    </MudText>
-                    @if (!string.IsNullOrEmpty(context.MetadataBasedFilename))
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Primary">
-                            Output: @context.MetadataBasedFilename
-                        </MudText>
-                    }
+                    <MediaInfoDisplay Item="@context" ShowOutputFilename="true" />
                 </MudTd>
                 <MudTd DataLabel="Output Directory">
                     <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 300px;">
@@ -104,85 +76,11 @@
                     @{
                         var effectiveStatus = _stateService.GetEffectiveStatus(context);
                         var progress = _stateService.GetProgress(context.Id);
-                        var isRunning = effectiveStatus == ConversionStatus.Running && progress?.Status == ConversionProgressStatus.Running && !_stateService.IsPaused;
-                        var isPaused = effectiveStatus == ConversionStatus.Running && _stateService.IsPaused;
                     }
-                    @if (isPaused && progress != null)
-                    {
-                        <div>
-                            <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-paused">
-                                Paused
-                            </MudChip>
-                            <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-paused" />
-                            <MudText Typo="Typo.caption">
-                                @if (progress.PercentageComplete.HasValue)
-                                {
-                                    <text>@($"{progress.PercentageComplete:F1}%")</text>
-                                }
-                            </MudText>
-                        </div>
-                    }
-                    else if (isRunning && progress != null)
-                    {
-                        <div>
-                            <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@($"mb-2 {GetStatusCssClass(effectiveStatus)}")">
-                                @effectiveStatus
-                            </MudChip>
-                            <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="@($"mb-1 {GetStatusCssClass(effectiveStatus)}")" />
-                            <MudText Typo="Typo.caption">
-                                @if (progress.PercentageComplete.HasValue)
-                                {
-                                    <text>@($"{progress.PercentageComplete:F1}%")</text>
-                                }
-                            </MudText>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(effectiveStatus)">
-                            @effectiveStatus
-                        </MudChip>
-                    }
+                    <ConversionStatusBadge Status="@effectiveStatus" IsPaused="@_stateService.IsPaused" Progress="@progress" />
                 </MudTd>
                 <MudTd DataLabel="VMAF">
-                    @if (context.VmafScore.HasValue)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(context.VmafScore.Value)">
-                            @context.VmafScore.Value.ToString("F1")
-                        </MudChip>
-                    }
-                    else if (context.Status == ConversionStatus.Pending)
-                    {
-                        @if (context.VmafEnabled)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Default" />
-                        }
-                        else
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
-                        }
-                    }
-                    else if (context.Status == ConversionStatus.Running)
-                    {
-                        @if (context.VmafEnabled)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Pending</MudText>
-                        }
-                        else
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
-                        }
-                    }
-                    else if (context.Status == ConversionStatus.Completed && context.VmafEnabled)
-                    {
-                        <MudTooltip Text="VMAF calculation failed">
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
-                        </MudTooltip>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
-                    }
+                    <VmafBadge Score="@context.VmafScore" IsEnabled="@context.VmafEnabled" Status="@context.Status" />
                 </MudTd>
                 <MudTd DataLabel="Actions">
                     @if (context.Status == ConversionStatus.Pending)
@@ -442,37 +340,6 @@
             Logger.LogError(ex, "Error updating conversion {ConversionId}", id);
             Snackbar.Add($"Error updating conversion: {ex.Message}", Severity.Error);
         }
-    }
-
-    private static string GetStatusCssClass(ConversionStatus status)
-    {
-        return status switch
-        {
-            ConversionStatus.Pending => "status-pending",
-            ConversionStatus.Running => "status-running",
-            ConversionStatus.Completed => "status-completed",
-            ConversionStatus.Failed => "status-failed",
-            ConversionStatus.Deleted => "status-deleted",
-            ConversionStatus.Canceled => "status-deleted",
-            _ => "",
-        };
-    }
-
-    private static Color GetVmafScoreColor(double score) => score switch
-    {
-        >= 93 => Color.Success,
-        >= 80 => Color.Info,
-        >= 60 => Color.Warning,
-        _ => Color.Error
-    };
-
-    private static string GetTmdbLink(ConversionDto item)
-    {
-        if (item.MatchedSeason.HasValue)
-        {
-            return $"https://www.themoviedb.org/tv/{item.TmdbId}";
-        }
-        return $"https://www.themoviedb.org/movie/{item.TmdbId}";
     }
 
     public void Dispose()

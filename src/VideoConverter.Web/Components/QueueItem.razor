@@ -8,31 +8,7 @@
      @ondrop:preventDefault="@true">
     <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="queue-item-handle" />
     <div class="queue-item-content">
-        @if (!string.IsNullOrEmpty(Item.MatchedTitle))
-        {
-            <div class="d-flex align-center gap-2">
-                <MudText Typo="Typo.body1" Style="font-weight: 500;">
-                    @Item.MatchedTitle
-                    @if (Item.MatchedYear.HasValue)
-                    {
-                        <span class="ml-1">(@Item.MatchedYear)</span>
-                    }
-                </MudText>
-                @if (Item.MatchedSeason.HasValue)
-                {
-                    <MudText Typo="Typo.body2">S@(Item.MatchedSeason)E@(Item.MatchedEpisode)</MudText>
-                }
-                @if (Item.TmdbId.HasValue)
-                {
-                    <MudLink Href="@GetTmdbLink(Item)" Target="_blank" Typo="Typo.caption">TMDb</MudLink>
-                }
-            </div>
-        }
-        <MudText Typo="Typo.body2">@Item.InputPath</MudText>
-        @if (!string.IsNullOrEmpty(Item.MetadataBasedFilename))
-        {
-            <MudText Typo="Typo.caption" Color="Color.Primary">Output: @Item.MetadataBasedFilename</MudText>
-        }
+        <MediaInfoDisplay Item="@Item" ShowOutputFilename="true" />
         <MudText Typo="Typo.caption" Color="Color.Secondary">@Item.OutputDirectory</MudText>
     </div>
     @if (OnDelete.HasValue)
@@ -122,15 +98,6 @@
         {
             OnDelete.Value.InvokeAsync(Item.Id);
         }
-    }
-
-    private static string GetTmdbLink(ConversionDto item)
-    {
-        if (item.MatchedSeason.HasValue)
-        {
-            return $"https://www.themoviedb.org/tv/{item.TmdbId}";
-        }
-        return $"https://www.themoviedb.org/movie/{item.TmdbId}";
     }
 }
 

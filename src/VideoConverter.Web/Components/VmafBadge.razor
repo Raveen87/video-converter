@@ -1,0 +1,60 @@
+@using VideoConverter.Common.Models
+
+@if (Score.HasValue)
+{
+    <MudChip T="string" Size="Size.Small" Color="@GetVmafScoreColor(Score.Value)">
+        @Score.Value.ToString("F1")
+    </MudChip>
+}
+else if (Status == ConversionStatus.Pending)
+{
+    @if (IsEnabled)
+    {
+        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Default" />
+    }
+    else
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+    }
+}
+else if (Status == ConversionStatus.Running)
+{
+    @if (IsEnabled)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Pending</MudText>
+    }
+    else
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+    }
+}
+else if (Status == ConversionStatus.Completed && IsEnabled)
+{
+    <MudTooltip Text="VMAF calculation failed">
+        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+    </MudTooltip>
+}
+else
+{
+    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+}
+
+@code {
+    [Parameter]
+    public double? Score { get; set; }
+
+    [Parameter]
+    public bool IsEnabled { get; set; }
+
+    [Parameter]
+    public ConversionStatus Status { get; set; }
+
+    private static Color GetVmafScoreColor(double score) => score switch
+    {
+        >= 93 => Color.Success,
+        >= 80 => Color.Info,
+        >= 60 => Color.Warning,
+        _ => Color.Error
+    };
+}
+
