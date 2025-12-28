@@ -1,4 +1,5 @@
 @page "/queue"
+@using VideoConverter.Web.Components
 
 <PageTitle>Queue</PageTitle>
 
@@ -43,36 +44,7 @@
                 <MudText Typo="Typo.body1" Class="mb-1">@current.InputPath</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@current.OutputDirectory</MudText>
             </div>
-            @if (isPaused && progress != null)
-            {
-                <div>
-                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-paused">
-                        Paused
-                    </MudChip>
-                    <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-paused" />
-                    <MudText Typo="Typo.caption">
-                        @if (progress.PercentageComplete.HasValue)
-                        {
-                            <text>@($"{progress.PercentageComplete:F1}%")</text>
-                        }
-                    </MudText>
-                </div>
-            }
-            else if (progress != null)
-            {
-                <div>
-                    <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-running">
-                        Running
-                    </MudChip>
-                    <MudProgressLinear Value="@(progress.PercentageComplete ?? 0)" Class="mb-1 status-running" />
-                    <MudText Typo="Typo.caption">
-                        @if (progress.PercentageComplete.HasValue)
-                        {
-                            <text>@($"{progress.PercentageComplete:F1}%")</text>
-                        }
-                    </MudText>
-                </div>
-            }
+            <ConversionStatusBadge Status="@current.Status" IsPaused="@isPaused" Progress="@progress" />
         </MudPaper>
     }
 

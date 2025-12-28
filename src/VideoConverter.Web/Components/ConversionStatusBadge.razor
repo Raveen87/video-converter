@@ -1,0 +1,64 @@
+@using VideoConverter.Common.Models
+
+<div>
+    @if (IsPaused && Progress != null)
+    {
+        <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Class="mb-2 status-paused">
+            Paused
+        </MudChip>
+        <MudProgressLinear Value="@(Progress.PercentageComplete ?? 0)" Class="mb-1 status-paused" />
+        <MudText Typo="Typo.caption">
+            @if (Progress.PercentageComplete.HasValue)
+            {
+                <text>@($"{Progress.PercentageComplete:F1}%")</text>
+            }
+        </MudText>
+    }
+    else if (IsRunning && Progress != null)
+    {
+        <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@($"mb-2 {GetStatusCssClass(Status)}")">
+            @Status
+        </MudChip>
+        <MudProgressLinear Value="@(Progress.PercentageComplete ?? 0)" Class="@($"mb-1 {GetStatusCssClass(Status)}")" />
+        <MudText Typo="Typo.caption">
+            @if (Progress.PercentageComplete.HasValue)
+            {
+                <text>@($"{Progress.PercentageComplete:F1}%")</text>
+            }
+        </MudText>
+    }
+    else
+    {
+        <MudChip T="ConversionStatus" Variant="Variant.Text" Size="Size.Small" Class="@GetStatusCssClass(Status)">
+            @Status
+        </MudChip>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversionStatus Status { get; set; }
+
+    [Parameter]
+    public bool IsPaused { get; set; }
+
+    [Parameter]
+    public ConversionProgress? Progress { get; set; }
+
+    private bool IsRunning => Status == ConversionStatus.Running && !IsPaused;
+
+    public static string GetStatusCssClass(ConversionStatus status)
+    {
+        return status switch
+        {
+            ConversionStatus.Pending => "status-pending",
+            ConversionStatus.Running => "status-running",
+            ConversionStatus.Completed => "status-completed",
+            ConversionStatus.Failed => "status-failed",
+            ConversionStatus.Deleted => "status-deleted",
+            ConversionStatus.Canceled => "status-deleted",
+            _ => "",
+        };
+    }
+}
+
