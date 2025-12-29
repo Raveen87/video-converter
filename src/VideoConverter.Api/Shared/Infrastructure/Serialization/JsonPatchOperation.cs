@@ -18,13 +18,12 @@ public class JsonPatchOperation
     {
         if (string.IsNullOrWhiteSpace(Op))
         {
-            return;
+            throw new JsonPatchException("JSON Patch operation 'op' must be specified. Supported operations: 'replace'.");
         }
 
         if (!string.Equals(Op, "replace", StringComparison.OrdinalIgnoreCase))
         {
-            // Only replace is supported for now
-            return;
+            throw new JsonPatchException($"Unsupported JSON Patch operation '{Op}'. Supported operations: 'replace'.");
         }
 
         var pathSegments = Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
