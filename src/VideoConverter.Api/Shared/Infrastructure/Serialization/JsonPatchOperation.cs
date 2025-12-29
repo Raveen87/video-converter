@@ -3,6 +3,13 @@ using System.Text.Json.Nodes;
 
 namespace VideoConverter.Api.Shared.Infrastructure.Serialization;
 
+/// <summary>
+/// Represents a JSON Patch operation that can be applied to an object.
+/// </summary>
+/// <remarks>
+/// This implementation supports only the "replace" operation and shallow property paths (first segment only).
+/// Nested paths like "/address/city" are not supported. Only top-level properties can be modified.
+/// </remarks>
 public class JsonPatchOperation
 {
     [JsonPropertyName("op")]
@@ -14,6 +21,18 @@ public class JsonPatchOperation
     [JsonPropertyName("value")]
     public JsonNode? Value { get; set; }
 
+    /// <summary>
+    /// Applies this patch operation to the specified target object.
+    /// </summary>
+    /// <param name="target">The object to which the patch operation should be applied.</param>
+    /// <exception cref="JsonPatchException">
+    /// Thrown when the operation is invalid, the property is not found, the property is not writable,
+    /// or the value cannot be applied to the property.
+    /// </exception>
+    /// <remarks>
+    /// Only shallow property paths are supported (e.g., "/PropertyName").
+    /// Nested paths (e.g., "/Address/City") are not supported and will only use the first path segment.
+    /// </remarks>
     public void Apply(object target)
     {
         if (string.IsNullOrWhiteSpace(Op))
