@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.JsonPatch.Exceptions;
-
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Domain.ValueObjects;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Infrastructure.Serialization;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
 
@@ -171,8 +169,8 @@ public sealed class ConversionsEndpoints(
         CancellationToken cancellationToken)
     {
         // Check if languages were actually modified in the patch document
-        var hasAudioLanguageOp = patchDocument.Operations.Exists(op => op.path.Equals("/audioLanguages", StringComparison.OrdinalIgnoreCase));
-        var hasSubtitleLanguageOp = patchDocument.Operations.Exists(op => op.path.Equals("/subtitleLanguages", StringComparison.OrdinalIgnoreCase));
+        var hasAudioLanguageOp = patchDocument.Operations.Any(op => op.Path.Equals("/audioLanguages", StringComparison.OrdinalIgnoreCase));
+        var hasSubtitleLanguageOp = patchDocument.Operations.Any(op => op.Path.Equals("/subtitleLanguages", StringComparison.OrdinalIgnoreCase));
 
         if (!hasAudioLanguageOp && !hasSubtitleLanguageOp)
         {
@@ -238,7 +236,7 @@ public sealed class ConversionsEndpoints(
 
     private void LogPatchOperations(int id, JsonPatchDocument<ConversionPatchDto> patchDocument)
     {
-        var patchOperations = string.Join(", ", patchDocument.Operations.Select(op => $"{op.op} {op.path} = {op.value}"));
+        var patchOperations = string.Join(", ", patchDocument.Operations.Select(op => $"{op.Op} {op.Path} = {op.Value}"));
         _logger.LogInformation("Received patch request for conversion {ConversionId}. Operations: [{Operations}]", id, patchOperations);
     }
 

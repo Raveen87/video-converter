@@ -2,6 +2,7 @@ using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Infrastructure.Serialization;
 
 namespace VideoConverter.Api.Features.Conversions.Api;
 
@@ -126,7 +127,7 @@ public sealed class ConversionsApi(
     [HttpPatch("{id:int}")]
     public async Task<IResult> UpdateConversionAsync(
         int id,
-        [FromBody] Microsoft.AspNetCore.JsonPatch.JsonPatchDocument<ConversionPatchDto>? patchDocument,
+        [FromBody] JsonPatchDocument<ConversionPatchDto>? patchDocument,
         CancellationToken ct)
     {
         // Log the raw request body for debugging

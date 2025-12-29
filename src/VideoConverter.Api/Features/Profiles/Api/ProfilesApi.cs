@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.JsonPatch;
+using VideoConverter.Api.Shared.Infrastructure.Serialization;
 
 namespace VideoConverter.Api.Features.Profiles.Api;
 

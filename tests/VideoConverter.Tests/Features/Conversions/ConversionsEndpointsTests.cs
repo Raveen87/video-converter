@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.JsonPatch;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Features.Conversions.Services;
@@ -6,6 +5,7 @@ using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Features.Metadata.Models;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
+using VideoConverter.Api.Shared.Infrastructure.Serialization;
 using VideoConverter.Api.Shared.Validation;
 using VideoConverter.Common.Models;
 using VideoConverter.Tests.TestUtils;
