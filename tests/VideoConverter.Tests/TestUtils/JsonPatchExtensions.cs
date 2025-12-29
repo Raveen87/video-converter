@@ -13,7 +13,7 @@ public static class JsonPatchExtensions
         doc.Operations.Add(new JsonPatchOperation
         {
             Op = "replace",
-            Path = propertyName,
+            Path = "/" + propertyName,
             Value = JsonSerializer.SerializeToNode(value),
         });
     }

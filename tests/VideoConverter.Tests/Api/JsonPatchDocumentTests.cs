@@ -30,7 +30,7 @@ public class JsonPatchDocumentTests
     [Fact]
     public void JsonPatchDocument_Deserializes_FromJsonArray()
     {
-        var json = string.Empty + """[{"op":"replace","path":"/name","value":"John"}]""";
+        var json = """[{"op":"replace","path":"/name","value":"John"}]""";
 
         var patchDoc = JsonSerializer.Deserialize<JsonPatchDocument<TestModel>>(json, _options);
 
@@ -109,7 +109,7 @@ public class JsonPatchDocumentTests
     [Fact]
     public void JsonPatchDocument_Deserializes_EmptyArray()
     {
-        var json = string.Empty + "[]";
+        var json = "[]";
 
         var patchDoc = JsonSerializer.Deserialize<JsonPatchDocument<TestModel>>(json, _options);
 
@@ -592,7 +592,7 @@ public class JsonPatchDocumentTests
     public void JsonPatchOperation_HandlesComplexJsonValue()
     {
         var model = new TestModel();
-        var complexJson = string.Empty + """{"FirstName":"John","LastName":"Doe","Age":30}""";
+        var complexJson = """{"FirstName":"John","LastName":"Doe","Age":30}""";
         var patchDoc = new JsonPatchDocument<TestModel>();
         patchDoc.Operations.Add(new JsonPatchOperation
         {
