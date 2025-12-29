@@ -29,7 +29,7 @@ public class JsonPatchOperation
         var pathSegments = Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (pathSegments.Length is 0)
         {
-            return;
+            throw new JsonPatchException("JSON Patch operation 'path' must be a valid non-empty path.");
         }
 
         // Simple property traversal (shallow)
