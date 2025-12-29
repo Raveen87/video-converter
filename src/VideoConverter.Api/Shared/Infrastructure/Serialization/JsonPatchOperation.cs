@@ -16,6 +16,7 @@ public class JsonPatchOperation
 
     public void Apply(object target)
     {
+        // Validate that the operation is specified to prevent silent failures and make debugging easier
         if (string.IsNullOrWhiteSpace(Op))
         {
             throw new JsonPatchException("JSON Patch operation 'op' must be specified. Supported operations: 'replace'.");
