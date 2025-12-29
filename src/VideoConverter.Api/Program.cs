@@ -105,8 +105,7 @@ public static class Program
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            })
-            .AddNewtonsoftJson(); // Required for JsonPatchDocument model binding
+            });
         RegisterBatching(services);
     }
 
