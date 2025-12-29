@@ -30,6 +30,6 @@ public static class JsonPatchExtensions
             return unaryMember.Member.Name;
         }
 
-        throw new ArgumentException("Invalid expression");
+        throw new ArgumentException("Expression must be a member access expression (e.g., x => x.PropertyName).", nameof(expression));
     }
 }
