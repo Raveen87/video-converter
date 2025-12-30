@@ -31,7 +31,9 @@ public class ManualResolutionService(
             request.TmdbId,
             request.MediaType);
 
-        var conversionRequest = JsonSerializer.Deserialize<ConversionCreateDto>(item.SerializedRequest)
+        var conversionRequest = JsonSerializer.Deserialize(
+            item.SerializedRequest,
+            Shared.Infrastructure.Serialization.AppJsonSerializerContext.Default.ConversionCreateDto)
             ?? throw new InvalidOperationException($"Failed to deserialize conversion request for queue item {queueId}.");
 
         var metadata = (request.MediaType is MediaType.Movie
@@ -134,7 +136,9 @@ public class ManualResolutionService(
             request.AudioStreamIndices ?? "none",
             request.SubtitleStreamIndices ?? "none");
 
-        var conversionRequest = JsonSerializer.Deserialize<ConversionCreateDto>(item.SerializedRequest)
+        var conversionRequest = JsonSerializer.Deserialize(
+            item.SerializedRequest,
+            Shared.Infrastructure.Serialization.AppJsonSerializerContext.Default.ConversionCreateDto)
             ?? throw new InvalidOperationException($"Failed to deserialize conversion request for queue item {queueId}.");
 
         // Create a new conversion with the manually selected streams

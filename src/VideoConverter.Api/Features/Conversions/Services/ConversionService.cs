@@ -613,9 +613,9 @@ public sealed class ConversionService(
             Status = "Pending",
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
-            SerializedRequest = JsonSerializer.Serialize(request),
-            AvailableAudioStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(audioStreams)),
-            AvailableSubtitleStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(subtitleStreams)),
+            SerializedRequest = JsonSerializer.Serialize(request, Shared.Infrastructure.Serialization.AppJsonSerializerContext.Default.ConversionCreateDto),
+            AvailableAudioStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(audioStreams), Shared.Infrastructure.Serialization.AppJsonSerializerContext.Default.ListMediaStreamDto),
+            AvailableSubtitleStreamsJson = JsonSerializer.Serialize(MapToStreamDtos(subtitleStreams), Shared.Infrastructure.Serialization.AppJsonSerializerContext.Default.ListMediaStreamDto),
             MissingAudioLanguages = missingAudioLanguages is not null ? string.Join(',', missingAudioLanguages) : null,
             MissingSubtitleLanguages = missingSubtitleLanguages is not null ? string.Join(',', missingSubtitleLanguages) : null,
         };
