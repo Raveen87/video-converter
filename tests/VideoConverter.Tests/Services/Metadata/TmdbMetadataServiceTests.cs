@@ -265,14 +265,14 @@ public class TmdbMetadataServiceTests
 
         // Assert
         _ = result.Should().NotBeNull();
-        _ = result!.Id.Should().Be(5633);
+        _ = result.Id.Should().Be(5633);
         _ = result.SeasonNumber.Should().Be(1);
         _ = result.Name.Should().Be("Season 1");
         _ = result.Episodes.Should().NotBeNull();
         _ = result.Episodes!.Count.Should().BeGreaterThanOrEqualTo(2);
-        _ = result.Episodes![0].EpisodeNumber.Should().Be(1);
-        _ = result.Episodes![0].Name.Should().Be("Entourage");
-        _ = result.Networks![0].Name.Should().Be("HBO");
+        _ = result.Episodes!.First().EpisodeNumber.Should().Be(1);
+        _ = result.Episodes!.First().Name.Should().Be("Entourage");
+        _ = result.Networks!.First().Name.Should().Be("HBO");
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public class TmdbMetadataServiceTests
         _ = result.NumberOfSeasons.Should().Be(8);
         _ = result.NumberOfEpisodes.Should().Be(96);
         _ = result.Genres!.Select(g => g.Name).Should().Contain(["Comedy", "Drama"]);
-        _ = result.Networks![0].Name.Should().Be("HBO");
+        _ = result.Networks!.First().Name.Should().Be("HBO");
         _ = result.LastEpisodeToAir!.Name.Should().Be("The End");
         _ = result.LastEpisodeToAir.SeasonNumber.Should().Be(8);
         _ = result.LastEpisodeToAir.EpisodeNumber.Should().Be(8);

@@ -23,7 +23,7 @@ public class TmdbMetadataService(
 
             if (searchResult?.Results?.Count > 0)
             {
-                var movie = searchResult.Results[0];
+                var movie = searchResult.Results.First();
                 return new MovieMetadata(
                     movie.Title,
                     ExtractYear(movie.ReleaseDate),
@@ -58,7 +58,7 @@ public class TmdbMetadataService(
 
             if (searchResult?.Results?.Count is > 0)
             {
-                var show = searchResult.Results[0];
+                var show = searchResult.Results.First();
 
                 // Get episode details
                 var episodeDetails = await GetEpisodeDetailsAsync(show.Id, season, episode, cancellationToken).ConfigureAwait(false);
@@ -279,11 +279,11 @@ public class TmdbMetadataService(
         }
     }
 
-    public async Task<TmdbTvShowDetailsResponse?> GetTvShowDetailsAsync(int showId, CancellationToken cancellationToken = default)
+    public async Task<TmdbJson.TmdbTvShowDetailsResponse?> GetTvShowDetailsAsync(int showId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var url = $"https://api.themoviedb.org/3/tv/{showId}";
+            var url = $"https://api.themoviedb.org/3/tv/{showId}?append_to_response=episode_groups";
             var responseString = await GetAuthorizedStringAsync(url, cancellationToken).ConfigureAwait(false);
             return TmdbJson.DeserializeTvShowDetails(responseString);
         }
@@ -294,7 +294,7 @@ public class TmdbMetadataService(
         }
     }
 
-    public async Task<TmdbSeasonDetailsResponse?> GetTvSeasonDetailsAsync(int showId, int seasonNumber, CancellationToken cancellationToken = default)
+    public async Task<TmdbJson.TmdbSeasonDetailsResponse?> GetTvSeasonDetailsAsync(int showId, int seasonNumber, CancellationToken cancellationToken = default)
     {
         try
         {
