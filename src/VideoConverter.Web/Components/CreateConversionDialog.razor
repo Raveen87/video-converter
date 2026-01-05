@@ -291,7 +291,7 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting) && _editForm.EditContext?.Validate() == true)
+        if (EditConversionDialogLogic.ShouldAllowSubmission(e.Key, _isSubmitting, _editForm.EditContext?.Validate() == true))
         {
             Logger.LogDebug("Enter key pressed and form is valid, triggering form submission");
             await HandleValidSubmit();
