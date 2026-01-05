@@ -4,7 +4,7 @@
     </TitleContent>
     <DialogContent>
         <div @onkeydown="HandleKeyDown">
-            <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+            <EditForm @ref="_editForm" Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
             <MudSelect T="int?" Value="@_selectedProfileId" ValueChanged="@HandleProfileSelectionChanged" Label="Profile (Optional)" Variant="Variant.Outlined" Class="mb-3" Clearable="true">
                 <MudSelectItem T="int?" Value="@((int?)null)">None - Enter settings manually</MudSelectItem>
@@ -95,6 +95,7 @@
     [Inject]
     private IVideoConverterApiClient ApiClient { get; set; } = null!;
 
+    private EditForm _editForm = default!;
     private readonly ConversionFormModel _formModel = new();
     private readonly List<ProfileDto> _profiles = new();
     private int? _selectedProfileId;
@@ -290,9 +291,9 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting))
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting) && _editForm.EditContext?.Validate() == true)
         {
-            Logger.LogDebug("Enter key pressed, triggering form submission");
+            Logger.LogDebug("Enter key pressed and form is valid, triggering form submission");
             await HandleValidSubmit();
         }
     }

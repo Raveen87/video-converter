@@ -7,7 +7,7 @@
             <MudAlert Severity="Severity.Info" Class="mb-3">
                 Using profile: <strong>@Profile.Name</strong>
             </MudAlert>
-            <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+            <EditForm @ref="_editForm" Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
             <div class="d-flex align-center mb-3">
                 <MudTextField @bind-Value="_formModel.InputPath" Label="Input File Path" Required="true" Variant="Variant.Outlined" Class="flex-grow-1" />
@@ -61,6 +61,7 @@
     [Inject]
     private IDialogService DialogService { get; set; } = null!;
 
+    private EditForm _editForm = default!;
     private readonly ConversionFormModel _formModel = new();
     private bool _isSubmitting;
 
@@ -173,9 +174,9 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting))
+        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting) && _editForm.EditContext?.Validate() == true)
         {
-            Logger.LogDebug("Enter key pressed, triggering form submission");
+            Logger.LogDebug("Enter key pressed and form is valid, triggering form submission");
             await HandleValidSubmit();
         }
     }
