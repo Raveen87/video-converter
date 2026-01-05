@@ -10,7 +10,7 @@
     </TitleContent>
     <DialogContent>
         <div @onkeydown="HandleKeyDown">
-            <EditForm Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
+            <EditForm @ref="_editForm" Model="@_formModel" OnValidSubmit="@HandleValidSubmit">
             <DataAnnotationsValidator />
             @if (_validationErrors is not null && _validationErrors.Count > 0)
             {
@@ -93,6 +93,7 @@
     [Inject]
     private IRequestValidator<ProfilePatchDto> ProfilePatchValidator { get; set; } = null!;
 
+    private EditForm _editForm = default!;
     private readonly ProfileFormModel _formModel = new();
     private bool _isSubmitting;
     private IDictionary<string, string[]>? _validationErrors;
@@ -335,9 +336,9 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (EditConversionDialogLogic.ShouldTriggerSubmit(e.Key, _isSubmitting))
+        if (EditConversionDialogLogic.ShouldAllowSubmission(e.Key, _isSubmitting, _editForm.EditContext?.Validate() == true))
         {
-            Logger.LogDebug("Enter key pressed, triggering form submission");
+            Logger.LogDebug("Enter key pressed and form is valid, triggering form submission");
             await HandleValidSubmit();
         }
     }
