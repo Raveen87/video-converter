@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.JsonPatch.Exceptions;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Exceptions;
 
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Profiles.Validation;
@@ -50,6 +50,7 @@ public sealed class ProfilesEndpoints(
             AudioLanguages = request.AudioLanguages?.ToList(),
             SubtitleLanguages = request.SubtitleLanguages?.ToList(),
             VmafEnabled = request.VmafEnabled,
+            RequiredVmaf = request.RequiredVmaf,
         };
 
         _ = _db.Profiles.Add(profile);
@@ -134,6 +135,7 @@ public sealed class ProfilesEndpoints(
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
             VmafEnabled = profile.VmafEnabled,
+            RequiredVmaf = profile.RequiredVmaf,
         };
     }
 
@@ -151,7 +153,8 @@ public sealed class ProfilesEndpoints(
             profile.OutputPathTemplate,
             profile.AudioLanguages,
             profile.SubtitleLanguages,
-            profile.VmafEnabled);
+            profile.VmafEnabled,
+            profile.RequiredVmaf);
     }
 
     private static void UpdateProfileFromPatch(Profile profile, ProfilePatchDto patchModel)
@@ -174,6 +177,11 @@ public sealed class ProfilesEndpoints(
         if (patchModel.VmafEnabled is not null)
         {
             profile.VmafEnabled = patchModel.VmafEnabled.Value;
+        }
+
+        if (patchModel.RequiredVmaf is not null)
+        {
+            profile.RequiredVmaf = patchModel.RequiredVmaf;
         }
     }
 

@@ -19,4 +19,6 @@ public class ConversionPatchDto
     public IEnumerable<string>? SubtitleLanguages { get; init; }
 
     public bool? VmafEnabled { get; set; }
+
+    public double? RequiredVmaf { get; set; }
 }

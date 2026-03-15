@@ -76,6 +76,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<double?>("RequiredVmaf")
+                        .HasColumnType("REAL");
+
                     b.Property<int?>("Resolution")
                         .HasColumnType("INTEGER");
 
@@ -346,6 +349,9 @@ namespace VideoConverter.Api.Shared.Infrastructure.Persistence.Migrations
                     b.Property<string>("OutputPathTemplate")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("RequiredVmaf")
+                        .HasColumnType("REAL");
 
                     b.Property<int?>("Resolution")
                         .HasColumnType("INTEGER");

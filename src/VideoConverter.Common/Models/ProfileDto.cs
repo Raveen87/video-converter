@@ -12,4 +12,5 @@ public record ProfileDto(
     string? OutputPathTemplate,
     IEnumerable<string>? AudioLanguages,
     IEnumerable<string>? SubtitleLanguages,
-    bool VmafEnabled = false);
+    bool VmafEnabled = false,
+    double? RequiredVmaf = null);

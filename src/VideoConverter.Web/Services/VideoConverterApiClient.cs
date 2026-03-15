@@ -1106,6 +1106,11 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/VmafEnabled", Value = patch.VmafEnabled });
         }
 
+        if (patch.RequiredVmaf is not null)
+        {
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/RequiredVmaf", Value = patch.RequiredVmaf });
+        }
+
         return patchOperations;
     }
 
@@ -1136,6 +1141,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
         AddOperation(nameof(ProfilePatchDto.AudioLanguages), patch.AudioLanguages);
         AddOperation(nameof(ProfilePatchDto.SubtitleLanguages), patch.SubtitleLanguages);
         AddOperation(nameof(ProfilePatchDto.VmafEnabled), patch.VmafEnabled);
+        AddOperation(nameof(ProfilePatchDto.RequiredVmaf), patch.RequiredVmaf);
 
         return patchOperations;
     }

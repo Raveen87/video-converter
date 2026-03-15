@@ -43,6 +43,7 @@
                 <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring" Color="Color.Primary" Class="mb-3" />
                 @if (_formModel.VmafEnabled)
                 {
+                    <MudNumericField @bind-Value="_formModel.RequiredVmaf" Label="Required VMAF Score (0-100)" HelperText="If set, system will optimize CRF to meet this score" Variant="Variant.Outlined" Class="mb-3" Min="0" Max="100" />
                     <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
                         VMAF will calculate a quality score (0-100) after conversion completes by comparing the output to the source.
                     </MudAlert>
@@ -164,6 +165,7 @@
                 AudioLanguages = audioLanguages,
                 SubtitleLanguages = subtitleLanguages,
                 VmafEnabled = _formModel.VmafEnabled,
+                RequiredVmaf = _formModel.RequiredVmaf,
             };
 
             var validation = await ConversionPatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);
@@ -257,5 +259,7 @@
         public string? SubtitleLanguagesString { get; set; }
 
         public bool VmafEnabled { get; set; }
+
+        public double? RequiredVmaf { get; set; }
     }
 }

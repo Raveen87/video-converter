@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.JsonPatch.Exceptions;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Exceptions;
 
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;
@@ -86,6 +86,7 @@ public sealed class ConversionsEndpoints(
             conversion.DetectedCrop,
             conversion.OutputPathTemplate,
             conversion.VmafEnabled,
+            conversion.RequiredVmaf,
             conversion.VmafScore);
     }
 
@@ -105,6 +106,7 @@ public sealed class ConversionsEndpoints(
             AudioLanguages = null, // Cannot restore from entity
             SubtitleLanguages = null, // Cannot restore from entity
             VmafEnabled = conversion.VmafEnabled,
+            RequiredVmaf = conversion.RequiredVmaf,
         };
     }
 
@@ -158,6 +160,13 @@ public sealed class ConversionsEndpoints(
             var oldValue = conversion.VmafEnabled;
             conversion.VmafEnabled = patchModel.VmafEnabled.Value;
             _logger.LogDebug("Updated VmafEnabled: {OldValue} -> {NewValue}", oldValue, patchModel.VmafEnabled);
+        }
+
+        if (patchModel.RequiredVmaf is not null)
+        {
+            var oldValue = conversion.RequiredVmaf;
+            conversion.RequiredVmaf = patchModel.RequiredVmaf;
+            _logger.LogDebug("Updated RequiredVmaf: {OldValue} -> {NewValue}", oldValue, patchModel.RequiredVmaf);
         }
 
         // Note: OutputFilenameTemplate changes would require re-processing metadata, which we don't do on update

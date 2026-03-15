@@ -51,6 +51,11 @@
             </div>
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring" Color="Color.Primary" Class="mb-3" />
+            @if (_formModel.VmafEnabled)
+            {
+                <MudNumericField @bind-Value="_formModel.RequiredVmaf" Label="Required VMAF Score (0-100)" HelperText="If set, system will optimize CRF to meet this score" Variant="Variant.Outlined" Class="mb-3" Min="0" Max="100" />
+            }
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting">
                 @if (_isSubmitting)
                 {
@@ -128,6 +133,8 @@
             _formModel.OutputFilenameTemplate = InitialModel.OutputFilenameTemplate;
             _formModel.AudioLanguagesString = InitialModel.AudioLanguages is not null ? string.Join(", ", InitialModel.AudioLanguages) : null;
             _formModel.SubtitleLanguagesString = InitialModel.SubtitleLanguages is not null ? string.Join(", ", InitialModel.SubtitleLanguages) : null;
+            _formModel.VmafEnabled = InitialModel.VmafEnabled ?? false;
+            _formModel.RequiredVmaf = InitialModel.RequiredVmaf;
         }
         else
         {
@@ -199,7 +206,10 @@
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
-                _formModel.OutputFilenameTemplate);
+                _formModel.OutputFilenameTemplate,
+                null,
+                _formModel.VmafEnabled,
+                _formModel.RequiredVmaf);
 
             await OnSubmit.InvokeAsync(request);
             Logger.LogInformation("Form submission completed successfully");
@@ -323,5 +333,9 @@
         public string? AudioLanguagesString { get; set; }
 
         public string? SubtitleLanguagesString { get; set; }
+
+        public bool VmafEnabled { get; set; }
+
+        public double? RequiredVmaf { get; set; }
     }
 }

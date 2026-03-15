@@ -23,4 +23,5 @@ public record ConversionDto(
     string? DetectedCrop,
     string? OutputPathTemplate = null,
     bool VmafEnabled = false,
+    double? RequiredVmaf = null,
     double? VmafScore = null);

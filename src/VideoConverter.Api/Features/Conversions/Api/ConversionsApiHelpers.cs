@@ -32,6 +32,7 @@ internal static class ConversionsApiHelpers
             c.DetectedCrop,
             c.OutputPathTemplate,
             c.VmafEnabled,
+            c.RequiredVmaf,
             c.VmafScore);
     }
 

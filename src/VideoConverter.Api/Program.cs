@@ -68,10 +68,7 @@ public static class Program
         {
             options.AddPolicy(corsPolicyName, p =>
             {
-                _ = p.WithOrigins(
-                        "http://localhost:5173",
-                        "https://localhost:5173",
-                        "http://localhost:5263")
+                _ = p.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
                      .AllowAnyHeader()
                      .AllowAnyMethod();
             });

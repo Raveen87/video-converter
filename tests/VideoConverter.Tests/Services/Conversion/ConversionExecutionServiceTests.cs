@@ -30,7 +30,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -57,7 +58,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FailingConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -85,7 +87,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FailingConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 
@@ -112,7 +115,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FailingConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var (result, conversionId) = await svc.RunNextPendingAsync(CancellationToken.None);
 
@@ -148,7 +152,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var (result, conversionId) = await svc.RunNextPendingAsync(CancellationToken.None);
 
@@ -191,7 +196,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var result = await svc.RunByIdAsync(targetConversion.Id, CancellationToken.None);
 
@@ -224,7 +230,8 @@ public sealed class ConversionExecutionServiceTests
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = LoggerFactory.Create(_ => { }).CreateLogger<ConversionExecutionService>();
-        var svc = new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        var svc = new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
 
         var result = await svc.RunByIdAsync(conversion.Id, CancellationToken.None);
 

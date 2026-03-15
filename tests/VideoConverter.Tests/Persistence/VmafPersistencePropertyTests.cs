@@ -159,6 +159,7 @@ public class VmafPersistencePropertyTests
                 conversion.DetectedCrop,
                 conversion.OutputPathTemplate,
                 conversion.VmafEnabled,
+                conversion.RequiredVmaf,
                 conversion.VmafScore);
 
             var vmafEnabledMatches = dto.VmafEnabled == input.VmafEnabled;

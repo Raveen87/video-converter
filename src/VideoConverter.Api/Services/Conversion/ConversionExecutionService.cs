@@ -1,10 +1,16 @@
+using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Notifications.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 
 namespace VideoConverter.Api.Services.Conversion;
 
-public sealed class ConversionExecutionService(AppDbContext db, IConversionRunner runner, INotificationService notificationService, ILogger<ConversionExecutionService> logger)
+public sealed class ConversionExecutionService(
+    AppDbContext db,
+    IConversionRunner runner,
+    INotificationService notificationService,
+    ICrfOptimizationService optimizer,
+    ILogger<ConversionExecutionService> logger)
     : IConversionExecutionService
 {
     public async Task<ConversionStartResult> RunByIdAsync(int id, CancellationToken ct)
@@ -133,6 +139,7 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         ConversionStartResult result;
         try
         {
+            await OptimizeCrfIfNeededAsync(conversion, ct).ConfigureAwait(false);
             result = await runner.StartAsync(conversion, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -168,6 +175,32 @@ public sealed class ConversionExecutionService(AppDbContext db, IConversionRunne
         }
 
         return result;
+    }
+
+    private async Task OptimizeCrfIfNeededAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
+    {
+        if (conversion.RequiredVmaf is double requiredVmaf && requiredVmaf > 0)
+        {
+            var startCrf = conversion.Crf ?? 23;
+            var optimizedCrf = await optimizer.OptimizeCrfAsync(
+                conversion,
+                requiredVmaf,
+                startCrf,
+                ct).ConfigureAwait(false);
+
+            if (optimizedCrf != startCrf)
+            {
+                logger.LogInformation(
+                    "Conversion {ConversionId}: CRF optimized from {OriginalCrf} to {OptimizedCrf} to meet VMAF {RequiredVmaf}",
+                    conversion.Id,
+                    startCrf,
+                    optimizedCrf,
+                    requiredVmaf);
+
+                conversion.Crf = optimizedCrf;
+                _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            }
+        }
     }
 
     private async Task AddNotificationForConversionAsync(Shared.Domain.Entities.Conversion conversion, ConversionStartResult result, CancellationToken ct)

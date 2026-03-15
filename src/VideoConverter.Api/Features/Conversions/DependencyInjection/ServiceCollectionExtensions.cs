@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         _ = services.AddScoped<IConversionService, ConversionService>();
         _ = services.AddScoped<IDirectoryQueueService, DirectoryQueueService>();
         _ = services.AddScoped<IConversionExecutionService, ConversionExecutionService>();
+        _ = services.AddScoped<ICrfOptimizationService, CrfOptimizationService>();
         _ = services.AddScoped<IRequestValidator<ConversionCreateDto>, ConversionCreateValidator>();
         _ = services.AddScoped<IRequestValidator<ConversionPatchDto>, ConversionPatchValidator>();
         _ = services.AddScoped<IRequestValidator<DirectoryQueueRequestDto>, DirectoryQueueRequestValidator>();

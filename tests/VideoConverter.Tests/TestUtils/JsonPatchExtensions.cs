@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
-using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.JsonPatch.Operations;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Operations;
 
 namespace VideoConverter.Tests.TestUtils;
 

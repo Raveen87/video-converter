@@ -52,6 +52,10 @@
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring by Default" Color="Color.Primary" Class="mb-3" />
+            @if (_formModel.VmafEnabled)
+            {
+                <MudNumericField @bind-Value="_formModel.RequiredVmaf" Label="Required VMAF Score (0-100)" HelperText="If set, system will optimize CRF to meet this score" Variant="Variant.Outlined" Class="mb-3" Min="0" Max="100" />
+            }
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSubmitting || !HasChanges)">
                 @if (_isSubmitting)
                 {
@@ -310,6 +314,12 @@
             _ = changedFields.Add(nameof(ProfilePatchDto.VmafEnabled));
         }
 
+        if (Math.Abs((_formModel.RequiredVmaf ?? 0) - (original.RequiredVmaf ?? 0)) > 0.001)
+        {
+            patch.RequiredVmaf = _formModel.RequiredVmaf;
+            _ = changedFields.Add(nameof(ProfilePatchDto.RequiredVmaf));
+        }
+
         return (patch, changedFields);
     }
 
@@ -366,5 +376,7 @@
         public string? SubtitleLanguagesString { get; set; }
 
         public bool VmafEnabled { get; set; }
+
+        public double? RequiredVmaf { get; set; }
     }
 }
