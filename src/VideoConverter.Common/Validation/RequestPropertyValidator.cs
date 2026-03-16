@@ -5,6 +5,9 @@ namespace VideoConverter.Common.Validation;
 
 public sealed class RequestPropertyValidator : IRequestPropertyValidator
 {
+    private const double MinRequiredVmaf = 0;
+    private const double MaxRequiredVmaf = 100;
+
     public bool IsValidCrf(int? crf, out string? errorMessage)
     {
         errorMessage = null;
@@ -94,6 +97,45 @@ public sealed class RequestPropertyValidator : IRequestPropertyValidator
         if (template.Length > 1024)
         {
             errorMessage = "OutputFilenameTemplate is too long (maximum 1024 characters).";
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool IsValidRequiredVmaf(double? requiredVmaf, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (requiredVmaf is < MinRequiredVmaf or > MaxRequiredVmaf)
+        {
+            errorMessage = $"RequiredVmaf must be between {MinRequiredVmaf} and {MaxRequiredVmaf}.";
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool IsValidVmafConfiguration(bool? vmafEnabled, double? requiredVmaf, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (vmafEnabled is false && requiredVmaf is not null)
+        {
+            errorMessage = "RequiredVmaf can only be set when VmafEnabled is true or unspecified.";
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool IsValidVmafConfigurationForCreate(bool? vmafEnabled, double? requiredVmaf, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (requiredVmaf is not null && vmafEnabled is not true)
+        {
+            errorMessage = "RequiredVmaf can only be set when VmafEnabled is true.";
             return false;
         }
 

@@ -15,6 +15,7 @@ public sealed class ConversionCreateDtoBuilder
     private string? _outputFilenameTemplate;
     private string? _outputPathTemplate;
     private bool? _vmafEnabled;
+    private double? _requiredVmaf;
 
     public ConversionCreateDtoBuilder WithInputPath(string path)
     {
@@ -82,6 +83,12 @@ public sealed class ConversionCreateDtoBuilder
         return this;
     }
 
+    public ConversionCreateDtoBuilder WithRequiredVmaf(double? requiredVmaf)
+    {
+        _requiredVmaf = requiredVmaf;
+        return this;
+    }
+
     public ConversionCreateDto Build()
     {
         return new ConversionCreateDto(
@@ -95,6 +102,7 @@ public sealed class ConversionCreateDtoBuilder
             _subtitleLanguages,
             _outputFilenameTemplate,
             _outputPathTemplate,
-            _vmafEnabled);
+            _vmafEnabled,
+            _requiredVmaf);
     }
 }

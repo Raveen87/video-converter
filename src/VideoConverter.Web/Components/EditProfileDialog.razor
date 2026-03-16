@@ -133,6 +133,7 @@
         _formModel.AudioLanguagesString = Profile.AudioLanguages is not null ? string.Join(", ", Profile.AudioLanguages) : null;
         _formModel.SubtitleLanguagesString = Profile.SubtitleLanguages is not null ? string.Join(", ", Profile.SubtitleLanguages) : null;
         _formModel.VmafEnabled = Profile.VmafEnabled;
+        _formModel.RequiredVmaf = Profile.RequiredVmaf;
     }
 
     private async Task HandleValidSubmit()
@@ -314,9 +315,10 @@
             _ = changedFields.Add(nameof(ProfilePatchDto.VmafEnabled));
         }
 
-        if (Math.Abs((_formModel.RequiredVmaf ?? 0) - (original.RequiredVmaf ?? 0)) > 0.001)
+        var effectiveRequiredVmaf = _formModel.VmafEnabled ? _formModel.RequiredVmaf : null;
+        if (!AreNullableDoublesEqual(effectiveRequiredVmaf, original.RequiredVmaf))
         {
-            patch.RequiredVmaf = _formModel.RequiredVmaf;
+            patch.RequiredVmaf = effectiveRequiredVmaf;
             _ = changedFields.Add(nameof(ProfilePatchDto.RequiredVmaf));
         }
 
@@ -336,6 +338,21 @@
         }
 
         return left.SequenceEqual(right);
+    }
+
+    private static bool AreNullableDoublesEqual(double? left, double? right)
+    {
+        if (!left.HasValue && !right.HasValue)
+        {
+            return true;
+        }
+
+        if (!left.HasValue || !right.HasValue)
+        {
+            return false;
+        }
+
+        return Math.Abs(left.Value - right.Value) <= 0.001;
     }
 
     private async Task HandleCancel()

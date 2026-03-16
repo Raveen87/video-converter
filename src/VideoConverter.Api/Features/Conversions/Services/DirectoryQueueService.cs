@@ -90,7 +90,8 @@ public sealed class DirectoryQueueService(
             request.SubtitleLanguages,
             request.OutputFilenameTemplate,
             request.OutputPathTemplate,
-            request.VmafEnabled);
+            request.VmafEnabled,
+            request.RequiredVmaf);
 
         return perFileRequest;
     }

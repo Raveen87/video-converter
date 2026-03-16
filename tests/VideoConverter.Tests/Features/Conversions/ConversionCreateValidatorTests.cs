@@ -54,11 +54,138 @@ public class ConversionCreateValidatorTests
             .WithAudioLanguages(string.Empty)
             .WithSubtitleLanguages("   ")
             .WithAudioChannels((AudioChannels)99)
+            .WithRequiredVmaf(101)
             .Build();
 
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
         _ = result.IsValid.Should().BeFalse();
         var dict = result.ToDictionary();
-        _ = dict.Keys.Should().Contain([nameof(request.InputPath), nameof(request.OutputDirectory), nameof(request.Crf), nameof(request.AudioBitrateKbps), nameof(request.Resolution), nameof(request.AudioLanguages), nameof(request.SubtitleLanguages), nameof(request.AudioChannels)]);
+        _ = dict.Keys.Should().Contain([nameof(request.InputPath), nameof(request.OutputDirectory), nameof(request.Crf), nameof(request.AudioBitrateKbps), nameof(request.Resolution), nameof(request.AudioLanguages), nameof(request.SubtitleLanguages), nameof(request.AudioChannels), nameof(request.RequiredVmaf)]);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(100.0)]
+    public async Task ValidateAsync_WithRequiredVmafBoundaryValues_ReturnsValid(double requiredVmaf)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "vc-vmaf-boundary-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "input.mp4");
+        await File.WriteAllTextAsync(tempFile, "x");
+
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath(tempFile)
+            .WithOutputDirectory(tempDir)
+            .WithVmafEnabled(true)
+            .WithRequiredVmaf(requiredVmaf)
+            .Build();
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        try
+        {
+            _ = result.IsValid.Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(100.1)]
+    public async Task ValidateAsync_WithRequiredVmafOutOfRange_ReturnsError(double requiredVmaf)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "vc-vmaf-range-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "input.mp4");
+        await File.WriteAllTextAsync(tempFile, "x");
+
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath(tempFile)
+            .WithOutputDirectory(tempDir)
+            .WithRequiredVmaf(requiredVmaf)
+            .Build();
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        try
+        {
+            _ = result.IsValid.Should().BeFalse();
+            _ = result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithVmafDisabledAndRequiredVmafSet_ReturnsError()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "vc-vmaf-disabled-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "input.mp4");
+        await File.WriteAllTextAsync(tempFile, "x");
+
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath(tempFile)
+            .WithOutputDirectory(tempDir)
+            .WithVmafEnabled(false)
+            .WithRequiredVmaf(92.0)
+            .Build();
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        try
+        {
+            _ = result.IsValid.Should().BeFalse();
+            _ = result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithVmafUnspecifiedAndRequiredVmafSet_ReturnsError()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "vc-vmaf-unspecified-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "input.mp4");
+        await File.WriteAllTextAsync(tempFile, "x");
+
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath(tempFile)
+            .WithOutputDirectory(tempDir)
+            .WithVmafEnabled(null)
+            .WithRequiredVmaf(92.0)
+            .Build();
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        try
+        {
+            _ = result.IsValid.Should().BeFalse();
+            _ = result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
     }
 }

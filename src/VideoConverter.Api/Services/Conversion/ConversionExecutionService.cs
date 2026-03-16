@@ -179,9 +179,10 @@ public sealed class ConversionExecutionService(
 
     private async Task OptimizeCrfIfNeededAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
     {
-        if (conversion.RequiredVmaf is double requiredVmaf && requiredVmaf > 0)
+        if (conversion.VmafEnabled && conversion.RequiredVmaf is >= 0 and <= 100)
         {
-            var startCrf = conversion.Crf ?? 23;
+            var requiredVmaf = conversion.RequiredVmaf.Value;
+            var startCrf = conversion.Crf ?? VideoArgsBuilder.DefaultCrf;
             var optimizedCrf = await optimizer.OptimizeCrfAsync(
                 conversion,
                 requiredVmaf,

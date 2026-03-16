@@ -74,4 +74,69 @@ public class EffectiveConversionRequestBuilderTests()
         _ = effective.AudioLanguages.Should().BeEquivalentTo("English");
         _ = effective.SubtitleLanguages.Should().BeEquivalentTo("Swedish");
     }
+
+    [Fact]
+    public void Build_WithProfileRequiredVmaf_UsesProfileWhenRequestMissing()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("req-out")
+            .WithRequiredVmaf(null)
+            .Build();
+
+        var profile = new Profile
+        {
+            RequiredVmaf = 92.4,
+            VmafEnabled = true,
+        };
+
+        var effective = EffectiveConversionRequestBuilder.Build(request, profile);
+
+        _ = effective.RequiredVmaf.Should().Be(92.4);
+        _ = effective.VmafEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Build_WithRequestRequiredVmaf_OverridesProfileValue()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("req-out")
+            .WithVmafEnabled(true)
+            .WithRequiredVmaf(95.0)
+            .Build();
+
+        var profile = new Profile
+        {
+            RequiredVmaf = 90.0,
+            VmafEnabled = false,
+        };
+
+        var effective = EffectiveConversionRequestBuilder.Build(request, profile);
+
+        _ = effective.RequiredVmaf.Should().Be(95.0);
+        _ = effective.VmafEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Build_WithProfileRequiredVmafAndRequestDisablesVmaf_ClearsRequiredVmaf()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("in.mp4")
+            .WithOutputDirectory("req-out")
+            .WithVmafEnabled(false)
+            .WithRequiredVmaf(null)
+            .Build();
+
+        var profile = new Profile
+        {
+            RequiredVmaf = 93.5,
+            VmafEnabled = true,
+        };
+
+        var effective = EffectiveConversionRequestBuilder.Build(request, profile);
+
+        _ = effective.VmafEnabled.Should().BeFalse();
+        _ = effective.RequiredVmaf.Should().BeNull();
+    }
 }

@@ -204,6 +204,86 @@ public class ConversionsEndpointsTests
         _ = updated.Resolution.Should().Be(1080); // Unchanged
     }
 
+    [Fact]
+    public async Task UpdateConversionAsync_WithRemoveRequiredVmaf_ClearsValue()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Pending,
+            RequiredVmaf = 92.0,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Remove(x => x.RequiredVmaf);
+
+        var endpoints = CreateEndpoints(db);
+        _ = await endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None);
+
+        var updated = await db.Conversions.FindAsync(conversion.Id);
+        _ = updated.Should().NotBeNull();
+        _ = updated.RequiredVmaf.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateConversionAsync_WithReplaceNullRequiredVmaf_ClearsValue()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Pending,
+            RequiredVmaf = 93.5,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Replace(x => x.RequiredVmaf, (double?)null);
+
+        var endpoints = CreateEndpoints(db);
+        _ = await endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None);
+
+        var updated = await db.Conversions.FindAsync(conversion.Id);
+        _ = updated.Should().NotBeNull();
+        _ = updated.RequiredVmaf.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateConversionAsync_WithoutRequiredVmafOperation_LeavesValueUnchanged()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Pending,
+            Crf = 23,
+            RequiredVmaf = 91.2,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Replace(x => x.Crf, 28);
+
+        var endpoints = CreateEndpoints(db);
+        _ = await endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None);
+
+        var updated = await db.Conversions.FindAsync(conversion.Id);
+        _ = updated.Should().NotBeNull();
+        _ = updated.Crf.Should().Be(28);
+        _ = updated.RequiredVmaf.Should().Be(91.2);
+    }
+
     private static ConversionsEndpoints CreateEndpoints(AppDbContext db)
     {
         var logger = NullLogger<ConversionsEndpoints>.Instance;

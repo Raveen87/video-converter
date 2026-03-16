@@ -48,10 +48,29 @@ public sealed class ConversionsEndpoints(
         ApplyPatchOrThrow(patchDocument, patchModel, id);
         LogPatchModelValues(id, patchModel);
 
-        await ValidatePatchedModelOrThrow(patchModel, cancellationToken).ConfigureAwait(false);
+        var hasVmafEnabledOp = patchDocument.Operations.Exists(op => op.path.Equals("/vmafEnabled", StringComparison.OrdinalIgnoreCase));
+        var hasRequiredVmafOp = patchDocument.Operations.Exists(op => op.path.Equals("/requiredVmaf", StringComparison.OrdinalIgnoreCase));
+
+        var modelForValidation = hasVmafEnabledOp || hasRequiredVmafOp
+            ? patchModel
+            : new ConversionPatchDto
+            {
+                OutputDirectory = patchModel.OutputDirectory,
+                Crf = patchModel.Crf,
+                AudioBitrateKbps = patchModel.AudioBitrateKbps,
+                AudioChannels = patchModel.AudioChannels,
+                Resolution = patchModel.Resolution,
+                OutputFilenameTemplate = patchModel.OutputFilenameTemplate,
+                AudioLanguages = patchModel.AudioLanguages,
+                SubtitleLanguages = patchModel.SubtitleLanguages,
+                VmafEnabled = null,
+                RequiredVmaf = null,
+            };
+
+        await ValidatePatchedModelOrThrow(modelForValidation, cancellationToken).ConfigureAwait(false);
         await ProcessLanguagesIfUpdatedAsync(conversion, patchDocument, patchModel, cancellationToken).ConfigureAwait(false);
 
-        UpdateConversionFromPatch(conversion, patchModel);
+        UpdateConversionFromPatch(conversion, patchModel, hasVmafEnabledOp, hasRequiredVmafOp);
         LogConversionValues("Final", id, conversion);
 
         _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -64,30 +83,30 @@ public sealed class ConversionsEndpoints(
     private static ConversionDto ToDto(Conversion conversion)
     {
         return new ConversionDto(
-            conversion.Id,
-            conversion.InputPath,
-            conversion.OutputDirectory,
-            conversion.CreatedAtUtc,
-            conversion.Status,
-            conversion.Crf,
-            conversion.AudioBitrateKbps,
-            conversion.AudioChannels,
-            conversion.Resolution,
-            conversion.MetadataBasedFilename,
-            conversion.DeletedAtUtc,
-            conversion.TmdbId,
-            conversion.MatchedTitle,
-            conversion.MatchedYear,
-            conversion.MatchedSeason,
-            conversion.MatchedEpisode,
-            conversion.SelectedAudioStreamIndicesCsv,
-            conversion.SelectedSubtitleStreamIndicesCsv,
-            conversion.SelectedExternalSubtitlePathsCsv,
-            conversion.DetectedCrop,
-            conversion.OutputPathTemplate,
-            conversion.VmafEnabled,
-            conversion.RequiredVmaf,
-            conversion.VmafScore);
+            Id: conversion.Id,
+            InputPath: conversion.InputPath,
+            OutputDirectory: conversion.OutputDirectory,
+            CreatedAtUtc: conversion.CreatedAtUtc,
+            Status: conversion.Status,
+            Crf: conversion.Crf,
+            AudioBitrateKbps: conversion.AudioBitrateKbps,
+            AudioChannels: conversion.AudioChannels,
+            Resolution: conversion.Resolution,
+            MetadataBasedFilename: conversion.MetadataBasedFilename,
+            DeletedAtUtc: conversion.DeletedAtUtc,
+            TmdbId: conversion.TmdbId,
+            MatchedTitle: conversion.MatchedTitle,
+            MatchedYear: conversion.MatchedYear,
+            MatchedSeason: conversion.MatchedSeason,
+            MatchedEpisode: conversion.MatchedEpisode,
+            SelectedAudioStreamIndicesCsv: conversion.SelectedAudioStreamIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv: conversion.SelectedSubtitleStreamIndicesCsv,
+            SelectedExternalSubtitlePathsCsv: conversion.SelectedExternalSubtitlePathsCsv,
+            DetectedCrop: conversion.DetectedCrop,
+            OutputPathTemplate: conversion.OutputPathTemplate,
+            VmafEnabled: conversion.VmafEnabled,
+            RequiredVmaf: conversion.RequiredVmaf,
+            VmafScore: conversion.VmafScore);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)
@@ -110,7 +129,7 @@ public sealed class ConversionsEndpoints(
         };
     }
 
-    private void UpdateConversionFromPatch(Conversion conversion, ConversionPatchDto patchModel)
+    private void UpdateConversionFromPatch(Conversion conversion, ConversionPatchDto patchModel, bool hasVmafEnabledOp, bool hasRequiredVmafOp)
     {
         if (patchModel.OutputDirectory is not null)
         {
@@ -155,14 +174,14 @@ public sealed class ConversionsEndpoints(
             _logger.LogDebug("Updated Resolution: {OldValue} -> {NewValue}", oldValue, patchModel.Resolution);
         }
 
-        if (patchModel.VmafEnabled is not null)
+        if (hasVmafEnabledOp && patchModel.VmafEnabled is not null)
         {
             var oldValue = conversion.VmafEnabled;
             conversion.VmafEnabled = patchModel.VmafEnabled.Value;
             _logger.LogDebug("Updated VmafEnabled: {OldValue} -> {NewValue}", oldValue, patchModel.VmafEnabled);
         }
 
-        if (patchModel.RequiredVmaf is not null)
+        if (hasRequiredVmafOp)
         {
             var oldValue = conversion.RequiredVmaf;
             conversion.RequiredVmaf = patchModel.RequiredVmaf;

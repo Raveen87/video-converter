@@ -6,7 +6,8 @@ namespace VideoConverter.Common.Validation.Requests;
 
 public sealed class ProfileConversionCreateValidator(
     ILogger<ProfileConversionCreateValidator> logger,
-    IFileSystemValidator fileSystemValidator) : IRequestValidator<ProfileConversionCreateDto>
+    IFileSystemValidator fileSystemValidator,
+    IRequestPropertyValidator requestPropertyValidator) : IRequestValidator<ProfileConversionCreateDto>
 {
     public Task<DomainValidationResult> ValidateAsync(ProfileConversionCreateDto request, CancellationToken cancellationToken)
     {
@@ -15,6 +16,10 @@ public sealed class ProfileConversionCreateValidator(
 
         result.AddIfInvalid(fileSystemValidator.IsValidFile(request.InputPath, out var inputError), nameof(request.InputPath), inputError, logger, request.InputPath);
         result.AddIfInvalid(fileSystemValidator.IsValidDirectory(request.OutputDirectory, out var outputError), nameof(request.OutputDirectory), outputError, logger, request.OutputDirectory);
+        _ = requestPropertyValidator.IsValidRequiredVmaf(request.RequiredVmaf, out var requiredVmafErr);
+        result.AddIfInvalid(requiredVmafErr is null, nameof(request.RequiredVmaf), requiredVmafErr, logger, request.RequiredVmaf);
+        _ = requestPropertyValidator.IsValidVmafConfigurationForCreate(request.VmafEnabled, request.RequiredVmaf, out var vmafConfigErr);
+        result.AddIfInvalid(vmafConfigErr is null, nameof(request.RequiredVmaf), vmafConfigErr, logger, request.RequiredVmaf);
 
         if (result.IsValid)
         {

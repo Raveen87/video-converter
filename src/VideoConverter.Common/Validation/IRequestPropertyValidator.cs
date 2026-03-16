@@ -15,4 +15,10 @@ public interface IRequestPropertyValidator
     bool IsValidAudioChannels(AudioChannels? audioChannels, out string? errorMessage);
 
     bool IsValidFilenameTemplate(string? template, out string? errorMessage);
+
+    bool IsValidRequiredVmaf(double? requiredVmaf, out string? errorMessage);
+
+    bool IsValidVmafConfiguration(bool? vmafEnabled, double? requiredVmaf, out string? errorMessage);
+
+    bool IsValidVmafConfigurationForCreate(bool? vmafEnabled, double? requiredVmaf, out string? errorMessage);
 }

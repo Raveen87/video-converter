@@ -173,6 +173,8 @@
                 _formModel.OutputFilenameTemplate = profile.OutputFilenameTemplate;
                 _formModel.AudioLanguagesString = profile.AudioLanguages is not null ? string.Join(", ", profile.AudioLanguages) : null;
                 _formModel.SubtitleLanguagesString = profile.SubtitleLanguages is not null ? string.Join(", ", profile.SubtitleLanguages) : null;
+                _formModel.VmafEnabled = profile.VmafEnabled;
+                _formModel.RequiredVmaf = profile.RequiredVmaf;
                 StateHasChanged();
             }
         }
@@ -209,7 +211,7 @@
                 _formModel.OutputFilenameTemplate,
                 null,
                 _formModel.VmafEnabled,
-                _formModel.RequiredVmaf);
+                _formModel.VmafEnabled ? _formModel.RequiredVmaf : null);
 
             await OnSubmit.InvokeAsync(request);
             Logger.LogInformation("Form submission completed successfully");

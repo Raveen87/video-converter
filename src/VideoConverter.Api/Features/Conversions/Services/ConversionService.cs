@@ -72,6 +72,7 @@ public sealed class ConversionService(
             TmdbId = metadata?.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
             VmafEnabled = request.VmafEnabled ?? false,
+            RequiredVmaf = request.RequiredVmaf,
         };
 
         if (metadata is not null)
@@ -128,6 +129,7 @@ public sealed class ConversionService(
             TmdbId = metadata.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
             VmafEnabled = request.VmafEnabled ?? false,
+            RequiredVmaf = request.RequiredVmaf,
         };
 
         UpdateConversionWithMetadata(conversion, metadata);

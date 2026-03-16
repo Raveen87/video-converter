@@ -113,63 +113,82 @@ public class VmafPersistencePropertyTests
     [Property(MaxTest = 100)]
     public Property ConversionDto_ShouldIncludeAllVmafFields()
     {
+        return Prop.ForAll(CreateVmafDtoInputGenerator().ToArbitrary(), input =>
+        {
+            var conversion = BuildConversion(input);
+            var dto = BuildDto(conversion);
+
+            var vmafEnabledMatches = dto.VmafEnabled == input.VmafEnabled;
+            var requiredVmafMatches = NullableDoubleMatches(dto.RequiredVmaf, input.RequiredVmaf);
+            var vmafScoreMatches = NullableDoubleMatches(dto.VmafScore, input.VmafScore);
+
+            return (vmafEnabledMatches && requiredVmafMatches && vmafScoreMatches)
+                .Label($"VmafEnabled: expected={input.VmafEnabled}, got={dto.VmafEnabled}")
+                .Label($"RequiredVmaf: expected={input.RequiredVmaf}, got={dto.RequiredVmaf}")
+                .Label($"VmafScore: expected={input.VmafScore}, got={dto.VmafScore}");
+        });
+    }
+
+    private static Gen<(bool VmafEnabled, double? RequiredVmaf, double? VmafScore)> CreateVmafDtoInputGenerator()
+    {
         var boolGen = Gen.Elements(true, false);
-        var vmafScoreGen = Gen.OneOf(
+        var nullableDoubleGen = Gen.OneOf(
             Gen.Constant<double?>(null),
             Gen.Choose(0, 10000).Select(i => (double?)i / 100.0));
 
-        var inputGen = from vmafEnabled in boolGen
-                       from vmafScore in vmafScoreGen
-                       select (VmafEnabled: vmafEnabled, VmafScore: vmafScore);
+        return from vmafEnabled in boolGen
+               from requiredVmaf in nullableDoubleGen
+               from vmafScore in nullableDoubleGen
+               select (vmafEnabled, requiredVmaf, vmafScore);
+    }
 
-        return Prop.ForAll(inputGen.ToArbitrary(), input =>
+    private static Conversion BuildConversion((bool VmafEnabled, double? RequiredVmaf, double? VmafScore) input)
+    {
+        return new Conversion
         {
-            var conversion = new Conversion
-            {
-                Id = 1,
-                InputPath = "/test/input.mp4",
-                OutputDirectory = "/test/output",
-                CreatedAtUtc = DateTime.UtcNow,
-                Status = ConversionStatus.Completed,
-                VmafEnabled = input.VmafEnabled,
-                VmafScore = input.VmafScore,
-            };
+            Id = 1,
+            InputPath = "/test/input.mp4",
+            OutputDirectory = "/test/output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Completed,
+            VmafEnabled = input.VmafEnabled,
+            RequiredVmaf = input.RequiredVmaf,
+            VmafScore = input.VmafScore,
+        };
+    }
 
-            // Create DTO using the same mapping logic as the API
-            var dto = new ConversionDto(
-                conversion.Id,
-                conversion.InputPath,
-                conversion.OutputDirectory,
-                conversion.CreatedAtUtc,
-                conversion.Status,
-                conversion.Crf,
-                conversion.AudioBitrateKbps,
-                conversion.AudioChannels,
-                conversion.Resolution,
-                conversion.MetadataBasedFilename,
-                conversion.DeletedAtUtc,
-                conversion.TmdbId,
-                conversion.MatchedTitle,
-                conversion.MatchedYear,
-                conversion.MatchedSeason,
-                conversion.MatchedEpisode,
-                conversion.SelectedAudioStreamIndicesCsv,
-                conversion.SelectedSubtitleStreamIndicesCsv,
-                conversion.SelectedExternalSubtitlePathsCsv,
-                conversion.DetectedCrop,
-                conversion.OutputPathTemplate,
-                conversion.VmafEnabled,
-                conversion.RequiredVmaf,
-                conversion.VmafScore);
+    private static ConversionDto BuildDto(Conversion conversion)
+    {
+        return new ConversionDto(
+            Id: conversion.Id,
+            InputPath: conversion.InputPath,
+            OutputDirectory: conversion.OutputDirectory,
+            CreatedAtUtc: conversion.CreatedAtUtc,
+            Status: conversion.Status,
+            Crf: conversion.Crf,
+            AudioBitrateKbps: conversion.AudioBitrateKbps,
+            AudioChannels: conversion.AudioChannels,
+            Resolution: conversion.Resolution,
+            MetadataBasedFilename: conversion.MetadataBasedFilename,
+            DeletedAtUtc: conversion.DeletedAtUtc,
+            TmdbId: conversion.TmdbId,
+            MatchedTitle: conversion.MatchedTitle,
+            MatchedYear: conversion.MatchedYear,
+            MatchedSeason: conversion.MatchedSeason,
+            MatchedEpisode: conversion.MatchedEpisode,
+            SelectedAudioStreamIndicesCsv: conversion.SelectedAudioStreamIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv: conversion.SelectedSubtitleStreamIndicesCsv,
+            SelectedExternalSubtitlePathsCsv: conversion.SelectedExternalSubtitlePathsCsv,
+            DetectedCrop: conversion.DetectedCrop,
+            OutputPathTemplate: conversion.OutputPathTemplate,
+            VmafEnabled: conversion.VmafEnabled,
+            RequiredVmaf: conversion.RequiredVmaf,
+            VmafScore: conversion.VmafScore);
+    }
 
-            var vmafEnabledMatches = dto.VmafEnabled == input.VmafEnabled;
-            var vmafScoreMatches = input.VmafScore is null
-                ? dto.VmafScore is null
-                : dto.VmafScore.HasValue && Math.Abs(dto.VmafScore.Value - input.VmafScore.Value) < 0.0001;
-
-            return (vmafEnabledMatches && vmafScoreMatches)
-                .Label($"VmafEnabled: expected={input.VmafEnabled}, got={dto.VmafEnabled}")
-                .Label($"VmafScore: expected={input.VmafScore}, got={dto.VmafScore}");
-        });
+    private static bool NullableDoubleMatches(double? left, double? right)
+    {
+        return (left is null && right is null)
+            || (left.HasValue && right.HasValue && Math.Abs(left.Value - right.Value) < 0.0001);
     }
 }

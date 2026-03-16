@@ -1106,7 +1106,7 @@ public sealed class VideoConverterApiClient : IVideoConverterApiClient
             patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/VmafEnabled", Value = patch.VmafEnabled });
         }
 
-        if (patch.RequiredVmaf is not null)
+        if (patch.RequiredVmaf is not null || patch.VmafEnabled is not null)
         {
             patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/RequiredVmaf", Value = patch.RequiredVmaf });
         }

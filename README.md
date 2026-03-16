@@ -39,7 +39,8 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       "subtitleLanguages": ["English", "Swedish"],
       "outputFilenameTemplate": "{Title}.{Year}.S{Season:00}E{Episode:00}.{EpisodeName}.{Source}",
       "outputPathTemplate": "{Type}/{Title}",
-      "vmafEnabled": false
+      "vmafEnabled": true,
+      "requiredVmaf": 92.0
     }
     ```
   - Profiles cannot be used with this endpoint anymore.
@@ -69,10 +70,11 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
         "deletedAtUtc": null,
         "tmdbId": 27205,
         "matchedTitle": "Inception",
-        "matchedYear": 2010,
-        "vmafEnabled": false,
-        "vmafScore": null
-      }
+      "matchedYear": 2010,
+      "vmafEnabled": true,
+      "requiredVmaf": 92.0,
+      "vmafScore": null
+    }
     ]
     ```
 
@@ -158,7 +160,9 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
       { "op": "replace", "path": "/outputFilenameTemplate", "value": "{Title}" },
       { "op": "replace", "path": "/outputPathTemplate", "value": "{Type}/{Title}" },
       { "op": "replace", "path": "/audioLanguages", "value": ["English", "Spanish"] },
-      { "op": "replace", "path": "/subtitleLanguages", "value": ["English"] }
+      { "op": "replace", "path": "/subtitleLanguages", "value": ["English"] },
+      { "op": "replace", "path": "/vmafEnabled", "value": true },
+      { "op": "replace", "path": "/requiredVmaf", "value": 92.0 }
     ]
     ```
   - Editable fields:
@@ -171,6 +175,8 @@ dotnet ef database update --project src/VideoConverter.Api --startup-project src
     - `outputPathTemplate` (string?)
     - `audioLanguages` (string[]?)
     - `subtitleLanguages` (string[]?)
+    - `vmafEnabled` (bool?)
+    - `requiredVmaf` (double?, 0-100)
   - Note: `inputPath` cannot be updated. If `audioLanguages` or `subtitleLanguages` are updated, the system will re-process stream matching.
   - Responses:
     - 200 OK with updated conversion
@@ -635,6 +641,7 @@ Environment variable overrides:
       - And many more languages with their respective tags
     - When found, external subtitles are added as inputs and mapped to the output and copied (`-c:s copy`).
 - `vmafEnabled` (optional): boolean. When `true`, VMAF quality scoring is calculated after conversion completes. If omitted, defaults to `false`. Can also be set via profiles.
+- `requiredVmaf` (optional): number in range `0..100`. When set, the conversion pipeline can use CRF optimization to try to reach the requested VMAF target.
 - Additional improvements suggested for future hardening:
   - Restrict allowed input file extensions (e.g., `.mp4`, `.mkv`, etc.).
   - Verify sufficient free disk space in `outputDirectory` before starting a conversion.

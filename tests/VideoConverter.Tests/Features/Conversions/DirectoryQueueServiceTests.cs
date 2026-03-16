@@ -101,13 +101,15 @@ public class DirectoryQueueServiceTests
             OutputFilenameTemplate: null,
             OutputPathTemplate: null,
             Extensions: null,
-            VmafEnabled: true);
+            VmafEnabled: true,
+            RequiredVmaf: 91.5);
 
         var result = await svc.QueueDirectoryAsync(req, CancellationToken.None);
 
         _ = result.Queued.Should().Be(1);
         var conversion = await db.Conversions.SingleAsync();
         _ = conversion.VmafEnabled.Should().BeTrue();
+        _ = conversion.RequiredVmaf.Should().Be(91.5);
     }
 
     private static (AppDbContext Db, IDirectoryQueueService Svc) CreateSut()

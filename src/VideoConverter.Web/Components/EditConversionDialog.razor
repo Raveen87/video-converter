@@ -127,6 +127,7 @@
         _formModel.AudioLanguagesString = null; // Cannot restore from entity
         _formModel.SubtitleLanguagesString = null; // Cannot restore from entity
         _formModel.VmafEnabled = Conversion.VmafEnabled;
+        _formModel.RequiredVmaf = Conversion.RequiredVmaf;
     }
 
     private async Task HandleValidSubmit()
@@ -154,6 +155,8 @@
                 _formModel.AudioChannels, audioLanguages != null ? string.Join(", ", audioLanguages) : "null", 
                 subtitleLanguages != null ? string.Join(", ", subtitleLanguages) : "null");
 
+            var requiredVmaf = _formModel.VmafEnabled ? _formModel.RequiredVmaf : null;
+
             var patch = new ConversionPatchDto
             {
                 OutputDirectory = _formModel.OutputDirectory,
@@ -165,7 +168,7 @@
                 AudioLanguages = audioLanguages,
                 SubtitleLanguages = subtitleLanguages,
                 VmafEnabled = _formModel.VmafEnabled,
-                RequiredVmaf = _formModel.RequiredVmaf,
+                RequiredVmaf = requiredVmaf,
             };
 
             var validation = await ConversionPatchValidator.ValidateAsync(patch, CancellationToken.None).ConfigureAwait(false);

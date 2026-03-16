@@ -76,4 +76,76 @@ public sealed class VideoArgsBuilderTests
 
         filters.Should().Be(expectedFilter);
     }
+
+    [Fact]
+    public void BuildVideoCodecArgs_UsesDefaultCrf_WhenConversionCrfIsNull()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = null,
+        };
+        var options = new FfmpegOptions();
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+
+        args.Should().ContainInConsecutiveOrder("-crf", VideoArgsBuilder.DefaultCrf.ToString());
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_AddsSvtParamsOnlyForSvtCodec()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libx265",
+            SvtParams = "film-grain=8",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+
+        args.Should().NotContain("-svtav1-params");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_AddsSvtParamsForSvtCodecWhenConfigured()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParams = "film-grain=8",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=8");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_InsertsSvtParamsImmediatelyBeforeVfFlag()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParams = "film-grain=8",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options).ToList();
+        var svtIndex = args.IndexOf("-svtav1-params");
+        var vfIndex = args.IndexOf("-vf");
+
+        svtIndex.Should().BeGreaterThanOrEqualTo(0);
+        vfIndex.Should().BeGreaterThan(svtIndex);
+        vfIndex.Should().Be(svtIndex + 2);
+    }
 }

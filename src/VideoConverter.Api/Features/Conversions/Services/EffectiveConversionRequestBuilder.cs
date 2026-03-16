@@ -18,6 +18,7 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
         var effectiveTemplate = ResolveTemplate(profile?.OutputFilenameTemplate, request.OutputFilenameTemplate);
         var effectivePathTemplate = ResolveTemplate(profile?.OutputPathTemplate, request.OutputPathTemplate);
         var vmafEnabled = ChooseVmafEnabled(profile?.VmafEnabled, request.VmafEnabled);
+        var requiredVmaf = ChooseRequiredVmaf(profile?.RequiredVmaf, request.RequiredVmaf, vmafEnabled);
 
         return request with
         {
@@ -31,6 +32,7 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
             OutputFilenameTemplate = effectiveTemplate,
             OutputPathTemplate = effectivePathTemplate,
             VmafEnabled = vmafEnabled,
+            RequiredVmaf = requiredVmaf,
         };
     }
 
@@ -66,6 +68,30 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
         }
 
         logger.LogDebug("No VmafEnabled specified, using default: null");
+        return null;
+    }
+
+    private double? ChooseRequiredVmaf(double? profileValue, double? requestValue, bool? effectiveVmafEnabled)
+    {
+        if (effectiveVmafEnabled is false)
+        {
+            logger.LogDebug("Effective VmafEnabled is false, clearing RequiredVmaf");
+            return null;
+        }
+
+        if (requestValue is not null)
+        {
+            logger.LogDebug("Using request value for RequiredVmaf: {Value}", requestValue);
+            return requestValue;
+        }
+
+        if (profileValue is not null)
+        {
+            logger.LogDebug("Using profile value for RequiredVmaf: {Value}", profileValue);
+            return profileValue;
+        }
+
+        logger.LogDebug("No RequiredVmaf specified, using default: null");
         return null;
     }
 

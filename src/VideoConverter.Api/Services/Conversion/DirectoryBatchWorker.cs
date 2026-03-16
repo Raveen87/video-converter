@@ -299,7 +299,8 @@ public sealed class DirectoryBatchWorker(
                 request.SubtitleLanguages,
                 request.OutputFilenameTemplate,
                 request.OutputPathTemplate,
-                request.VmafEnabled);
+                request.VmafEnabled,
+                request.RequiredVmaf);
         }
 
         public static string BuildValidationReason(DomainValidationResult validation)

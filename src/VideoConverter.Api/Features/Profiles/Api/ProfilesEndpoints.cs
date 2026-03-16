@@ -113,7 +113,29 @@ public sealed class ProfilesEndpoints(
 
         var patchModel = CreatePatchModelFrom(profile);
         ApplyPatchOrThrow(patchDocument, patchModel, id);
-        await ValidatePatchedModelOrThrow(patchModel, cancellationToken).ConfigureAwait(false);
+
+        var hasVmafEnabledOp = patchDocument.Operations.Exists(op => op.path.Equals("/vmafEnabled", StringComparison.OrdinalIgnoreCase));
+        var hasRequiredVmafOp = patchDocument.Operations.Exists(op => op.path.Equals("/requiredVmaf", StringComparison.OrdinalIgnoreCase));
+
+        var modelForValidation = hasVmafEnabledOp || hasRequiredVmafOp
+            ? patchModel
+            : new ProfilePatchDto
+            {
+                Name = patchModel.Name,
+                OutputDirectory = patchModel.OutputDirectory,
+                Crf = patchModel.Crf,
+                AudioBitrateKbps = patchModel.AudioBitrateKbps,
+                AudioChannels = patchModel.AudioChannels,
+                Resolution = patchModel.Resolution,
+                OutputFilenameTemplate = patchModel.OutputFilenameTemplate,
+                OutputPathTemplate = patchModel.OutputPathTemplate,
+                AudioLanguages = patchModel.AudioLanguages,
+                SubtitleLanguages = patchModel.SubtitleLanguages,
+                VmafEnabled = null,
+                RequiredVmaf = null,
+            };
+
+        await ValidatePatchedModelOrThrow(modelForValidation, cancellationToken).ConfigureAwait(false);
         UpdateProfileFromPatch(profile, patchModel);
         _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
@@ -179,10 +201,7 @@ public sealed class ProfilesEndpoints(
             profile.VmafEnabled = patchModel.VmafEnabled.Value;
         }
 
-        if (patchModel.RequiredVmaf is not null)
-        {
-            profile.RequiredVmaf = patchModel.RequiredVmaf;
-        }
+        profile.RequiredVmaf = patchModel.RequiredVmaf;
     }
 
     private void ApplyPatchOrThrow(JsonPatchDocument<ProfilePatchDto> patchDocument, ProfilePatchDto patchModel, int id)

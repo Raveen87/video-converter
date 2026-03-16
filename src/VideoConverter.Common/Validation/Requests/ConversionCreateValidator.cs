@@ -47,6 +47,13 @@ public sealed class ConversionCreateValidator(
         _ = requestPropertyValidator.IsValidFilenameTemplate(request.OutputFilenameTemplate, out var tmplErr);
         result.AddIfInvalid(tmplErr is null, nameof(request.OutputFilenameTemplate), tmplErr, logger);
 
+        // Validate required VMAF range when provided
+        _ = requestPropertyValidator.IsValidRequiredVmaf(request.RequiredVmaf, out var requiredVmafErr);
+        result.AddIfInvalid(requiredVmafErr is null, nameof(request.RequiredVmaf), requiredVmafErr, logger, request.RequiredVmaf);
+
+        _ = requestPropertyValidator.IsValidVmafConfigurationForCreate(request.VmafEnabled, request.RequiredVmaf, out var vmafConfigErr);
+        result.AddIfInvalid(vmafConfigErr is null, nameof(request.RequiredVmaf), vmafConfigErr, logger, request.RequiredVmaf);
+
         if (result.IsValid)
         {
             logger.LogInformation("Validation completed successfully");

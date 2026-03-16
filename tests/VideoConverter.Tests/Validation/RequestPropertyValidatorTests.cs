@@ -95,4 +95,66 @@ public class RequestPropertyValidatorTests
         _ = _validator.IsValidLanguageList(["English", "   "], out var e3).Should().BeFalse();
         _ = e3.Should().Be("Language names must be non-empty.");
     }
+
+    [Fact]
+    public void IsValidRequiredVmaf_ReturnsTrueForValidValues()
+    {
+        _ = _validator.IsValidRequiredVmaf(0, out var e1).Should().BeTrue();
+        _ = e1.Should().BeNull();
+        _ = _validator.IsValidRequiredVmaf(100, out var e2).Should().BeTrue();
+        _ = e2.Should().BeNull();
+        _ = _validator.IsValidRequiredVmaf(92.5, out var e3).Should().BeTrue();
+        _ = e3.Should().BeNull();
+        _ = _validator.IsValidRequiredVmaf(requiredVmaf: null, out var e4).Should().BeTrue();
+        _ = e4.Should().BeNull();
+    }
+
+    [Fact]
+    public void IsValidRequiredVmaf_ReturnsFalseForInvalidValues()
+    {
+        _ = _validator.IsValidRequiredVmaf(-0.1, out var e1).Should().BeFalse();
+        _ = e1.Should().Be("RequiredVmaf must be between 0 and 100.");
+        _ = _validator.IsValidRequiredVmaf(100.1, out var e2).Should().BeFalse();
+        _ = e2.Should().Be("RequiredVmaf must be between 0 and 100.");
+    }
+
+    [Fact]
+    public void IsValidVmafConfiguration_ReturnsFalseWhenDisabledAndRequiredVmafProvided()
+    {
+        _ = _validator.IsValidVmafConfiguration(vmafEnabled: false, requiredVmaf: 92.0, out var error).Should().BeFalse();
+        _ = error.Should().Be("RequiredVmaf can only be set when VmafEnabled is true or unspecified.");
+    }
+
+    [Fact]
+    public void IsValidVmafConfiguration_ReturnsTrueForAllowedCombinations()
+    {
+        _ = _validator.IsValidVmafConfiguration(vmafEnabled: true, requiredVmaf: 92.0, out var errorWhenEnabled).Should().BeTrue();
+        _ = errorWhenEnabled.Should().BeNull();
+
+        _ = _validator.IsValidVmafConfiguration(vmafEnabled: null, requiredVmaf: 92.0, out var errorWhenUnspecified).Should().BeTrue();
+        _ = errorWhenUnspecified.Should().BeNull();
+
+        _ = _validator.IsValidVmafConfiguration(vmafEnabled: false, requiredVmaf: null, out var errorWhenNull).Should().BeTrue();
+        _ = errorWhenNull.Should().BeNull();
+    }
+
+    [Fact]
+    public void IsValidVmafConfigurationForCreate_ReturnsFalse_WhenRequiredVmafProvidedAndVmafNotExplicitlyTrue()
+    {
+        _ = _validator.IsValidVmafConfigurationForCreate(vmafEnabled: null, requiredVmaf: 92.0, out var errorWhenUnspecified).Should().BeFalse();
+        _ = errorWhenUnspecified.Should().Be("RequiredVmaf can only be set when VmafEnabled is true.");
+
+        _ = _validator.IsValidVmafConfigurationForCreate(vmafEnabled: false, requiredVmaf: 92.0, out var errorWhenDisabled).Should().BeFalse();
+        _ = errorWhenDisabled.Should().Be("RequiredVmaf can only be set when VmafEnabled is true.");
+    }
+
+    [Fact]
+    public void IsValidVmafConfigurationForCreate_ReturnsTrue_ForAllowedCombinations()
+    {
+        _ = _validator.IsValidVmafConfigurationForCreate(vmafEnabled: true, requiredVmaf: 92.0, out var errorWhenEnabled).Should().BeTrue();
+        _ = errorWhenEnabled.Should().BeNull();
+
+        _ = _validator.IsValidVmafConfigurationForCreate(vmafEnabled: null, requiredVmaf: null, out var errorWhenMissing).Should().BeTrue();
+        _ = errorWhenMissing.Should().BeNull();
+    }
 }

@@ -12,4 +12,5 @@ public record DirectoryQueueRequestDto(
     string? OutputFilenameTemplate,
     string? OutputPathTemplate,
     IEnumerable<string>? Extensions,
-    bool? VmafEnabled = null);
+    bool? VmafEnabled = null,
+    double? RequiredVmaf = null);

@@ -12,6 +12,9 @@ public sealed class CrfOptimizationService(
     IVmafOutputParser outputParser,
     ILogger<CrfOptimizationService> logger) : ICrfOptimizationService
 {
+    private const int MaxOptimizationIterations = 20;
+    private const int MaxCoarseSearchSteps = 8;
+
     private readonly FfmpegOptions _ffmpegOptions = ffmpegOptions.Value;
     private readonly VmafOptions _vmafOptions = vmafOptions.Value;
 
@@ -41,35 +44,242 @@ public sealed class CrfOptimizationService(
             requiredVmaf,
             startCrf);
 
-        // Aggressive strategy: Loop from startCrf down to 0
-        for (var crf = startCrf; crf >= 0; crf--)
+        var boundedStartCrf = Math.Clamp(startCrf, 0, 63);
+        var scoreCache = new Dictionary<int, double?>();
+        var optimizationResult = await FindOptimizedCrfAsync(
+            conversion,
+            requiredVmaf,
+            boundedStartCrf,
+            segmentStartTimes,
+            duration.Value,
+            scoreCache,
+            ct).ConfigureAwait(false);
+
+        if (!optimizationResult.IsSuccess)
         {
-            var averageScore = await CalculateAverageVmafForCrfAsync(
-                conversion,
-                crf,
-                segmentStartTimes,
-                duration.Value,
-                ct).ConfigureAwait(false);
+            logger.LogWarning(
+                "Could not meet required VMAF {RequiredVmaf} within bounded optimization. Keeping starting CRF {StartCrf}.",
+                requiredVmaf,
+                boundedStartCrf);
+            return boundedStartCrf;
+        }
 
-            if (averageScore is double score)
+        return optimizationResult.Crf;
+    }
+
+    private static List<string> BuildVmafArgs(string referencePath, string distortedPath, double startTime, double duration, string filterChain)
+    {
+        return
+        [
+            "-hide_banner",
+            "-nostats",
+
+            // Reference input (seek to segment start)
+            "-ss", startTime.ToString("F3", CultureInfo.InvariantCulture),
+            "-t", duration.ToString("F3", CultureInfo.InvariantCulture),
+            "-i", referencePath,
+
+            // Distorted input (the clip, start at 0)
+            "-i", distortedPath,
+
+            "-lavfi", filterChain,
+            "-f", "null",
+            "-",
+        ];
+    }
+
+    private async Task<OptimizationResult> FindOptimizedCrfAsync(
+        Conversion conversion,
+        double requiredVmaf,
+        int startCrf,
+        IReadOnlyList<double> segmentStartTimes,
+        double totalDuration,
+        IDictionary<int, double?> scoreCache,
+        CancellationToken ct)
+    {
+        var iterations = 0;
+
+        var startScore = await EvaluateCrfAsync(
+            conversion,
+            startCrf,
+            segmentStartTimes,
+            totalDuration,
+            scoreCache,
+            ct).ConfigureAwait(false);
+        iterations++;
+
+        if (startScore is not null && startScore.Value >= requiredVmaf)
+        {
+            LogOptimizationSuccess(startCrf, conversion.Id, startScore.Value, requiredVmaf, iterations: null);
+            return OptimizationResult.Success(startCrf);
+        }
+
+        var (passCrf, failCrf, coarseIterations) = await FindPassingCrfWithCoarseSearchAsync(
+            conversion,
+            requiredVmaf,
+            startCrf,
+            segmentStartTimes,
+            totalDuration,
+            scoreCache,
+            ct).ConfigureAwait(false);
+        iterations += coarseIterations;
+
+        if (passCrf < 0)
+        {
+            return OptimizationResult.Failure();
+        }
+
+        passCrf = await RefinePassingBoundaryAsync(
+            conversion,
+            requiredVmaf,
+            passCrf,
+            failCrf,
+            segmentStartTimes,
+            totalDuration,
+            scoreCache,
+            MaxOptimizationIterations - iterations,
+            ct).ConfigureAwait(false);
+
+        if (scoreCache.TryGetValue(passCrf, out var finalScore) && finalScore is not null)
+        {
+            LogOptimizationSuccess(passCrf, conversion.Id, finalScore.Value, requiredVmaf, iterations);
+        }
+
+        return OptimizationResult.Success(passCrf);
+    }
+
+    private async Task<(int PassCrf, int FailCrf, int Iterations)> FindPassingCrfWithCoarseSearchAsync(
+        Conversion conversion,
+        double requiredVmaf,
+        int startCrf,
+        IReadOnlyList<double> segmentStartTimes,
+        double totalDuration,
+        IDictionary<int, double?> scoreCache,
+        CancellationToken ct)
+    {
+        var iterations = 0;
+        var failCrf = startCrf;
+        var passCrf = -1;
+        var step = Math.Max(1, (int)Math.Ceiling(startCrf / (double)Math.Max(1, MaxCoarseSearchSteps - 1)));
+
+        while (iterations < MaxOptimizationIterations && failCrf > 0)
+        {
+            var nextCrf = Math.Max(0, failCrf - step);
+            var score = await EvaluateCrfAsync(conversion, nextCrf, segmentStartTimes, totalDuration, scoreCache, ct).ConfigureAwait(false);
+            iterations++;
+
+            if (score is not null && score.Value >= requiredVmaf)
             {
-                logger.LogDebug("CRF {Crf} resulted in average VMAF {VmafScore:F2}", crf, score);
+                passCrf = nextCrf;
+                break;
+            }
 
-                if (score >= requiredVmaf)
-                {
-                    logger.LogInformation(
-                        "Found optimized CRF {Crf} for Conversion {ConversionId} (Score: {VmafScore:F2} >= {Target:F2})",
-                        crf,
-                        conversion.Id,
-                        score,
-                        requiredVmaf);
-                    return crf;
-                }
+            if (nextCrf is 0)
+            {
+                return (-1, 0, iterations);
+            }
+
+            failCrf = nextCrf;
+        }
+
+        if (passCrf >= 0)
+        {
+            return (passCrf, failCrf, iterations);
+        }
+
+        if (failCrf is not 0 && iterations < MaxOptimizationIterations)
+        {
+            var scoreAtZero = await EvaluateCrfAsync(conversion, 0, segmentStartTimes, totalDuration, scoreCache, ct).ConfigureAwait(false);
+            iterations++;
+            if (scoreAtZero is not null && scoreAtZero.Value >= requiredVmaf)
+            {
+                return (0, Math.Max(1, failCrf), iterations);
             }
         }
 
-        logger.LogWarning("Could not meet required VMAF {RequiredVmaf} even at CRF 0. Returning 0.", requiredVmaf);
-        return 0;
+        return (-1, failCrf, iterations);
+    }
+
+    private async Task<int> RefinePassingBoundaryAsync(
+        Conversion conversion,
+        double requiredVmaf,
+        int passCrf,
+        int failCrf,
+        IReadOnlyList<double> segmentStartTimes,
+        double totalDuration,
+        IDictionary<int, double?> scoreCache,
+        int maxIterations,
+        CancellationToken ct)
+    {
+        var iterations = 0;
+        while (iterations < maxIterations && failCrf - passCrf > 1)
+        {
+            var midCrf = passCrf + ((failCrf - passCrf) / 2);
+            var score = await EvaluateCrfAsync(conversion, midCrf, segmentStartTimes, totalDuration, scoreCache, ct).ConfigureAwait(false);
+            iterations++;
+
+            if (score is not null && score.Value >= requiredVmaf)
+            {
+                passCrf = midCrf;
+            }
+            else
+            {
+                failCrf = midCrf;
+            }
+        }
+
+        return passCrf;
+    }
+
+    private void LogOptimizationSuccess(int crf, int conversionId, double score, double requiredVmaf, int? iterations)
+    {
+        if (iterations is null)
+        {
+            logger.LogInformation(
+                "Found optimized CRF {Crf} for Conversion {ConversionId} (Score: {VmafScore:F2} >= {Target:F2})",
+                crf,
+                conversionId,
+                score,
+                requiredVmaf);
+            return;
+        }
+
+        logger.LogInformation(
+            "Found optimized CRF {Crf} for Conversion {ConversionId} (Score: {VmafScore:F2} >= {Target:F2}) after {Iterations} iterations",
+            crf,
+            conversionId,
+            score,
+            requiredVmaf,
+            iterations.Value);
+    }
+
+    private async Task<double?> EvaluateCrfAsync(
+        Conversion conversion,
+        int crf,
+        IReadOnlyList<double> segmentStartTimes,
+        double totalDuration,
+        IDictionary<int, double?> scoreCache,
+        CancellationToken ct)
+    {
+        if (scoreCache.TryGetValue(crf, out var cached))
+        {
+            return cached;
+        }
+
+        var score = await CalculateAverageVmafForCrfAsync(
+            conversion,
+            crf,
+            segmentStartTimes,
+            totalDuration,
+            ct).ConfigureAwait(false);
+
+        if (score is double value)
+        {
+            logger.LogDebug("CRF {Crf} resulted in average VMAF {VmafScore:F2}", crf, value);
+        }
+
+        scoreCache[crf] = score;
+        return score;
     }
 
     private async Task<double?> CalculateAverageVmafForCrfAsync(
@@ -148,9 +358,9 @@ public sealed class CrfOptimizationService(
                 {
                     File.Delete(tempClipFile);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    logger.LogDebug(ex, "Failed to delete temporary optimization clip {TempClipFile}", tempClipFile);
                 }
             }
         }
@@ -174,27 +384,16 @@ public sealed class CrfOptimizationService(
             "-i", conversion.InputPath,
         };
 
-        // Resolution scaling if needed
-        if (conversion.Resolution is int resolution)
+        var (targetWidth, targetHeight) = VideoArgsBuilder.GetTargetDimensions(conversion.Resolution);
+        var vf = VideoArgsBuilder.BuildVideoFilters(conversion.DetectedCrop, targetWidth, targetHeight, logger);
+        var clipConversion = new Conversion
         {
-            args.Add("-vf");
+            Crf = crf,
+        };
 
-            // Scale height to target, maintain aspect ratio (-2)
-            // Ensure width is divisible by 2 (standard requirement)
-            args.Add($"scale=-2:{resolution}");
-        }
-
-        args.AddRange(
-        [
-            "-c:v",
-            "libx264", // Using libx264 for CRF optimization
-            "-crf",
-            crf.ToString(),
-            "-preset",
-            "veryfast", // Speed up optimization
-            "-an", // No audio
-            outputPath,
-        ]);
+        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(clipConversion, vf, _ffmpegOptions));
+        args.Add("-an");
+        args.Add(outputPath);
 
         var request = new ProcessRequest
         {
@@ -261,34 +460,12 @@ public sealed class CrfOptimizationService(
                 {
                     File.Delete(tempLogFile);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    logger.LogDebug(ex, "Failed to delete temporary optimization VMAF log {TempLogFile}", tempLogFile);
                 }
             }
         }
-    }
-
-    private List<string> BuildVmafArgs(string referencePath, string distortedPath, double startTime, double duration, string filterChain)
-    {
-        _ = _ffmpegOptions;
-        return
-        [
-            "-hide_banner",
-            "-nostats",
-
-            // Reference input (seek to segment start)
-            "-ss", startTime.ToString("F3", CultureInfo.InvariantCulture),
-            "-t", duration.ToString("F3", CultureInfo.InvariantCulture),
-            "-i", referencePath,
-
-            // Distorted input (the clip, start at 0)
-            "-i", distortedPath,
-
-            "-lavfi", filterChain,
-            "-f", "null",
-            "-",
-        ];
     }
 
     private async Task<double?> GetVideoDurationAsync(string path, CancellationToken ct)
@@ -302,6 +479,29 @@ public sealed class CrfOptimizationService(
         {
             logger.LogWarning(ex, "Failed to probe video duration for {Path}", path);
             return null;
+        }
+    }
+
+    private sealed class OptimizationResult
+    {
+        private OptimizationResult(bool isSuccess, int crf)
+        {
+            IsSuccess = isSuccess;
+            Crf = crf;
+        }
+
+        public bool IsSuccess { get; }
+
+        public int Crf { get; }
+
+        public static OptimizationResult Success(int crf)
+        {
+            return new OptimizationResult(isSuccess: true, crf: crf);
+        }
+
+        public static OptimizationResult Failure()
+        {
+            return new OptimizationResult(isSuccess: false, crf: 0);
         }
     }
 }
