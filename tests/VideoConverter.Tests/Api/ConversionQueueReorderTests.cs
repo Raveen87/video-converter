@@ -407,7 +407,8 @@ public sealed class ConversionQueueReorderTests
         var loggerFactory = NullLoggerFactory.Instance;
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
-        var executor = new ConversionExecutionService(db, runner, notificationService, NullLogger<ConversionExecutionService>.Instance);
+        var optimizer = new FakeCrfOptimizationService();
+        var executor = new ConversionExecutionService(db, runner, notificationService, optimizer, NullLogger<ConversionExecutionService>.Instance);
         var registry = new RunningProcessRegistry();
         var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
 

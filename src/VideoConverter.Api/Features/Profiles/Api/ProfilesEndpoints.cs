@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.JsonPatch.Exceptions;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Exceptions;
 
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Profiles.Validation;
@@ -50,6 +50,7 @@ public sealed class ProfilesEndpoints(
             AudioLanguages = request.AudioLanguages?.ToList(),
             SubtitleLanguages = request.SubtitleLanguages?.ToList(),
             VmafEnabled = request.VmafEnabled,
+            RequiredVmaf = request.RequiredVmaf,
         };
 
         _ = _db.Profiles.Add(profile);
@@ -112,7 +113,29 @@ public sealed class ProfilesEndpoints(
 
         var patchModel = CreatePatchModelFrom(profile);
         ApplyPatchOrThrow(patchDocument, patchModel, id);
-        await ValidatePatchedModelOrThrow(patchModel, cancellationToken).ConfigureAwait(false);
+
+        var hasVmafEnabledOp = patchDocument.Operations.Exists(op => op.path.Equals("/vmafEnabled", StringComparison.OrdinalIgnoreCase));
+        var hasRequiredVmafOp = patchDocument.Operations.Exists(op => op.path.Equals("/requiredVmaf", StringComparison.OrdinalIgnoreCase));
+
+        var modelForValidation = hasVmafEnabledOp || hasRequiredVmafOp
+            ? patchModel
+            : new ProfilePatchDto
+            {
+                Name = patchModel.Name,
+                OutputDirectory = patchModel.OutputDirectory,
+                Crf = patchModel.Crf,
+                AudioBitrateKbps = patchModel.AudioBitrateKbps,
+                AudioChannels = patchModel.AudioChannels,
+                Resolution = patchModel.Resolution,
+                OutputFilenameTemplate = patchModel.OutputFilenameTemplate,
+                OutputPathTemplate = patchModel.OutputPathTemplate,
+                AudioLanguages = patchModel.AudioLanguages,
+                SubtitleLanguages = patchModel.SubtitleLanguages,
+                VmafEnabled = null,
+                RequiredVmaf = null,
+            };
+
+        await ValidatePatchedModelOrThrow(modelForValidation, cancellationToken).ConfigureAwait(false);
         UpdateProfileFromPatch(profile, patchModel);
         _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("Profile updated successfully with ID: {ProfileId}", id);
@@ -134,6 +157,7 @@ public sealed class ProfilesEndpoints(
             AudioLanguages = profile.AudioLanguages,
             SubtitleLanguages = profile.SubtitleLanguages,
             VmafEnabled = profile.VmafEnabled,
+            RequiredVmaf = profile.RequiredVmaf,
         };
     }
 
@@ -151,7 +175,8 @@ public sealed class ProfilesEndpoints(
             profile.OutputPathTemplate,
             profile.AudioLanguages,
             profile.SubtitleLanguages,
-            profile.VmafEnabled);
+            profile.VmafEnabled,
+            profile.RequiredVmaf);
     }
 
     private static void UpdateProfileFromPatch(Profile profile, ProfilePatchDto patchModel)
@@ -175,6 +200,8 @@ public sealed class ProfilesEndpoints(
         {
             profile.VmafEnabled = patchModel.VmafEnabled.Value;
         }
+
+        profile.RequiredVmaf = patchModel.RequiredVmaf;
     }
 
     private void ApplyPatchOrThrow(JsonPatchDocument<ProfilePatchDto> patchDocument, ProfilePatchDto patchModel, int id)

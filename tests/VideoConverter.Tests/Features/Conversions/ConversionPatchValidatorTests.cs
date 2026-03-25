@@ -90,4 +90,48 @@ public class ConversionPatchValidatorTests
             }
         }
     }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(100.0)]
+    public async Task ValidateAsync_WithRequiredVmafBoundaryValues_ReturnsValid(double requiredVmaf)
+    {
+        var dto = new ConversionPatchDto
+        {
+            RequiredVmaf = requiredVmaf,
+            VmafEnabled = true,
+        };
+
+        var result = await _validator.ValidateAsync(dto, CancellationToken.None);
+        _ = result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(100.1)]
+    public async Task ValidateAsync_WithRequiredVmafOutOfRange_ReturnsError(double requiredVmaf)
+    {
+        var dto = new ConversionPatchDto
+        {
+            RequiredVmaf = requiredVmaf,
+        };
+
+        var result = await _validator.ValidateAsync(dto, CancellationToken.None);
+        _ = result.IsValid.Should().BeFalse();
+        _ = result.ToDictionary().Should().ContainKey(nameof(dto.RequiredVmaf));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithVmafDisabledAndRequiredVmafSet_ReturnsError()
+    {
+        var dto = new ConversionPatchDto
+        {
+            VmafEnabled = false,
+            RequiredVmaf = 92.0,
+        };
+
+        var result = await _validator.ValidateAsync(dto, CancellationToken.None);
+        _ = result.IsValid.Should().BeFalse();
+        _ = result.ToDictionary().Should().ContainKey(nameof(dto.RequiredVmaf));
+    }
 }

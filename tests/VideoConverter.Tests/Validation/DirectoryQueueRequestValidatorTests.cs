@@ -127,12 +127,135 @@ public class DirectoryQueueRequestValidatorTests
             SubtitleLanguages: new[] { "sv" },
             OutputFilenameTemplate: null,
             OutputPathTemplate: null,
-            Extensions: new[] { ".mkv", ".mp4" });
+            Extensions: new[] { ".mkv", ".mp4" },
+            VmafEnabled: true,
+            RequiredVmaf: 92.5);
 
         var result = await _validator.ValidateAsync(request, CancellationToken.None);
 
         result.IsValid.Should().BeTrue();
         result.ToDictionary().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenRequiredVmafOutOfRange_ReturnsError()
+    {
+        var request = new DirectoryQueueRequestDto(
+            DirectoryPath: "/input",
+            OutputDirectory: "/output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            RequiredVmaf: 101);
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(100.0)]
+    public async Task ValidateAsync_WhenRequiredVmafAtBoundaries_ReturnsValid(double requiredVmaf)
+    {
+        var request = new DirectoryQueueRequestDto(
+            DirectoryPath: "/input",
+            OutputDirectory: "/output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            VmafEnabled: true,
+            RequiredVmaf: requiredVmaf);
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(100.1)]
+    public async Task ValidateAsync_WhenRequiredVmafOutsideBoundaries_ReturnsError(double requiredVmaf)
+    {
+        var request = new DirectoryQueueRequestDto(
+            DirectoryPath: "/input",
+            OutputDirectory: "/output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            RequiredVmaf: requiredVmaf);
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenVmafDisabledAndRequiredVmafProvided_ReturnsError()
+    {
+        var request = new DirectoryQueueRequestDto(
+            DirectoryPath: "/input",
+            OutputDirectory: "/output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            VmafEnabled: false,
+            RequiredVmaf: 92.0);
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenVmafUnspecifiedAndRequiredVmafProvided_ReturnsError()
+    {
+        var request = new DirectoryQueueRequestDto(
+            DirectoryPath: "/input",
+            OutputDirectory: "/output",
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            AudioLanguages: null,
+            SubtitleLanguages: null,
+            OutputFilenameTemplate: null,
+            OutputPathTemplate: null,
+            Extensions: null,
+            VmafEnabled: null,
+            RequiredVmaf: 92.0);
+
+        var result = await _validator.ValidateAsync(request, CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.ToDictionary().Should().ContainKey(nameof(request.RequiredVmaf));
     }
 
     private sealed class StubFileSystemValidator : IFileSystemValidator

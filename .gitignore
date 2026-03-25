@@ -31,6 +31,9 @@ obj/
 # Kiro
 .kiro/
 
+# Local AI agent artifacts
+.sisyphus/
+
 # Logs
 *.log
 

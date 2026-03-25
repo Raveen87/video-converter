@@ -12,4 +12,5 @@ public record ProfileDirectoryQueueRequestDto(
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate,
     string? OutputPathTemplate,
-    bool? VmafEnabled = null);
+    bool? VmafEnabled = null,
+    double? RequiredVmaf = null);

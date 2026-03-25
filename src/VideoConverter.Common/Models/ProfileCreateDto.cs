@@ -11,4 +11,5 @@ public record ProfileCreateDto(
     IReadOnlyList<string>? SubtitleLanguages,
     string? OutputFilenameTemplate = null,
     string? OutputPathTemplate = null,
-    bool VmafEnabled = false);
+    bool VmafEnabled = false,
+    double? RequiredVmaf = null);

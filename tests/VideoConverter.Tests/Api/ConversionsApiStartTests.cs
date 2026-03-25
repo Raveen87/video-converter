@@ -153,7 +153,8 @@ public sealed class ConversionsApiStartTests
         var runner = new FakeConversionRunner();
         var notificationService = new FakeNotificationService();
         var logger = NullLogger<ConversionExecutionService>.Instance;
-        return new ConversionExecutionService(db, runner, notificationService, logger);
+        var optimizer = new FakeCrfOptimizationService();
+        return new ConversionExecutionService(db, runner, notificationService, optimizer, logger);
     }
 
     private static ConversionsQueueApi CreateConversionsQueueApi(AppDbContext db, IConversionExecutionService executor)

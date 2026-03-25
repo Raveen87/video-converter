@@ -14,6 +14,10 @@ internal static class ProfileValidationHelper
         int? resolution,
         IEnumerable<string>? audioLanguages,
         IEnumerable<string>? subtitleLanguages,
+        bool? vmafEnabled,
+        double? requiredVmaf,
+        string requiredVmafFieldName,
+        bool isCreateValidation,
         IFileSystemValidator fileSystemValidator,
         IRequestPropertyValidator requestPropertyValidator,
         ILogger logger,
@@ -41,6 +45,20 @@ internal static class ProfileValidationHelper
 
         _ = requestPropertyValidator.IsValidLanguageList(subtitleLanguages, out var slErr);
         result.AddIfInvalid(slErr is null, nameof(subtitleLanguages), slErr, logger);
+
+        _ = requestPropertyValidator.IsValidRequiredVmaf(requiredVmaf, out var requiredVmafErr);
+        result.AddIfInvalid(requiredVmafErr is null, requiredVmafFieldName, requiredVmafErr, logger, requiredVmaf);
+
+        if (isCreateValidation)
+        {
+            _ = requestPropertyValidator.IsValidVmafConfigurationForCreate(vmafEnabled, requiredVmaf, out var vmafConfigErr);
+            result.AddIfInvalid(vmafConfigErr is null, requiredVmafFieldName, vmafConfigErr, logger, requiredVmaf);
+        }
+        else
+        {
+            _ = requestPropertyValidator.IsValidVmafConfiguration(vmafEnabled, requiredVmaf, out var vmafConfigErr);
+            result.AddIfInvalid(vmafConfigErr is null, requiredVmafFieldName, vmafConfigErr, logger, requiredVmaf);
+        }
 
         // Validate optional output filename template when provided
         // Note: This helper doesn't receive the template itself, validators will validate it separately when available.

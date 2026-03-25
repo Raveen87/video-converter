@@ -23,4 +23,6 @@ public class ProfilePatchDto
     public IEnumerable<string>? SubtitleLanguages { get; set; }
 
     public bool? VmafEnabled { get; set; }
+
+    public double? RequiredVmaf { get; set; }
 }

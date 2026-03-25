@@ -19,6 +19,9 @@ internal static class DirectoryQueueValidationHelper
         IEnumerable<string>? audioLanguages,
         IEnumerable<string>? subtitleLanguages,
         string? outputFilenameTemplate,
+        bool? vmafEnabled,
+        double? requiredVmaf,
+        bool isCreateValidation,
         IEnumerable<string>? extensions,
         IFileSystemValidator fileSystemValidator,
         IRequestPropertyValidator requestPropertyValidator,
@@ -28,7 +31,7 @@ internal static class DirectoryQueueValidationHelper
         ValidateDirectories(directoryFieldName, outputDirectoryFieldName, directoryPath, outputDirectory, fileSystemValidator, logger, result);
         ValidateMediaOptions(crf, audioBitrateKbps, audioChannels, resolution, requestPropertyValidator, logger, result);
         ValidateLanguages(audioLanguages, subtitleLanguages, requestPropertyValidator, logger, result);
-        ValidateTemplates(outputFilenameTemplate, requestPropertyValidator, logger, result);
+        ValidateTemplates(outputFilenameTemplate, vmafEnabled, requiredVmaf, isCreateValidation, requestPropertyValidator, logger, result);
         ValidateExtensions(extensionsFieldName, extensions, result);
     }
 
@@ -98,12 +101,29 @@ internal static class DirectoryQueueValidationHelper
 
     private static void ValidateTemplates(
         string? outputFilenameTemplate,
+        bool? vmafEnabled,
+        double? requiredVmaf,
+        bool isCreateValidation,
         IRequestPropertyValidator requestPropertyValidator,
         ILogger logger,
         DomainValidationResult result)
     {
         _ = requestPropertyValidator.IsValidFilenameTemplate(outputFilenameTemplate, out var tmplErr);
         result.AddIfInvalid(tmplErr is null, nameof(DirectoryQueueRequestDto.OutputFilenameTemplate), tmplErr, logger);
+
+        _ = requestPropertyValidator.IsValidRequiredVmaf(requiredVmaf, out var requiredVmafErr);
+        result.AddIfInvalid(requiredVmafErr is null, nameof(DirectoryQueueRequestDto.RequiredVmaf), requiredVmafErr, logger, requiredVmaf);
+
+        if (isCreateValidation)
+        {
+            _ = requestPropertyValidator.IsValidVmafConfigurationForCreate(vmafEnabled, requiredVmaf, out var createVmafConfigErr);
+            result.AddIfInvalid(createVmafConfigErr is null, nameof(DirectoryQueueRequestDto.RequiredVmaf), createVmafConfigErr, logger, requiredVmaf);
+        }
+        else
+        {
+            _ = requestPropertyValidator.IsValidVmafConfiguration(vmafEnabled, requiredVmaf, out var patchVmafConfigErr);
+            result.AddIfInvalid(patchVmafConfigErr is null, nameof(DirectoryQueueRequestDto.RequiredVmaf), patchVmafConfigErr, logger, requiredVmaf);
+        }
     }
 
     private static void ValidateExtensions(

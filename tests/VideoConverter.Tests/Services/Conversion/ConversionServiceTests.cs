@@ -99,6 +99,32 @@ public class ConversionServiceTests
     }
 
     [Fact]
+    public async Task ConversionService_CreateConversionAsync_MapsRequiredVmafAndVmafEnabled_FromRequest()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithVmafEnabled(true)
+            .WithRequiredVmaf(91.7)
+            .Build();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                VideoHeight = 1080,
+            });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
+
+        _ = result.VmafEnabled.Should().BeTrue();
+        _ = result.RequiredVmaf.Should().Be(91.7);
+    }
+
+    [Fact]
     public async Task ConversionService_CreateConversionAsync_WithAudioLanguages_ProcessesAudioStreams()
     {
         // Arrange

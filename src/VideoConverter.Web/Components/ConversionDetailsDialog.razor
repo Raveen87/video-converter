@@ -71,6 +71,13 @@
                         </tr>
                         @if (Conversion.VmafEnabled)
                         {
+                            @if (Conversion.RequiredVmaf.HasValue)
+                            {
+                                <tr>
+                                    <td><b>Required VMAF</b></td>
+                                    <td>@Conversion.RequiredVmaf.Value</td>
+                                </tr>
+                            }
                             <tr>
                                 <td><b>VMAF Score</b></td>
                                 <td>

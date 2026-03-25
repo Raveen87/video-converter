@@ -52,6 +52,10 @@
             <MudTextField @bind-Value="_formModel.AudioLanguagesString" Label="Audio Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_formModel.SubtitleLanguagesString" Label="Subtitle Languages (comma-separated)" Variant="Variant.Outlined" Class="mb-3" />
             <MudSwitch @bind-Value="_formModel.VmafEnabled" Label="Enable VMAF Quality Scoring by Default" Color="Color.Primary" Class="mb-3" />
+            @if (_formModel.VmafEnabled)
+            {
+                <MudNumericField @bind-Value="_formModel.RequiredVmaf" Label="Required VMAF Score (0-100)" HelperText="If set, system will optimize CRF to meet this score" Variant="Variant.Outlined" Class="mb-3" Min="0" Max="100" />
+            }
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSubmitting || !HasChanges)">
                 @if (_isSubmitting)
                 {
@@ -129,6 +133,7 @@
         _formModel.AudioLanguagesString = Profile.AudioLanguages is not null ? string.Join(", ", Profile.AudioLanguages) : null;
         _formModel.SubtitleLanguagesString = Profile.SubtitleLanguages is not null ? string.Join(", ", Profile.SubtitleLanguages) : null;
         _formModel.VmafEnabled = Profile.VmafEnabled;
+        _formModel.RequiredVmaf = Profile.RequiredVmaf;
     }
 
     private async Task HandleValidSubmit()
@@ -310,6 +315,13 @@
             _ = changedFields.Add(nameof(ProfilePatchDto.VmafEnabled));
         }
 
+        var effectiveRequiredVmaf = _formModel.VmafEnabled ? _formModel.RequiredVmaf : null;
+        if (!AreNullableDoublesEqual(effectiveRequiredVmaf, original.RequiredVmaf))
+        {
+            patch.RequiredVmaf = effectiveRequiredVmaf;
+            _ = changedFields.Add(nameof(ProfilePatchDto.RequiredVmaf));
+        }
+
         return (patch, changedFields);
     }
 
@@ -326,6 +338,21 @@
         }
 
         return left.SequenceEqual(right);
+    }
+
+    private static bool AreNullableDoublesEqual(double? left, double? right)
+    {
+        if (!left.HasValue && !right.HasValue)
+        {
+            return true;
+        }
+
+        if (!left.HasValue || !right.HasValue)
+        {
+            return false;
+        }
+
+        return Math.Abs(left.Value - right.Value) <= 0.001;
     }
 
     private async Task HandleCancel()
@@ -366,5 +393,7 @@
         public string? SubtitleLanguagesString { get; set; }
 
         public bool VmafEnabled { get; set; }
+
+        public double? RequiredVmaf { get; set; }
     }
 }

@@ -4,6 +4,8 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal static class VideoArgsBuilder
 {
+    public const int DefaultCrf = 40;
+
     public static (int Width, int Height) GetTargetDimensions(int? targetHeight)
     {
         var height = targetHeight ?? 720;
@@ -39,16 +41,25 @@ internal static class VideoArgsBuilder
 
     public static IReadOnlyList<string> BuildVideoCodecArgs(Conversion conversion, string vf, FfmpegOptions options)
     {
-        return [
+        var args = new List<string>
+        {
             "-map", "0:v:0",
             "-c:v", options.VideoCodec,
             "-pix_fmt", options.PixelFormat,
             "-preset", options.Preset,
             "-tune", options.Tune,
             "-g", options.Gop,
-            "-crf", conversion.Crf?.ToString() ?? "40",
-            "-svtav1-params", options.SvtParams,
+            "-crf", (conversion.Crf ?? DefaultCrf).ToString(),
             "-vf", vf,
-        ];
+        };
+
+        if (string.Equals(options.VideoCodec, "libsvtav1", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(options.SvtParams))
+        {
+            var vfIndex = args.IndexOf("-vf");
+            var insertIndex = vfIndex >= 0 ? vfIndex : args.Count;
+            args.InsertRange(insertIndex, ["-svtav1-params", options.SvtParams]);
+        }
+
+        return args;
     }
 }

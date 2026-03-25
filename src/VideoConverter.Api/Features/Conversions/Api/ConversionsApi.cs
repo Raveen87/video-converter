@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
 
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Services;

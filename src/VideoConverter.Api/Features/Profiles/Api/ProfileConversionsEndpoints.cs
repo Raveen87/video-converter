@@ -33,7 +33,8 @@ public sealed class ProfileConversionsEndpoints(
             profile.SubtitleLanguages,
             profile.OutputFilenameTemplate,
             profile.OutputPathTemplate,
-            request.VmafEnabled);
+            request.VmafEnabled,
+            request.RequiredVmaf);
 
         // Ensure request-specified output directory takes precedence
         var effective = effectiveRequestBuilder.Build(baseRequest, profile) with { OutputDirectory = request.OutputDirectory };
@@ -70,6 +71,12 @@ public sealed class ProfileConversionsEndpoints(
         logger.LogInformation("Queueing directory for profile {ProfileId}: {Dir} -> {Out}", id, request.DirectoryPath, request.OutputDirectory);
 
         var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, ct).ConfigureAwait(false);
+        var effectiveVmafEnabled = request.VmafEnabled ?? profile.VmafEnabled;
+        var effectiveRequiredVmaf = request.RequiredVmaf ?? profile.RequiredVmaf;
+        if (!effectiveVmafEnabled)
+        {
+            effectiveRequiredVmaf = null;
+        }
 
         var dto = new DirectoryQueueRequestDto(
             DirectoryPath: request.DirectoryPath,
@@ -83,7 +90,8 @@ public sealed class ProfileConversionsEndpoints(
             OutputFilenameTemplate: request.OutputFilenameTemplate ?? profile.OutputFilenameTemplate,
             OutputPathTemplate: request.OutputPathTemplate ?? profile.OutputPathTemplate,
             Extensions: request.Extensions,
-            VmafEnabled: request.VmafEnabled ?? profile.VmafEnabled);
+            VmafEnabled: effectiveVmafEnabled,
+            RequiredVmaf: effectiveRequiredVmaf);
 
         var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);
         return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
@@ -92,29 +100,30 @@ public sealed class ProfileConversionsEndpoints(
     private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
     {
         return new ConversionDto(
-            c.Id,
-            c.InputPath,
-            c.OutputDirectory,
-            c.CreatedAtUtc,
-            c.Status,
-            c.Crf,
-            c.AudioBitrateKbps,
-            c.AudioChannels,
-            c.Resolution,
-            c.MetadataBasedFilename,
-            c.DeletedAtUtc,
-            c.TmdbId,
-            c.MatchedTitle,
-            c.MatchedYear,
-            c.MatchedSeason,
-            c.MatchedEpisode,
-            c.SelectedAudioStreamIndicesCsv,
-            c.SelectedSubtitleStreamIndicesCsv,
-            c.SelectedExternalSubtitlePathsCsv,
-            c.DetectedCrop,
-            c.OutputPathTemplate,
-            c.VmafEnabled,
-            c.VmafScore);
+            Id: c.Id,
+            InputPath: c.InputPath,
+            OutputDirectory: c.OutputDirectory,
+            CreatedAtUtc: c.CreatedAtUtc,
+            Status: c.Status,
+            Crf: c.Crf,
+            AudioBitrateKbps: c.AudioBitrateKbps,
+            AudioChannels: c.AudioChannels,
+            Resolution: c.Resolution,
+            MetadataBasedFilename: c.MetadataBasedFilename,
+            DeletedAtUtc: c.DeletedAtUtc,
+            TmdbId: c.TmdbId,
+            MatchedTitle: c.MatchedTitle,
+            MatchedYear: c.MatchedYear,
+            MatchedSeason: c.MatchedSeason,
+            MatchedEpisode: c.MatchedEpisode,
+            SelectedAudioStreamIndicesCsv: c.SelectedAudioStreamIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv: c.SelectedSubtitleStreamIndicesCsv,
+            SelectedExternalSubtitlePathsCsv: c.SelectedExternalSubtitlePathsCsv,
+            DetectedCrop: c.DetectedCrop,
+            OutputPathTemplate: c.OutputPathTemplate,
+            VmafEnabled: c.VmafEnabled,
+            RequiredVmaf: c.RequiredVmaf,
+            VmafScore: c.VmafScore);
     }
 
     private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)

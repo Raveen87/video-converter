@@ -11,4 +11,5 @@ public record ConversionCreateDto(
     IEnumerable<string>? SubtitleLanguages,
     string? OutputFilenameTemplate = null,
     string? OutputPathTemplate = null,
-    bool? VmafEnabled = null);
+    bool? VmafEnabled = null,
+    double? RequiredVmaf = null);

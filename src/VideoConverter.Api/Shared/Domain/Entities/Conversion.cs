@@ -49,4 +49,6 @@ public class Conversion
     public bool VmafEnabled { get; set; }
 
     public double? VmafScore { get; set; }
+
+    public double? RequiredVmaf { get; set; }
 }
