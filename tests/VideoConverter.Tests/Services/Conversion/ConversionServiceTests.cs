@@ -283,6 +283,7 @@ public class ConversionServiceTests
         _ = result.DetectedCrop.Should().Be("1920:800:0:140");
         _ = result.DetectedGrainLevel.Should().Be(GrainLevel.High);
 
+        _mockProber.Verify(x => x.ProbeAsync("test.mp4", It.IsAny<CancellationToken>()), Times.Exactly(3));
         _mockCropDetector.Verify(x => x.DetectAsync("test.mp4", 120.5, It.IsAny<CancellationToken>()), Times.Once);
         _mockGrainDetector.Verify(x => x.DetectAsync("test.mp4", 120.5, It.IsAny<CancellationToken>()), Times.Once);
     }

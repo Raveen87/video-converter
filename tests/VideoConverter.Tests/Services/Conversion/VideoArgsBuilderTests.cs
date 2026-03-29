@@ -115,16 +115,18 @@ public sealed class VideoArgsBuilderTests
         var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
         {
             Crf = 30,
+            DetectedGrainLevel = GrainLevel.Low,
         };
         var options = new FfmpegOptions
         {
             VideoCodec = "libsvtav1",
-            SvtParams = "film-grain=8",
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsLowGrain = "film-grain=6:film-grain-denoise=1",
         };
 
         var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
 
-        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=8");
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=6:film-grain-denoise=1");
     }
 
     [Fact]

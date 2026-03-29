@@ -43,14 +43,16 @@ public sealed class ConversionService(
         // Process subtitle language requirements
         var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Validate resolution against source
-        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
+        await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
 
         // Perform crop detection
-        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedCrop = await DetectCropAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Perform grain detection
-        var detectedGrainLevel = await DetectGrainLevelAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
         var (metadataBasedFilename, metadata) = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
@@ -103,14 +105,16 @@ public sealed class ConversionService(
         // Process subtitle language requirements
         var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Validate resolution against source
-        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
+        await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
 
         // Perform crop detection
-        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedCrop = await DetectCropAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Perform grain detection
-        var detectedGrainLevel = await DetectGrainLevelAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Generate filename using provided metadata
         var metadataBasedFilename = GenerateFilenameFromMetadata(request, metadata);
@@ -931,7 +935,7 @@ public sealed class ConversionService(
         };
     }
 
-    private async Task ValidateResolutionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task ValidateResolutionAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask)
     {
         if (request.Resolution is null)
         {
@@ -942,7 +946,7 @@ public sealed class ConversionService(
 
         try
         {
-            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var probe = await probeTask.ConfigureAwait(false);
             if (probe.VideoHeight is not null && request.Resolution > probe.VideoHeight)
             {
                 logger.LogWarning(
@@ -965,13 +969,13 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<string?> DetectCropAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<string?> DetectCropAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
         logger.LogDebug("Starting crop detection for {InputPath}", request.InputPath);
 
         try
         {
-            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var probe = await probeTask.ConfigureAwait(false);
             var detectedCrop = await cropDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
 
             if (detectedCrop is not null)
@@ -992,13 +996,13 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<GrainLevel> DetectGrainLevelAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<GrainLevel> DetectGrainLevelAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
         logger.LogDebug("Starting grain detection for {InputPath}", request.InputPath);
 
         try
         {
-            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var probe = await probeTask.ConfigureAwait(false);
             return await grainDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
