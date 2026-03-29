@@ -180,6 +180,7 @@ public class VmafPersistencePropertyTests
             SelectedSubtitleStreamIndicesCsv: conversion.SelectedSubtitleStreamIndicesCsv,
             SelectedExternalSubtitlePathsCsv: conversion.SelectedExternalSubtitlePathsCsv,
             DetectedCrop: conversion.DetectedCrop,
+            DetectedGrainLevel: conversion.DetectedGrainLevel,
             OutputPathTemplate: conversion.OutputPathTemplate,
             VmafEnabled: conversion.VmafEnabled,
             RequiredVmaf: conversion.RequiredVmaf,

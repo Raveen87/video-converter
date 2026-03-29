@@ -37,13 +37,13 @@ public sealed class ConversionService(
             request.InputPath,
             request.OutputDirectory);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Process audio language requirements
-        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Process subtitle language requirements
-        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
-
-        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Validate resolution against source
         await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
@@ -99,13 +99,13 @@ public sealed class ConversionService(
             request.OutputDirectory,
             metadata.TmdbId);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Process audio language requirements
-        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Process subtitle language requirements
-        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
-
-        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Validate resolution against source
         await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
@@ -636,9 +636,9 @@ public sealed class ConversionService(
         };
     }
 
-    private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
-        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probe = await probeTask.ConfigureAwait(false);
         var inputAudioStreams = probe.Streams
             .Where(s => string.Equals(s.CodecType, "audio", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -751,20 +751,20 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
         var requested = request.SubtitleLanguages?.ToList();
 
         if (requested is not { Count: > 0 })
         {
-            return await ProcessDefaultTextSubtitlesAsync(request, cancellationToken).ConfigureAwait(false);
+            return await ProcessDefaultTextSubtitlesAsync(probeTask).ConfigureAwait(false);
         }
 
         logger.LogDebug(
             "Processing subtitle language requirements: {SubtitleLanguages}",
             string.Join(", ", requested));
 
-        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probe = await probeTask.ConfigureAwait(false);
 
         try
         {
@@ -910,10 +910,10 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(Task<MediaProbeResult> probeTask)
     {
         // No specific languages requested: include all available text-based internal subtitles.
-        var probeAll = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probeAll = await probeTask.ConfigureAwait(false);
         var streams = probeAll?.Streams ?? [];
         var textSubtitleIndices = streams
             .Where(s =>

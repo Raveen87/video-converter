@@ -39,7 +39,8 @@ public sealed class QueueItemTests : BunitContext
             null,
             null,
             null,
-            null);
+            null,
+            GrainLevel.Low);
 
         // Act
         var cut = Render<QueueItem>(parameters => parameters
@@ -188,6 +189,7 @@ public sealed class QueueItemTests : BunitContext
             null,
             null,
             null,
-            null);
+            null,
+            GrainLevel.Low);
     }
 }

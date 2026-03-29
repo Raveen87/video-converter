@@ -258,6 +258,8 @@
             null,
             null,
             null,
+            null,
+            GrainLevel.Low,
             null);
 
         Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
@@ -318,6 +320,8 @@
             null,
             null,
             null,
+            null,
+            GrainLevel.Low,
             null);
 
         Logger.LogDebug("Added temporary conversion with ID {TempId} for optimistic update", tempId);
@@ -510,4 +514,3 @@
         _stateService.StateChanged -= OnStateChanged;
     }
 }
-
