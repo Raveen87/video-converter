@@ -17,7 +17,7 @@ internal sealed class DefaultFfmpegArgumentsBuilder : IFfmpegArgumentsBuilder
             "-i", conversion.InputPath!,
         };
 
-        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf, options));
+        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf, options, logger));
         args.AddRange(AudioArgsBuilder.BuildAudioCodecArgs(conversion, options));
         args.Add(outputFile);
 

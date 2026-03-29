@@ -2,9 +2,10 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal static class FfmpegPreflightArgsBuilder
 {
-    public static List<string> Build()
+    public static List<string> Build(FfmpegOptions options)
     {
         var vf = "scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos";
+        var profile = SvtAv1GrainProfileSelector.Select(options, GrainLevel.Low);
         return
         [
             "-hide_banner",
@@ -16,7 +17,7 @@ internal static class FfmpegPreflightArgsBuilder
             "-preset", "6",
             "-tune", "0",
             "-crf", "40",
-            "-svtav1-params", "film-grain=8:film-grain-denoise=0",
+            "-svtav1-params", profile.SvtParams,
             "-vf", vf,
             "-t", "0.05",
             "-f", "null",

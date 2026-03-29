@@ -32,6 +32,8 @@ public class Conversion
 
     public string? DetectedCrop { get; set; } // format: "w:h:x:y"
 
+    public GrainLevel DetectedGrainLevel { get; set; } = GrainLevel.Low;
+
     public string? MetadataBasedFilename { get; set; } // filename based on metadata lookup
 
     public int? TmdbId { get; set; }

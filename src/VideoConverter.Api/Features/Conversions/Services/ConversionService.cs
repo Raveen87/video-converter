@@ -13,6 +13,7 @@ public sealed class ConversionService(
     IAudioLanguageMatcher audioMatcher,
     ISubtitleLanguageMatcher subtitleMatcher,
     ICropDetector cropDetector,
+    IGrainDetector grainDetector,
     IMetadataService metadataService,
     IFilenameParser filenameParser,
     IFilenameGenerator filenameGenerator,
@@ -48,6 +49,9 @@ public sealed class ConversionService(
         // Perform crop detection
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
+        // Perform grain detection
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, cancellationToken).ConfigureAwait(false);
+
         // Look up metadata and generate filename
         var (metadataBasedFilename, metadata) = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -68,6 +72,7 @@ public sealed class ConversionService(
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
+            DetectedGrainLevel = detectedGrainLevel,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata?.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
@@ -80,7 +85,7 @@ public sealed class ConversionService(
             UpdateConversionWithMetadata(conversion, metadata);
         }
 
-        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop, detectedGrainLevel);
         return conversion;
     }
 
@@ -104,6 +109,9 @@ public sealed class ConversionService(
         // Perform crop detection
         var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
 
+        // Perform grain detection
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, cancellationToken).ConfigureAwait(false);
+
         // Generate filename using provided metadata
         var metadataBasedFilename = GenerateFilenameFromMetadata(request, metadata);
         logger.LogInformation("Generated metadata-based filename (forced): {GeneratedFilename}", metadataBasedFilename);
@@ -125,6 +133,7 @@ public sealed class ConversionService(
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
+            DetectedGrainLevel = detectedGrainLevel,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
@@ -133,7 +142,7 @@ public sealed class ConversionService(
         };
 
         UpdateConversionWithMetadata(conversion, metadata);
-        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop, detectedGrainLevel);
         return conversion;
     }
 
@@ -983,6 +992,26 @@ public sealed class ConversionService(
         }
     }
 
+    private async Task<GrainLevel> DetectGrainLevelAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Starting grain detection for {InputPath}", request.InputPath);
+
+        try
+        {
+            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            return await grainDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Grain detection failed for {InputPath}. Falling back to {FallbackGrainLevel}",
+                request.InputPath,
+                GrainLevel.Low);
+            return GrainLevel.Low;
+        }
+    }
+
     private async Task<AudioProcessingResult> ProcessAudioLanguagesForUpdateAsync(string inputPath, IEnumerable<string>? requestedLanguages, CancellationToken cancellationToken)
     {
         var requested = requestedLanguages?.ToList();
@@ -1061,17 +1090,18 @@ public sealed class ConversionService(
         };
     }
 
-    private void LogConversionCreated(Conversion conversion, AudioProcessingResult audioProcessing, SubtitleProcessingResult subtitleProcessing, string? detectedCrop)
+    private void LogConversionCreated(Conversion conversion, AudioProcessingResult audioProcessing, SubtitleProcessingResult subtitleProcessing, string? detectedCrop, GrainLevel detectedGrainLevel)
     {
         logger.LogInformation(
-            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
+            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}, GrainLevel={GrainLevel}",
             conversion.Crf,
             conversion.AudioBitrateKbps,
             conversion.Resolution,
             audioProcessing.AudioIndicesCsv ?? "none",
             subtitleProcessing.SubtitleIndicesCsv ?? "none",
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
-            detectedCrop ?? "none");
+            detectedCrop ?? "none",
+            detectedGrainLevel);
     }
 
     private sealed record AudioProcessingResult

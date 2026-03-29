@@ -33,7 +33,8 @@ internal static class ConversionsApiHelpers
             OutputPathTemplate: c.OutputPathTemplate,
             VmafEnabled: c.VmafEnabled,
             RequiredVmaf: c.RequiredVmaf,
-            VmafScore: c.VmafScore);
+            VmafScore: c.VmafScore,
+            DetectedGrainLevel: c.DetectedGrainLevel);
     }
 
     public static void ThrowConversionStartError(ConversionStartResult result)

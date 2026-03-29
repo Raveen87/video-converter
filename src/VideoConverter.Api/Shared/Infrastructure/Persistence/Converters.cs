@@ -35,6 +35,13 @@ public static class Converters
             v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<AudioChannels>(v));
     }
 
+    public static ValueConverter<GrainLevel, string> CreateGrainLevelString()
+    {
+        return new ValueConverter<GrainLevel, string>(
+            v => v.ToString(),
+            v => Enum.Parse<GrainLevel>(v));
+    }
+
     public static ValueConverter<NotificationType, string> CreateNotificationTypeString()
     {
         return new ValueConverter<NotificationType, string>(

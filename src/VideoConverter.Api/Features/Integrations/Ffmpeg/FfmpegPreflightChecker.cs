@@ -1,8 +1,12 @@
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logger, IProcessManager processManager) : IFfmpegPreflightChecker, IDisposable
+public sealed class FfmpegPreflightChecker(
+    ILogger<FfmpegPreflightChecker> logger,
+    IProcessManager processManager,
+    IOptions<FfmpegOptions> options) : IFfmpegPreflightChecker, IDisposable
 {
     private readonly SemaphoreSlim _preflightLock = new(1, 1);
+    private readonly FfmpegOptions _options = options.Value;
     private bool _preflightDone;
 
     public async Task<(bool Ok, string? Error)> EnsurePreflightAsync(string ffmpegPath, CancellationToken cancellationToken)
@@ -47,7 +51,7 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
     {
         try
         {
-            var preflightArgs = FfmpegPreflightArgsBuilder.Build();
+            var preflightArgs = FfmpegPreflightArgsBuilder.Build(_options);
             var result = await processManager.RunAsync(
                 new ProcessRequest
                 {

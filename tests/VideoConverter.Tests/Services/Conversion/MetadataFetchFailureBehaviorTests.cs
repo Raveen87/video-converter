@@ -166,6 +166,9 @@ public class MetadataFetchFailureBehaviorTests
 
         var mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         var mockCropDetector = new Mock<ICropDetector>();
+        var mockGrainDetector = new Mock<IGrainDetector>();
+        _ = mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
         var logger = new Mock<ILogger<ConversionService>>();
 
         return new ConversionService(
@@ -173,6 +176,7 @@ public class MetadataFetchFailureBehaviorTests
             mockAudioMatcher.Object,
             mockSubtitleMatcher.Object,
             mockCropDetector.Object,
+            mockGrainDetector.Object,
             metadataService,
             filenameParser,
             filenameGenerator,

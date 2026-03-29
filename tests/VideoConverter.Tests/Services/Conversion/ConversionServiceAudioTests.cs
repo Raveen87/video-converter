@@ -18,6 +18,7 @@ public class ConversionServiceAudioTests
     private readonly Mock<IAudioLanguageMatcher> _mockAudioMatcher;
     private readonly Mock<ISubtitleLanguageMatcher> _mockSubtitleMatcher;
     private readonly Mock<ICropDetector> _mockCropDetector;
+    private readonly Mock<IGrainDetector> _mockGrainDetector;
     private readonly Mock<IMetadataService> _mockMetadataService;
     private readonly Mock<IFilenameParser> _mockFilenameParser;
     private readonly Mock<IFilenameGenerator> _mockFilenameGenerator;
@@ -31,6 +32,7 @@ public class ConversionServiceAudioTests
         _mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
         _mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         _mockCropDetector = new Mock<ICropDetector>();
+        _mockGrainDetector = new Mock<IGrainDetector>();
         _mockMetadataService = new Mock<IMetadataService>();
         _mockFilenameParser = new Mock<IFilenameParser>();
         _mockFilenameGenerator = new Mock<IFilenameGenerator>();
@@ -42,6 +44,7 @@ public class ConversionServiceAudioTests
             _mockAudioMatcher.Object,
             _mockSubtitleMatcher.Object,
             _mockCropDetector.Object,
+            _mockGrainDetector.Object,
             _mockMetadataService.Object,
             _mockFilenameParser.Object,
             _mockFilenameGenerator.Object,
@@ -66,6 +69,8 @@ public class ConversionServiceAudioTests
 
         _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -96,6 +101,8 @@ public class ConversionServiceAudioTests
 
         _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -122,6 +129,8 @@ public class ConversionServiceAudioTests
 
         _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "Test", 2020));
@@ -167,6 +176,8 @@ public class ConversionServiceAudioTests
 
         _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "Test", 2020));

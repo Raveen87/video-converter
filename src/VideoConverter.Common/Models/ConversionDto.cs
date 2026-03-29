@@ -24,4 +24,5 @@ public record ConversionDto(
     string? OutputPathTemplate = null,
     bool VmafEnabled = false,
     double? RequiredVmaf = null,
-    double? VmafScore = null);
+    double? VmafScore = null,
+    GrainLevel DetectedGrainLevel = GrainLevel.Low);

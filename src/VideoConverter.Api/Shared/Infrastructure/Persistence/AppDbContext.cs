@@ -63,6 +63,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(4096);
         _ = entity.Property(c => c.DetectedCrop)
             .HasMaxLength(64);
+        _ = entity.Property(c => c.DetectedGrainLevel)
+            .IsRequired()
+            .HasConversion(Converters.CreateGrainLevelString())
+            .HasMaxLength(16);
         _ = entity.Property(c => c.OutputPathTemplate)
             .HasMaxLength(1024);
 
