@@ -53,6 +53,27 @@ public sealed class FfmpegGrainDetectorTests
     }
 
     [Fact]
+    public void Selector_UsesLegacyProfileName_WhenPreferredProfileIsBlank()
+    {
+        var selectorType = typeof(FfmpegOptions).Assembly.GetType("VideoConverter.Api.Features.Integrations.Ffmpeg.SvtAv1GrainProfileSelector")
+            ?? throw new InvalidOperationException("Selector type not found.");
+        var selectMethod = selectorType.GetMethod("Select", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Select method not found.");
+        var options = new FfmpegOptions
+        {
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsHighGrain = string.Empty,
+        };
+
+        var profile = (SvtAv1GrainProfile)(selectMethod.Invoke(null, [options, GrainLevel.High])
+            ?? throw new InvalidOperationException("Selector returned null."));
+
+        profile.AppliedProfileName.Should().Be("Legacy");
+        profile.UsedFallback.Should().BeTrue();
+        profile.SvtParams.Should().Be("film-grain=8:film-grain-denoise=0");
+    }
+
+    [Fact]
     public void BuildTimestamps_UsesExpectedSpacing_ForKnownDuration()
     {
         var result = InvokePrivateStatic<IEnumerable<double>>(typeof(FfmpegGrainDetector), "BuildTimestamps", 100d, 3)

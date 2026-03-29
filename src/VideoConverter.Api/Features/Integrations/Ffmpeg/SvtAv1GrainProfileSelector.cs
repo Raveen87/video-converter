@@ -18,8 +18,9 @@ internal static class SvtAv1GrainProfileSelector
         var safeProfile = string.IsNullOrWhiteSpace(preferredProfile)
             ? ResolveLegacyFallback(options)
             : preferredProfile;
+        var appliedProfileName = usedFallback ? "Legacy" : detectedGrainLevel.ToString();
 
-        return new SvtAv1GrainProfile(detectedGrainLevel.ToString(), safeProfile, usedFallback);
+        return new SvtAv1GrainProfile(appliedProfileName, safeProfile, usedFallback);
     }
 
     private static string ResolveLegacyFallback(FfmpegOptions options)

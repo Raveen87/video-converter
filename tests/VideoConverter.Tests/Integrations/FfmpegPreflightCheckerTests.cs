@@ -19,6 +19,28 @@ public class FfmpegPreflightCheckerTests
         _ = err1.Should().BeNull();
         _ = ok2.Should().BeTrue();
         _ = err2.Should().BeNull();
+        pm.Verify(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task EnsurePreflightAsync_DeduplicatesFallbackProfiles_WhenProfilesResolveToSameParams()
+    {
+        var pm = new Mock<IProcessManager>();
+        _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+          .ReturnsAsync(new ProcessResult { IsSuccess = true, ExitCode = 0 });
+        var options = new FfmpegOptions
+        {
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(options));
+
+        var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
+
+        _ = ok.Should().BeTrue();
+        _ = err.Should().BeNull();
         pm.Verify(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

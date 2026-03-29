@@ -103,9 +103,9 @@ public sealed class FfmpegGrainDetector(
         ];
     }
 
-    private static double? ParseAveragePsnr(string stderr)
+    private static double? ParseAveragePsnr(string output)
     {
-        foreach (var line in stderr.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
             var idx = line.IndexOf("average:", StringComparison.OrdinalIgnoreCase);
             if (idx < 0)
@@ -160,9 +160,14 @@ public sealed class FfmpegGrainDetector(
             return null;
         }
 
-        var stderr = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        _ = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+
+        var outputs = await Task.WhenAll(stderrTask, stdoutTask).ConfigureAwait(false);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+        var stderr = outputs[0];
+        var stdout = outputs[1];
 
         if (process.ExitCode is not 0)
         {
@@ -175,7 +180,7 @@ public sealed class FfmpegGrainDetector(
             return null;
         }
 
-        var averagePsnr = ParseAveragePsnr(stderr);
+        var averagePsnr = ParseAveragePsnr(stderr) ?? ParseAveragePsnr(stdout);
         if (averagePsnr is not null)
         {
             logger.LogDebug(
@@ -186,11 +191,12 @@ public sealed class FfmpegGrainDetector(
         }
         else
         {
+            var combinedOutput = string.Join(Environment.NewLine, new[] { stderr, stdout }.Where(static text => !string.IsNullOrWhiteSpace(text)));
             logger.LogDebug(
                 "FFmpeg grain sample produced no PSNR summary for {InputPath} at {TimestampSeconds:F2}s. Output={Output}",
                 inputPath,
                 timestampSeconds,
-                stderr);
+                combinedOutput);
         }
 
         return averagePsnr;

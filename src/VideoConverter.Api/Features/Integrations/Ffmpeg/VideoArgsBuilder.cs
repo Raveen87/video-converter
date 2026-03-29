@@ -64,7 +64,7 @@ internal static class VideoArgsBuilder
                 "Applying SVT-AV1 grain profile. ConversionId={ConversionId}, DetectedGrainLevel={DetectedGrainLevel}, GrainProfile={GrainProfile}, UsedFallback={UsedFallback}, SvtParams={SvtParams}",
                 conversion.Id,
                 conversion.DetectedGrainLevel,
-                profile.GrainLevelName,
+                profile.AppliedProfileName,
                 profile.UsedFallback,
                 profile.SvtParams);
 
