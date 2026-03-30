@@ -46,7 +46,31 @@ public class DtoSerializationTests
     [Fact]
     public void ConversionDto_RoundTrips_WithValues()
     {
-        var dto = new ConversionDto(1, "test.mp4", "output", DateTime.UtcNow, ConversionStatus.Pending, 23, 128, AudioChannels.Stereo20, 1080, "Name.mp4", null, null, null, null, null, null, null, null, null, null, DetectedGrainLevel: GrainLevel.Low, VmafEnabled: true, VmafScore: 94.5);
+        var dto = new ConversionDto(
+            Id: 1,
+            InputPath: "test.mp4",
+            OutputDirectory: "output",
+            CreatedAtUtc: DateTime.UtcNow,
+            Status: ConversionStatus.Pending,
+            Crf: 23,
+            AudioBitrateKbps: 128,
+            AudioChannels: AudioChannels.Stereo20,
+            Resolution: 1080,
+            MetadataBasedFilename: "Name.mp4",
+            DeletedAtUtc: null,
+            TmdbId: null,
+            MatchedTitle: null,
+            MatchedYear: null,
+            MatchedSeason: null,
+            MatchedEpisode: null,
+            SelectedAudioStreamIndicesCsv: null,
+            SelectedSubtitleStreamIndicesCsv: null,
+            SelectedExternalSubtitlePathsCsv: null,
+            DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low,
+            OutputPathTemplate: null,
+            VmafEnabled: true,
+            VmafScore: 94.5);
         var json = JsonSerializer.Serialize(dto);
         var back = JsonSerializer.Deserialize<ConversionDto>(json);
         _ = back.Should().BeEquivalentTo(dto, options => options.Excluding(x => x.CreatedAtUtc));
