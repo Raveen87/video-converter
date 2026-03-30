@@ -2,8 +2,6 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 internal static class SvtAv1GrainProfileSelector
 {
-    private const string DefaultLowProfile = "film-grain=8:film-grain-denoise=0";
-
     public static SvtAv1GrainProfile Select(FfmpegOptions options, GrainLevel detectedGrainLevel)
     {
         var preferredProfile = detectedGrainLevel switch
@@ -36,8 +34,6 @@ internal static class SvtAv1GrainProfileSelector
             return options.SvtParams;
         }
 
-        return string.IsNullOrWhiteSpace(options.SvtParams)
-            ? string.Empty
-            : DefaultLowProfile;
+        return string.Empty;
     }
 }
