@@ -961,6 +961,10 @@ public sealed class ConversionService(
             // Re-throw validation exceptions
             throw;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
@@ -989,6 +993,10 @@ public sealed class ConversionService(
 
             return detectedCrop;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
@@ -1004,6 +1012,10 @@ public sealed class ConversionService(
         {
             var probe = await probeTask.ConfigureAwait(false);
             return await grainDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

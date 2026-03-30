@@ -319,6 +319,69 @@ public class ConversionServiceTests
     }
 
     [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenResolutionProbeIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithResolution(1080)
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenCropDetectionIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                DurationSeconds = 120.5,
+            });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenGrainDetectionIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                DurationSeconds = 120.5,
+            });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
+    }
+
+    [Fact]
     public async Task ConversionService_CreateConversionAsync_WithSubtitleLanguageNotFound_ThrowsException()
     {
         // Arrange
