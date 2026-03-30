@@ -4,6 +4,11 @@ internal static class GrainDetectionClassifier
 {
     public static GrainLevel Classify(double medianPsnr, double lowPsnrThreshold, double highPsnrThreshold)
     {
+        if (double.IsNaN(medianPsnr))
+        {
+            return GrainLevel.Low;
+        }
+
         var safeHigh = Math.Max(0, highPsnrThreshold);
         var safeLow = Math.Max(safeHigh, lowPsnrThreshold);
 

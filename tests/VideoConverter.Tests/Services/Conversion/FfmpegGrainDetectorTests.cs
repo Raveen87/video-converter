@@ -33,6 +33,14 @@ public sealed class FfmpegGrainDetectorTests
     }
 
     [Fact]
+    public void Classify_ReturnsLow_WhenMedianPsnrIsNaN()
+    {
+        var result = InvokeClassifier(double.NaN, 44, 38);
+
+        result.Should().Be(GrainLevel.Low);
+    }
+
+    [Fact]
     public void ParseAveragePsnr_ReturnsParsedValue_WhenSummaryExists()
     {
         const string stderr = "[Parsed_psnr_0 @ 000] PSNR y:39.1 u:40.2 v:41.3 average:40.4567 min:38.9 max:42.0";
@@ -50,6 +58,16 @@ public sealed class FfmpegGrainDetectorTests
         var result = InvokePrivateStatic<double?>(typeof(FfmpegGrainDetector), "ParseAveragePsnr", stderr);
 
         result.Should().Be(double.PositiveInfinity);
+    }
+
+    [Fact]
+    public void ParseAveragePsnr_ReturnsNull_WhenSummaryReportsNaN()
+    {
+        const string stderr = "[Parsed_psnr_0 @ 000] PSNR y:nan u:nan v:nan average:nan min:nan max:nan";
+
+        var result = InvokePrivateStatic<double?>(typeof(FfmpegGrainDetector), "ParseAveragePsnr", stderr);
+
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -112,7 +130,11 @@ public sealed class FfmpegGrainDetectorTests
         var method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException($"Method '{methodName}' not found on '{type.FullName}'.");
 
-        return (T)(method.Invoke(null, arguments) ?? throw new InvalidOperationException($"Method '{methodName}' returned null."));
+        var result = method.Invoke(null, arguments);
+
+        return result is null
+            ? default!
+            : (T)result;
     }
 
     private static T InvokeStaticOnType<T>(string fullTypeName, string methodName, params object?[] arguments)

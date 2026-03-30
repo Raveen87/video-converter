@@ -30,9 +30,18 @@ public sealed class FfmpegGrainDetector(
         foreach (var timestamp in timestamps)
         {
             var psnrAverage = await DetectAtAsync(inputPath, timestamp, sampleDuration, cancellationToken).ConfigureAwait(false);
-            if (psnrAverage is not null)
+            if (psnrAverage is double value)
             {
-                psnrValues.Add(psnrAverage.Value);
+                if (double.IsNaN(value))
+                {
+                    logger.LogDebug(
+                        "Ignoring invalid NaN PSNR sample for {InputPath} at {TimestampSeconds:F2}s",
+                        inputPath,
+                        timestamp);
+                    continue;
+                }
+
+                psnrValues.Add(value);
             }
         }
 
@@ -122,9 +131,16 @@ public sealed class FfmpegGrainDetector(
                 return double.PositiveInfinity;
             }
 
+            if (string.Equals(token, "nan", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
             if (double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
             {
-                return parsed;
+                return double.IsNaN(parsed)
+                    ? null
+                    : parsed;
             }
         }
 
