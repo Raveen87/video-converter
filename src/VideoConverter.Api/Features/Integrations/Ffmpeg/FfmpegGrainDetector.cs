@@ -2,15 +2,12 @@ namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
 public sealed class FfmpegGrainDetector(
     IOptions<FfmpegOptions> options,
-    ILogger<FfmpegGrainDetector> logger,
-    IConfiguration configuration) : IGrainDetector
+    ILogger<FfmpegGrainDetector> logger) : IGrainDetector
 {
     private const string DenoiseFilter = "hqdn3d=1.5:1.5:6:6";
 
     private readonly FfmpegOptions _options = options.Value;
-    private readonly string _ffmpegPath = configuration["Ffmpeg:Path"]
-        ?? Environment.GetEnvironmentVariable("FFMPEG_PATH")
-        ?? "ffmpeg";
+    private readonly string _ffmpegPath = options.Value.Path ?? "ffmpeg";
 
     public async Task<GrainLevel> DetectAsync(string inputPath, double? durationSeconds, CancellationToken cancellationToken)
     {

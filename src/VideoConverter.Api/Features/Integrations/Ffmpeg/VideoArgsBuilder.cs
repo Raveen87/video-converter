@@ -74,11 +74,18 @@ internal static class VideoArgsBuilder
 
             if (profile.UsedFallback)
             {
-                logger.LogWarning(
-                    string.IsNullOrWhiteSpace(profile.SvtParams)
-                        ? "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}, and global SvtParams is blank. Skipping -svtav1-params."
-                        : "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}. Falling back to legacy/default profile.",
-                    conversion.DetectedGrainLevel);
+                if (string.IsNullOrWhiteSpace(profile.SvtParams))
+                {
+                    logger.LogDebug(
+                        "SVT-AV1 grain profile config intentionally disabled for level {DetectedGrainLevel}. Skipping -svtav1-params.",
+                        conversion.DetectedGrainLevel);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}. Falling back to legacy/default profile.",
+                        conversion.DetectedGrainLevel);
+                }
             }
         }
 

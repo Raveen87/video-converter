@@ -18,9 +18,9 @@ public sealed class VideoConverterApiClientReorderTests
         var orderedIds = new[] { 1, 2, 3 };
         var expectedResponse = new[]
         {
-            new ConversionDto(1, "a.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, GrainLevel.Low),
-            new ConversionDto(2, "b.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, GrainLevel.Low),
-            new ConversionDto(3, "c.mp4", "out", DateTime.UtcNow, ConversionStatus.Pending, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, GrainLevel.Low),
+            CreateConversionDto(1, "a.mp4"),
+            CreateConversionDto(2, "b.mp4"),
+            CreateConversionDto(3, "c.mp4"),
         };
 
         var handler = new Mock<HttpMessageHandler>();
@@ -108,5 +108,32 @@ public sealed class VideoConverterApiClientReorderTests
 
         result.Should().NotBeNull();
         result.Should().BeEmpty();
+    }
+
+    private static ConversionDto CreateConversionDto(int id, string inputPath)
+    {
+        return new ConversionDto(
+            Id: id,
+            InputPath: inputPath,
+            OutputDirectory: "out",
+            CreatedAtUtc: DateTime.UtcNow,
+            Status: ConversionStatus.Pending,
+            Crf: null,
+            AudioBitrateKbps: null,
+            AudioChannels: null,
+            Resolution: null,
+            MetadataBasedFilename: null,
+            DeletedAtUtc: null,
+            TmdbId: null,
+            MatchedTitle: null,
+            MatchedYear: null,
+            MatchedSeason: null,
+            MatchedEpisode: null,
+            SelectedAudioStreamIndicesCsv: null,
+            SelectedSubtitleStreamIndicesCsv: null,
+            SelectedExternalSubtitlePathsCsv: null,
+            DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low,
+            OutputPathTemplate: null);
     }
 }
