@@ -45,6 +45,31 @@ public class FfmpegPreflightCheckerTests
     }
 
     [Fact]
+    public async Task EnsurePreflightAsync_DoesNotEmitSvtParams_WhenProfilesAreExplicitlyDisabled()
+    {
+        var capturedRequests = new List<ProcessRequest>();
+        var pm = new Mock<IProcessManager>();
+        _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+          .Callback<ProcessRequest, CancellationToken>((request, _) => capturedRequests.Add(request))
+          .ReturnsAsync(new ProcessResult { IsSuccess = true, ExitCode = 0 });
+        var options = new FfmpegOptions
+        {
+            SvtParams = string.Empty,
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(options));
+
+        var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
+
+        _ = ok.Should().BeTrue();
+        _ = err.Should().BeNull();
+        capturedRequests.Should().ContainSingle();
+        capturedRequests[0].Arguments.Should().NotContain("-svtav1-params");
+    }
+
+    [Fact]
     public async Task EnsurePreflightAsync_FailureWithStderr_ReportsError()
     {
         var pm = new Mock<IProcessManager>();

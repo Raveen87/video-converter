@@ -18,7 +18,13 @@ internal static class SvtAv1GrainProfileSelector
         var safeProfile = string.IsNullOrWhiteSpace(preferredProfile)
             ? ResolveLegacyFallback(options)
             : preferredProfile;
-        var appliedProfileName = usedFallback ? "Legacy" : detectedGrainLevel.ToString();
+        var appliedProfileName = detectedGrainLevel.ToString();
+        if (usedFallback)
+        {
+            appliedProfileName = string.IsNullOrWhiteSpace(safeProfile)
+                ? "Disabled"
+                : "Legacy";
+        }
 
         return new SvtAv1GrainProfile(appliedProfileName, safeProfile, usedFallback);
     }
@@ -30,6 +36,8 @@ internal static class SvtAv1GrainProfileSelector
             return options.SvtParams;
         }
 
-        return DefaultLowProfile;
+        return string.IsNullOrWhiteSpace(options.SvtParams)
+            ? string.Empty
+            : DefaultLowProfile;
     }
 }

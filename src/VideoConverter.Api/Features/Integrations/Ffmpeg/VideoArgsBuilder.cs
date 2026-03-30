@@ -56,9 +56,6 @@ internal static class VideoArgsBuilder
         if (string.Equals(options.VideoCodec, "libsvtav1", StringComparison.OrdinalIgnoreCase))
         {
             var profile = SvtAv1GrainProfileSelector.Select(options, conversion.DetectedGrainLevel);
-            var vfIndex = args.IndexOf("-vf");
-            var insertIndex = vfIndex >= 0 ? vfIndex : args.Count;
-            args.InsertRange(insertIndex, ["-svtav1-params", profile.SvtParams]);
 
             logger.LogInformation(
                 "Applying SVT-AV1 grain profile. ConversionId={ConversionId}, DetectedGrainLevel={DetectedGrainLevel}, GrainProfile={GrainProfile}, UsedFallback={UsedFallback}, SvtParams={SvtParams}",
@@ -68,10 +65,19 @@ internal static class VideoArgsBuilder
                 profile.UsedFallback,
                 profile.SvtParams);
 
+            if (!string.IsNullOrWhiteSpace(profile.SvtParams))
+            {
+                var vfIndex = args.IndexOf("-vf");
+                var insertIndex = vfIndex >= 0 ? vfIndex : args.Count;
+                args.InsertRange(insertIndex, ["-svtav1-params", profile.SvtParams]);
+            }
+
             if (profile.UsedFallback)
             {
                 logger.LogWarning(
-                    "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}. Falling back to legacy/default profile.",
+                    string.IsNullOrWhiteSpace(profile.SvtParams)
+                        ? "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}, and global SvtParams is blank. Skipping -svtav1-params."
+                        : "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}. Falling back to legacy/default profile.",
                     conversion.DetectedGrainLevel);
             }
         }

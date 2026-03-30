@@ -207,6 +207,28 @@ public sealed class VideoArgsBuilderTests
     }
 
     [Fact]
+    public void BuildVideoCodecArgs_SkipsSvtParams_WhenAllProfilesAreBlank()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.High,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParams = string.Empty,
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().NotContain("-svtav1-params");
+    }
+
+    [Fact]
     public void BuildVideoCodecArgs_InsertsSvtParamsImmediatelyBeforeVfFlag()
     {
         var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
