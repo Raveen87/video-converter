@@ -73,18 +73,13 @@ public sealed class FfmpegGrainDetectorTests
     [Fact]
     public void Selector_UsesLegacyProfileName_WhenPreferredProfileIsBlank()
     {
-        var selectorType = typeof(FfmpegOptions).Assembly.GetType("VideoConverter.Api.Features.Integrations.Ffmpeg.SvtAv1GrainProfileSelector")
-            ?? throw new InvalidOperationException("Selector type not found.");
-        var selectMethod = selectorType.GetMethod("Select", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Select method not found.");
         var options = new FfmpegOptions
         {
             SvtParams = "film-grain=8:film-grain-denoise=0",
             SvtParamsHighGrain = string.Empty,
         };
 
-        var profile = (SvtAv1GrainProfile)(selectMethod.Invoke(null, [options, GrainLevel.High])
-            ?? throw new InvalidOperationException("Selector returned null."));
+        var profile = SvtAv1GrainProfileSelector.Select(options, GrainLevel.High);
 
         profile.AppliedProfileName.Should().Be("Legacy");
         profile.UsedFallback.Should().BeTrue();
@@ -117,9 +112,7 @@ public sealed class FfmpegGrainDetectorTests
 
     private static GrainLevel InvokeClassifier(double medianPsnr, double lowThreshold, double highThreshold)
     {
-        return InvokeStaticOnType<GrainLevel>(
-            "VideoConverter.Api.Features.Integrations.Ffmpeg.GrainDetectionClassifier",
-            "Classify",
+        return GrainDetectionClassifier.Classify(
             medianPsnr,
             lowThreshold,
             highThreshold);
@@ -135,15 +128,5 @@ public sealed class FfmpegGrainDetectorTests
         return result is null
             ? default!
             : (T)result;
-    }
-
-    private static T InvokeStaticOnType<T>(string fullTypeName, string methodName, params object?[] arguments)
-    {
-        var type = typeof(FfmpegOptions).Assembly.GetType(fullTypeName)
-            ?? throw new InvalidOperationException($"Type '{fullTypeName}' not found.");
-        var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException($"Method '{methodName}' not found on '{fullTypeName}'.");
-
-        return (T)(method.Invoke(null, arguments) ?? throw new InvalidOperationException($"Method '{methodName}' returned null."));
     }
 }
