@@ -13,6 +13,7 @@ public sealed class ConversionService(
     IAudioLanguageMatcher audioMatcher,
     ISubtitleLanguageMatcher subtitleMatcher,
     ICropDetector cropDetector,
+    IGrainDetector grainDetector,
     IMetadataService metadataService,
     IFilenameParser filenameParser,
     IFilenameGenerator filenameGenerator,
@@ -36,17 +37,22 @@ public sealed class ConversionService(
             request.InputPath,
             request.OutputDirectory);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Process audio language requirements
-        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Process subtitle language requirements
-        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Validate resolution against source
-        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
+        await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
 
         // Perform crop detection
-        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedCrop = await DetectCropAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
+
+        // Perform grain detection
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Look up metadata and generate filename
         var (metadataBasedFilename, metadata) = await GenerateMetadataBasedFilenameAsync(request, cancellationToken).ConfigureAwait(false);
@@ -68,6 +74,7 @@ public sealed class ConversionService(
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
+            DetectedGrainLevel = detectedGrainLevel,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata?.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
@@ -80,7 +87,7 @@ public sealed class ConversionService(
             UpdateConversionWithMetadata(conversion, metadata);
         }
 
-        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop, detectedGrainLevel);
         return conversion;
     }
 
@@ -92,17 +99,22 @@ public sealed class ConversionService(
             request.OutputDirectory,
             metadata.TmdbId);
 
+        var probeTask = prober.ProbeAsync(request.InputPath, cancellationToken);
+
         // Process audio language requirements
-        var audioProcessing = await ProcessAudioLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var audioProcessing = await ProcessAudioLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Process subtitle language requirements
-        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, cancellationToken).ConfigureAwait(false);
+        var subtitleProcessing = await ProcessSubtitleLanguagesAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Validate resolution against source
-        await ValidateResolutionAsync(request, cancellationToken).ConfigureAwait(false);
+        await ValidateResolutionAsync(request, probeTask).ConfigureAwait(false);
 
         // Perform crop detection
-        var detectedCrop = await DetectCropAsync(request, cancellationToken).ConfigureAwait(false);
+        var detectedCrop = await DetectCropAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
+
+        // Perform grain detection
+        var detectedGrainLevel = await DetectGrainLevelAsync(request, probeTask, cancellationToken).ConfigureAwait(false);
 
         // Generate filename using provided metadata
         var metadataBasedFilename = GenerateFilenameFromMetadata(request, metadata);
@@ -125,6 +137,7 @@ public sealed class ConversionService(
             SelectedSubtitleStreamIndicesCsv = subtitleProcessing.SubtitleIndicesCsv,
             SelectedExternalSubtitlePathsCsv = subtitleProcessing.ExternalSubtitlePathsCsv,
             DetectedCrop = detectedCrop,
+            DetectedGrainLevel = detectedGrainLevel,
             MetadataBasedFilename = metadataBasedFilename,
             TmdbId = metadata.TmdbId,
             OutputPathTemplate = request.OutputPathTemplate,
@@ -133,7 +146,7 @@ public sealed class ConversionService(
         };
 
         UpdateConversionWithMetadata(conversion, metadata);
-        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop);
+        LogConversionCreated(conversion, audioProcessing, subtitleProcessing, detectedCrop, detectedGrainLevel);
         return conversion;
     }
 
@@ -623,9 +636,9 @@ public sealed class ConversionService(
         };
     }
 
-    private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<AudioProcessingResult> ProcessAudioLanguagesAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
-        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probe = await probeTask.ConfigureAwait(false);
         var inputAudioStreams = probe.Streams
             .Where(s => string.Equals(s.CodecType, "audio", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -738,20 +751,20 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<SubtitleProcessingResult> ProcessSubtitleLanguagesAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
         var requested = request.SubtitleLanguages?.ToList();
 
         if (requested is not { Count: > 0 })
         {
-            return await ProcessDefaultTextSubtitlesAsync(request, cancellationToken).ConfigureAwait(false);
+            return await ProcessDefaultTextSubtitlesAsync(probeTask).ConfigureAwait(false);
         }
 
         logger.LogDebug(
             "Processing subtitle language requirements: {SubtitleLanguages}",
             string.Join(", ", requested));
 
-        var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probe = await probeTask.ConfigureAwait(false);
 
         try
         {
@@ -897,10 +910,10 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<SubtitleProcessingResult> ProcessDefaultTextSubtitlesAsync(Task<MediaProbeResult> probeTask)
     {
         // No specific languages requested: include all available text-based internal subtitles.
-        var probeAll = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+        var probeAll = await probeTask.ConfigureAwait(false);
         var streams = probeAll?.Streams ?? [];
         var textSubtitleIndices = streams
             .Where(s =>
@@ -922,7 +935,7 @@ public sealed class ConversionService(
         };
     }
 
-    private async Task ValidateResolutionAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task ValidateResolutionAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask)
     {
         if (request.Resolution is null)
         {
@@ -933,7 +946,7 @@ public sealed class ConversionService(
 
         try
         {
-            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var probe = await probeTask.ConfigureAwait(false);
             if (probe.VideoHeight is not null && request.Resolution > probe.VideoHeight)
             {
                 logger.LogWarning(
@@ -948,6 +961,10 @@ public sealed class ConversionService(
             // Re-throw validation exceptions
             throw;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Could not determine source height: {Error}", ex.Message);
@@ -956,13 +973,13 @@ public sealed class ConversionService(
         }
     }
 
-    private async Task<string?> DetectCropAsync(ConversionCreateDto request, CancellationToken cancellationToken)
+    private async Task<string?> DetectCropAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
     {
         logger.LogDebug("Starting crop detection for {InputPath}", request.InputPath);
 
         try
         {
-            var probe = await prober.ProbeAsync(request.InputPath, cancellationToken).ConfigureAwait(false);
+            var probe = await probeTask.ConfigureAwait(false);
             var detectedCrop = await cropDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
 
             if (detectedCrop is not null)
@@ -976,10 +993,38 @@ public sealed class ConversionService(
 
             return detectedCrop;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Crop detection failed: {Error}", ex.Message);
             return null;
+        }
+    }
+
+    private async Task<GrainLevel> DetectGrainLevelAsync(ConversionCreateDto request, Task<MediaProbeResult> probeTask, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Starting grain detection for {InputPath}", request.InputPath);
+
+        try
+        {
+            var probe = await probeTask.ConfigureAwait(false);
+            return await grainDetector.DetectAsync(request.InputPath, probe.DurationSeconds, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Grain detection failed for {InputPath}. Falling back to {FallbackGrainLevel}",
+                request.InputPath,
+                GrainLevel.Low);
+            return GrainLevel.Low;
         }
     }
 
@@ -1061,17 +1106,18 @@ public sealed class ConversionService(
         };
     }
 
-    private void LogConversionCreated(Conversion conversion, AudioProcessingResult audioProcessing, SubtitleProcessingResult subtitleProcessing, string? detectedCrop)
+    private void LogConversionCreated(Conversion conversion, AudioProcessingResult audioProcessing, SubtitleProcessingResult subtitleProcessing, string? detectedCrop, GrainLevel detectedGrainLevel)
     {
         logger.LogInformation(
-            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}",
+            "Conversion created with settings: CRF={Crf}, AudioBitrate={AudioBitrate}Kbps, Resolution={Resolution}p, AudioStreams={AudioStreams}, SubtitleStreams={SubtitleStreams}, ExternalSubtitles={ExternalSubtitles}, Crop={Crop}, GrainLevel={GrainLevel}",
             conversion.Crf,
             conversion.AudioBitrateKbps,
             conversion.Resolution,
             audioProcessing.AudioIndicesCsv ?? "none",
             subtitleProcessing.SubtitleIndicesCsv ?? "none",
             subtitleProcessing.ExternalSubtitlePathsCsv ?? "none",
-            detectedCrop ?? "none");
+            detectedCrop ?? "none",
+            detectedGrainLevel);
     }
 
     private sealed record AudioProcessingResult

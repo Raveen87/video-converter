@@ -39,7 +39,7 @@ internal static class VideoArgsBuilder
         return vf;
     }
 
-    public static IReadOnlyList<string> BuildVideoCodecArgs(Conversion conversion, string vf, FfmpegOptions options)
+    public static IReadOnlyList<string> BuildVideoCodecArgs(Conversion conversion, string vf, FfmpegOptions options, ILogger logger)
     {
         var args = new List<string>
         {
@@ -53,11 +53,40 @@ internal static class VideoArgsBuilder
             "-vf", vf,
         };
 
-        if (string.Equals(options.VideoCodec, "libsvtav1", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(options.SvtParams))
+        if (string.Equals(options.VideoCodec, "libsvtav1", StringComparison.OrdinalIgnoreCase))
         {
-            var vfIndex = args.IndexOf("-vf");
-            var insertIndex = vfIndex >= 0 ? vfIndex : args.Count;
-            args.InsertRange(insertIndex, ["-svtav1-params", options.SvtParams]);
+            var profile = SvtAv1GrainProfileSelector.Select(options, conversion.DetectedGrainLevel);
+
+            logger.LogInformation(
+                "Applying SVT-AV1 grain profile. ConversionId={ConversionId}, DetectedGrainLevel={DetectedGrainLevel}, GrainProfile={GrainProfile}, UsedFallback={UsedFallback}, SvtParams={SvtParams}",
+                conversion.Id,
+                conversion.DetectedGrainLevel,
+                profile.AppliedProfileName,
+                profile.UsedFallback,
+                profile.SvtParams);
+
+            if (!string.IsNullOrWhiteSpace(profile.SvtParams))
+            {
+                var vfIndex = args.IndexOf("-vf");
+                var insertIndex = vfIndex >= 0 ? vfIndex : args.Count;
+                args.InsertRange(insertIndex, ["-svtav1-params", profile.SvtParams]);
+            }
+
+            if (profile.UsedFallback)
+            {
+                if (string.IsNullOrWhiteSpace(profile.SvtParams))
+                {
+                    logger.LogDebug(
+                        "SVT-AV1 grain profile config intentionally disabled for level {DetectedGrainLevel}. Skipping -svtav1-params.",
+                        conversion.DetectedGrainLevel);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "SVT-AV1 grain profile config missing for level {DetectedGrainLevel}. Falling back to legacy/default profile.",
+                        conversion.DetectedGrainLevel);
+                }
+            }
         }
 
         return args;

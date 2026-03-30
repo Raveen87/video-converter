@@ -123,7 +123,8 @@ public sealed class ProfileConversionsEndpoints(
             OutputPathTemplate: c.OutputPathTemplate,
             VmafEnabled: c.VmafEnabled,
             RequiredVmaf: c.RequiredVmaf,
-            VmafScore: c.VmafScore);
+            VmafScore: c.VmafScore,
+            DetectedGrainLevel: c.DetectedGrainLevel);
     }
 
     private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)

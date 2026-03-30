@@ -1,8 +1,12 @@
 namespace VideoConverter.Api.Features.Integrations.Ffmpeg;
 
-public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logger, IProcessManager processManager) : IFfmpegPreflightChecker, IDisposable
+public sealed class FfmpegPreflightChecker(
+    ILogger<FfmpegPreflightChecker> logger,
+    IProcessManager processManager,
+    IOptions<FfmpegOptions> options) : IFfmpegPreflightChecker, IDisposable
 {
     private readonly SemaphoreSlim _preflightLock = new(1, 1);
+    private readonly FfmpegOptions _options = options.Value;
     private bool _preflightDone;
 
     public async Task<(bool Ok, string? Error)> EnsurePreflightAsync(string ffmpegPath, CancellationToken cancellationToken)
@@ -47,23 +51,27 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
     {
         try
         {
-            var preflightArgs = FfmpegPreflightArgsBuilder.Build();
-            var result = await processManager.RunAsync(
-                new ProcessRequest
-                {
-                    ExecutablePath = ffmpegPath,
-                    Arguments = preflightArgs,
-                    CaptureOutput = true,
-                },
-                cancellationToken).ConfigureAwait(false);
-
-            if (!result.IsSuccess)
+            foreach (var profile in GetProfilesToValidate())
             {
-                var error = string.IsNullOrWhiteSpace(result.StandardError)
-                    ? $"FFmpeg preflight failed with exit code {result.ExitCode}"
-                    : result.StandardError;
-                logger.LogError("FFmpeg preflight failed: {Error}", error);
-                return (false, error);
+                logger.LogDebug("Running FFmpeg preflight for grain profile {GrainProfile}", profile.AppliedProfileName);
+                var preflightArgs = FfmpegPreflightArgsBuilder.Build(profile);
+                var result = await processManager.RunAsync(
+                    new ProcessRequest
+                    {
+                        ExecutablePath = ffmpegPath,
+                        Arguments = preflightArgs,
+                        CaptureOutput = true,
+                    },
+                    cancellationToken).ConfigureAwait(false);
+
+                if (!result.IsSuccess)
+                {
+                    var error = string.IsNullOrWhiteSpace(result.StandardError)
+                        ? $"FFmpeg preflight failed for profile {profile.AppliedProfileName} with exit code {result.ExitCode}"
+                        : $"{profile.AppliedProfileName}: {result.StandardError}";
+                    logger.LogError("FFmpeg preflight failed: {Error}", error);
+                    return (false, error);
+                }
             }
 
             return (true, null);
@@ -73,5 +81,16 @@ public sealed class FfmpegPreflightChecker(ILogger<FfmpegPreflightChecker> logge
             logger.LogError(ex, "FFmpeg preflight threw an exception");
             return (false, ex.Message);
         }
+    }
+
+    private IEnumerable<SvtAv1GrainProfile> GetProfilesToValidate()
+    {
+        return new[]
+            {
+                SvtAv1GrainProfileSelector.Select(_options, GrainLevel.None),
+                SvtAv1GrainProfileSelector.Select(_options, GrainLevel.Low),
+                SvtAv1GrainProfileSelector.Select(_options, GrainLevel.High),
+            }
+            .DistinctBy(static profile => profile.SvtParams, StringComparer.Ordinal);
     }
 }

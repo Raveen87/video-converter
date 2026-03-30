@@ -86,7 +86,7 @@ public sealed class VideoArgsBuilderTests
         };
         var options = new FfmpegOptions();
 
-        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
 
         args.Should().ContainInConsecutiveOrder("-crf", VideoArgsBuilder.DefaultCrf.ToString());
     }
@@ -104,7 +104,7 @@ public sealed class VideoArgsBuilderTests
             SvtParams = "film-grain=8",
         };
 
-        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
 
         args.Should().NotContain("-svtav1-params");
     }
@@ -115,16 +115,117 @@ public sealed class VideoArgsBuilderTests
         var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
         {
             Crf = 30,
+            DetectedGrainLevel = GrainLevel.Low,
         };
         var options = new FfmpegOptions
         {
             VideoCodec = "libsvtav1",
-            SvtParams = "film-grain=8",
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsLowGrain = "film-grain=6:film-grain-denoise=1",
         };
 
-        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options);
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
 
-        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=8");
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=6:film-grain-denoise=1");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_UsesNoGrainProfile_WhenDetectedLevelIsNone()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.None,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParamsNoGrain = "film-grain=0:film-grain-denoise=0",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=0:film-grain-denoise=0");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_UsesHighGrainProfile_WhenDetectedLevelIsHigh()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.High,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParamsHighGrain = "film-grain=12:film-grain-denoise=1",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=12:film-grain-denoise=1");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_UsesLowGrainProfile_WhenDetectedLevelIsLow()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.Low,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParamsLowGrain = "film-grain=6:film-grain-denoise=1",
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=6:film-grain-denoise=1");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_UsesLegacySvtParamsFallback_WhenLowGrainProfileIsBlank()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.Low,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsLowGrain = string.Empty,
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().ContainInConsecutiveOrder("-svtav1-params", "film-grain=8:film-grain-denoise=0");
+    }
+
+    [Fact]
+    public void BuildVideoCodecArgs_SkipsSvtParams_WhenAllProfilesAreBlank()
+    {
+        var conversion = new VideoConverter.Api.Shared.Domain.Entities.Conversion
+        {
+            Crf = 30,
+            DetectedGrainLevel = GrainLevel.High,
+        };
+        var options = new FfmpegOptions
+        {
+            VideoCodec = "libsvtav1",
+            SvtParams = string.Empty,
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance);
+
+        args.Should().NotContain("-svtav1-params");
     }
 
     [Fact]
@@ -140,7 +241,7 @@ public sealed class VideoArgsBuilderTests
             SvtParams = "film-grain=8",
         };
 
-        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options).ToList();
+        var args = VideoArgsBuilder.BuildVideoCodecArgs(conversion, "scale=w='min(1280,iw)':h='min(720,ih)'", options, NullLogger.Instance).ToList();
         var svtIndex = args.IndexOf("-svtav1-params");
         var vfIndex = args.IndexOf("-vf");
 

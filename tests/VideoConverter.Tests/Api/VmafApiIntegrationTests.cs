@@ -217,6 +217,7 @@ public sealed class VmafApiIntegrationTests
             SelectedSubtitleStreamIndicesCsv: null,
             SelectedExternalSubtitlePathsCsv: null,
             DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low,
             OutputPathTemplate: null,
             VmafEnabled: true,
             VmafScore: 95.2);
@@ -258,6 +259,7 @@ public sealed class VmafApiIntegrationTests
             SelectedSubtitleStreamIndicesCsv: null,
             SelectedExternalSubtitlePathsCsv: null,
             DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low,
             OutputPathTemplate: null,
             VmafEnabled: true,
             VmafScore: vmafScore);

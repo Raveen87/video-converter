@@ -10,7 +10,7 @@ public class FfmpegPreflightCheckerTests
         var pm = new Mock<IProcessManager>();
         _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync(new ProcessResult { IsSuccess = true, ExitCode = 0 });
-        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object);
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(new FfmpegOptions()));
 
         var (ok1, err1) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
         var (ok2, err2) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
@@ -19,7 +19,54 @@ public class FfmpegPreflightCheckerTests
         _ = err1.Should().BeNull();
         _ = ok2.Should().BeTrue();
         _ = err2.Should().BeNull();
+        pm.Verify(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task EnsurePreflightAsync_DeduplicatesFallbackProfiles_WhenProfilesResolveToSameParams()
+    {
+        var pm = new Mock<IProcessManager>();
+        _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+          .ReturnsAsync(new ProcessResult { IsSuccess = true, ExitCode = 0 });
+        var options = new FfmpegOptions
+        {
+            SvtParams = "film-grain=8:film-grain-denoise=0",
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(options));
+
+        var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
+
+        _ = ok.Should().BeTrue();
+        _ = err.Should().BeNull();
         pm.Verify(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnsurePreflightAsync_DoesNotEmitSvtParams_WhenProfilesAreExplicitlyDisabled()
+    {
+        var capturedRequests = new List<ProcessRequest>();
+        var pm = new Mock<IProcessManager>();
+        _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+          .Callback<ProcessRequest, CancellationToken>((request, _) => capturedRequests.Add(request))
+          .ReturnsAsync(new ProcessResult { IsSuccess = true, ExitCode = 0 });
+        var options = new FfmpegOptions
+        {
+            SvtParams = string.Empty,
+            SvtParamsNoGrain = string.Empty,
+            SvtParamsLowGrain = string.Empty,
+            SvtParamsHighGrain = string.Empty,
+        };
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(options));
+
+        var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
+
+        _ = ok.Should().BeTrue();
+        _ = err.Should().BeNull();
+        capturedRequests.Should().ContainSingle();
+        capturedRequests[0].Arguments.Should().NotContain("-svtav1-params");
     }
 
     [Fact]
@@ -28,7 +75,7 @@ public class FfmpegPreflightCheckerTests
         var pm = new Mock<IProcessManager>();
         _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync(new ProcessResult { IsSuccess = false, ExitCode = 1, StandardError = "encoder not found" });
-        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object);
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(new FfmpegOptions()));
 
         var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
         _ = ok.Should().BeFalse();
@@ -41,7 +88,7 @@ public class FfmpegPreflightCheckerTests
         var pm = new Mock<IProcessManager>();
         _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync(new ProcessResult { IsSuccess = false, ExitCode = 2, StandardError = string.Empty });
-        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object);
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(new FfmpegOptions()));
         var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
         _ = ok.Should().BeFalse();
         _ = err.Should().Contain("exit code 2");
@@ -53,7 +100,7 @@ public class FfmpegPreflightCheckerTests
         var pm = new Mock<IProcessManager>();
         _ = pm.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
           .ThrowsAsync(new InvalidOperationException("boom"));
-        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object);
+        var checker = new FfmpegPreflightChecker(NullLogger<FfmpegPreflightChecker>.Instance, pm.Object, Options.Create(new FfmpegOptions()));
         var (ok, err) = await checker.EnsurePreflightAsync("ffmpeg", CancellationToken.None);
         _ = ok.Should().BeFalse();
         _ = err.Should().Contain("boom");

@@ -133,6 +133,7 @@ public sealed class VideoConverterApiClientConversionPatchTests
             SelectedSubtitleStreamIndicesCsv: null,
             SelectedExternalSubtitlePathsCsv: null,
             DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low,
             OutputPathTemplate: null,
             VmafEnabled: true,
             RequiredVmaf: null,

@@ -23,6 +23,20 @@ public sealed class FfmpegOptions
 
     public string SvtParams { get; set; } = "film-grain=8:film-grain-denoise=0";
 
+    public string SvtParamsNoGrain { get; set; } = "film-grain=0:film-grain-denoise=0";
+
+    public string SvtParamsLowGrain { get; set; } = "film-grain=6:film-grain-denoise=1";
+
+    public string SvtParamsHighGrain { get; set; } = "film-grain=12:film-grain-denoise=1";
+
+    public int GrainDetectionSampleCount { get; set; } = 8;
+
+    public int GrainDetectionSampleDurationSeconds { get; set; } = 1;
+
+    public double GrainDetectionLowPsnrThreshold { get; set; } = 44;
+
+    public double GrainDetectionHighPsnrThreshold { get; set; } = 38;
+
     // Audio defaults
     public string AudioCodec { get; set; } = "libopus";
 

@@ -18,6 +18,7 @@ public class ConversionServiceTests
     private readonly Mock<IAudioLanguageMatcher> _mockAudioMatcher;
     private readonly Mock<ISubtitleLanguageMatcher> _mockSubtitleMatcher;
     private readonly Mock<ICropDetector> _mockCropDetector;
+    private readonly Mock<IGrainDetector> _mockGrainDetector;
     private readonly Mock<IMetadataService> _mockMetadataService;
     private readonly Mock<IFilenameParser> _mockFilenameParser;
     private readonly Mock<IFilenameGenerator> _mockFilenameGenerator;
@@ -31,6 +32,7 @@ public class ConversionServiceTests
         _mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
         _mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         _mockCropDetector = new Mock<ICropDetector>();
+        _mockGrainDetector = new Mock<IGrainDetector>();
         _mockMetadataService = new Mock<IMetadataService>();
         _mockFilenameParser = new Mock<IFilenameParser>();
         _mockFilenameGenerator = new Mock<IFilenameGenerator>();
@@ -42,6 +44,7 @@ public class ConversionServiceTests
             _mockAudioMatcher.Object,
             _mockSubtitleMatcher.Object,
             _mockCropDetector.Object,
+            _mockGrainDetector.Object,
             _mockMetadataService.Object,
             _mockFilenameParser.Object,
             _mockFilenameGenerator.Object,
@@ -70,6 +73,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:1080:0:0");
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "test", 2020));
@@ -118,6 +124,9 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
+
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
         _ = result.VmafEnabled.Should().BeTrue();
@@ -151,6 +160,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
@@ -196,6 +208,9 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
@@ -228,6 +243,9 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _conversionService.CreateConversionAsync(request, CancellationToken.None));
@@ -254,14 +272,20 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), 120.5, It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:800:0:140");
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), 120.5, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.High);
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
         // Assert
         _ = result.Should().NotBeNull();
         _ = result.DetectedCrop.Should().Be("1920:800:0:140");
+        _ = result.DetectedGrainLevel.Should().Be(GrainLevel.High);
 
+        _mockProber.Verify(x => x.ProbeAsync("test.mp4", It.IsAny<CancellationToken>()), Times.Once);
         _mockCropDetector.Verify(x => x.DetectAsync("test.mp4", 120.5, It.IsAny<CancellationToken>()), Times.Once);
+        _mockGrainDetector.Verify(x => x.DetectAsync("test.mp4", 120.5, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -282,12 +306,79 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Crop detection failed"));
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Grain detection failed"));
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
         // Assert
         _ = result.Should().NotBeNull();
         _ = result.DetectedCrop.Should().BeNull();
+        _ = result.DetectedGrainLevel.Should().Be(GrainLevel.Low);
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenResolutionProbeIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .WithResolution(1080)
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenCropDetectionIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                DurationSeconds = 120.5,
+            });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
+    }
+
+    [Fact]
+    public async Task ConversionService_CreateConversionAsync_WhenGrainDetectionIsCanceled_PropagatesCancellation()
+    {
+        var request = new ConversionCreateDtoBuilder()
+            .WithInputPath("test.mp4")
+            .WithOutputDirectory("output")
+            .Build();
+        using var cts = new CancellationTokenSource();
+
+        _ = _mockProber.Setup(x => x.ProbeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MediaProbeResult
+            {
+                Streams = [new MediaStream { Index = 0, CodecType = "audio", LanguageTag = "eng" }],
+                DurationSeconds = 120.5,
+            });
+
+        _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _conversionService.CreateConversionAsync(request, cts.Token));
     }
 
     [Fact]
@@ -311,6 +402,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -340,6 +434,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Create a temporary external subtitle file
         var tempDir = Path.GetTempPath();
@@ -401,6 +498,9 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("1920:1080:0:0");
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.None);
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
@@ -415,6 +515,7 @@ public class ConversionServiceTests
         _ = result.SelectedSubtitleStreamIndicesCsv.Should().Be("2");
         _ = result.SelectedExternalSubtitlePathsCsv.Should().BeNull();
         _ = result.DetectedCrop.Should().Be("1920:1080:0:0");
+        _ = result.DetectedGrainLevel.Should().Be(GrainLevel.None);
         _ = result.CreatedAtUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -436,6 +537,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         _ = _mockFilenameParser.Setup(x => x.ParseFilename("Yellowstone.S01E01.Daybreak.mp4"))
             .Returns(new ParsedFilename("Yellowstone.S01E01.Daybreak.mp4", MediaType.TvShow, "Yellowstone", Year: null, 1, 1, "Daybreak"));
@@ -476,6 +580,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         _ = _mockFilenameParser.Setup(x => x.ParseFilename("Unknown.Movie.mp4"))
             .Returns(new ParsedFilename("Unknown.Movie.mp4", MediaType.Movie, "Unknown Movie", 2020));
@@ -523,6 +630,9 @@ public class ConversionServiceTests
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
+
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);
 
@@ -560,6 +670,9 @@ public class ConversionServiceTests
 
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
 
         // Act
         var result = await _conversionService.CreateConversionAsync(request, CancellationToken.None);

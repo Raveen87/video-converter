@@ -106,7 +106,8 @@ public sealed class ConversionsEndpoints(
             OutputPathTemplate: conversion.OutputPathTemplate,
             VmafEnabled: conversion.VmafEnabled,
             RequiredVmaf: conversion.RequiredVmaf,
-            VmafScore: conversion.VmafScore);
+            VmafScore: conversion.VmafScore,
+            DetectedGrainLevel: conversion.DetectedGrainLevel);
     }
 
     private static ConversionPatchDto CreatePatchModelFrom(Conversion conversion)

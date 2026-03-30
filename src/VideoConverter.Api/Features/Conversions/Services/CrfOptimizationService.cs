@@ -388,10 +388,12 @@ public sealed class CrfOptimizationService(
         var vf = VideoArgsBuilder.BuildVideoFilters(conversion.DetectedCrop, targetWidth, targetHeight, logger);
         var clipConversion = new Conversion
         {
+            Id = conversion.Id,
             Crf = crf,
+            DetectedGrainLevel = conversion.DetectedGrainLevel,
         };
 
-        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(clipConversion, vf, _ffmpegOptions));
+        args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(clipConversion, vf, _ffmpegOptions, logger));
         args.Add("-an");
         args.Add(outputPath);
 

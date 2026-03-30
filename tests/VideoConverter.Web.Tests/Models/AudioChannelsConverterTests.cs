@@ -107,7 +107,8 @@ public sealed class AudioChannelsConverterTests
             SelectedAudioStreamIndicesCsv: null,
             SelectedSubtitleStreamIndicesCsv: null,
             SelectedExternalSubtitlePathsCsv: null,
-            DetectedCrop: null);
+            DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -145,7 +146,8 @@ public sealed class AudioChannelsConverterTests
             SelectedAudioStreamIndicesCsv: null,
             SelectedSubtitleStreamIndicesCsv: null,
             SelectedExternalSubtitlePathsCsv: null,
-            DetectedCrop: null);
+            DetectedCrop: null,
+            DetectedGrainLevel: GrainLevel.Low);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

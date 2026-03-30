@@ -562,6 +562,13 @@ FFmpeg options (appsettings.json):
   "Tune": "0",
   "Gop": "120",
   "SvtParams": "film-grain=8:film-grain-denoise=0",
+  "SvtParamsNoGrain": "film-grain=0:film-grain-denoise=0",
+  "SvtParamsLowGrain": "film-grain=6:film-grain-denoise=1",
+  "SvtParamsHighGrain": "film-grain=12:film-grain-denoise=1",
+  "GrainDetectionSampleCount": 8,
+  "GrainDetectionSampleDurationSeconds": 1,
+  "GrainDetectionLowPsnrThreshold": 44,
+  "GrainDetectionHighPsnrThreshold": 38,
   "AudioCodec": "libopus",
   "DefaultAudioBitrateKbps": 128
 }
@@ -572,7 +579,14 @@ FFmpeg options (appsettings.json):
 - `Ffmpeg:Preset`: Encoder preset (default `6`)
 - `Ffmpeg:Tune`: Encoder tune (default `0`)
 - `Ffmpeg:Gop`: GOP size (default `120`)
-- `Ffmpeg:SvtParams`: SVT-AV1 parameter string (default `film-grain=8:film-grain-denoise=0`)
+- `Ffmpeg:SvtParams`: Legacy/default SVT-AV1 parameter string used as fallback when no grain-specific profile is configured (default `film-grain=8:film-grain-denoise=0`)
+- `Ffmpeg:SvtParamsNoGrain`: SVT-AV1 parameters applied when grain detection classifies the source as `None`
+- `Ffmpeg:SvtParamsLowGrain`: SVT-AV1 parameters applied when grain detection classifies the source as `Low` (default `film-grain=6:film-grain-denoise=1`)
+- `Ffmpeg:SvtParamsHighGrain`: SVT-AV1 parameters applied when grain detection classifies the source as `High`
+- `Ffmpeg:GrainDetectionSampleCount`: Number of sampled windows used for grain detection (default `8`)
+- `Ffmpeg:GrainDetectionSampleDurationSeconds`: Duration of each sampled analysis window in seconds (default `1`)
+- `Ffmpeg:GrainDetectionLowPsnrThreshold`: Median denoise-difference PSNR threshold at or below which content is treated as `Low` grain (default `44`)
+- `Ffmpeg:GrainDetectionHighPsnrThreshold`: Median denoise-difference PSNR threshold at or below which content is treated as `High` grain (default `38`)
 - `Ffmpeg:AudioCodec`: Audio codec (default `libopus`)
 - `Ffmpeg:DefaultAudioBitrateKbps`: Default audio bitrate when request doesn’t specify (default `128`)
 
@@ -767,7 +781,7 @@ The API includes a global exception handler middleware that automatically conver
 - Audio: Opus `-c:a libopus -b:a <kbps>k -ac <channels>` (default 128k for 2.0, 192k for 5.1)
 - Subtitles: copied `-c:s copy`
 - Scaling: downscale to requested resolution (720/1080/2160) maintaining aspect ratio; uses Lanczos scaling filter
-- Quality enhancements: Film grain synthesis enabled (`film-grain=8`) for better visual quality
+- Quality enhancements: grain-aware SVT-AV1 film-grain synthesis profiles selected automatically from pre-processing analysis
 
 ### Metadata-based file naming
 When a conversion is queued, the service automatically looks up metadata for the input file and generates a standardized output filename based on the content type:
@@ -849,9 +863,17 @@ When a conversion is queued, the service automatically looks up metadata for the
 - It selects the crop with the largest area (`w*h`) among samples and persists it.
 - If a crop is detected, it is applied before scaling in the filter chain: `-vf "crop=w:h:x:y,scale=..."`.
 
+### Automatic grain detection
+- When a new conversion is created, the service also runs a grain-analysis pre-processing step before encode.
+- The detector samples short windows across the source, applies a mild denoise pass, and measures the PSNR difference between the original and denoised result.
+- The median PSNR across the sampled windows is classified into `None`, `Low`, or `High` grain.
+- If grain detection fails, the service falls back to `Low` grain and logs the fallback explicitly.
+- The detected grain level is persisted on the conversion and logged when the conversion is created.
+- For AV1 (`libsvtav1`) encodes, the detected grain level selects the configured `-svtav1-params` profile before the encode starts.
+
 Example effective flags (simplified):
 ```bash
-ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:<sub-index-1> -map 0:<sub-index-2> -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "film-grain=8:film-grain-denoise=0" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -ac <channels> -c:s srt -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
+ffmpeg -y -i <input> -i <subtitle1.srt> -i <subtitle2.srt> -map 0:v:0 -map 0:a? -map 0:<sub-index-1> -map 0:<sub-index-2> -map 1:s:0 -map 2:s:0 -c:v libsvtav1 -pix_fmt yuv420p10le -preset 6 -tune 0 -g 120 -crf <crf> -svtav1-params "<grain-aware-svt-params>" -vf "crop=w:h:x:y,scale=w=1280:h=720:force_original_aspect_ratio=decrease:flags=lanczos" -c:a libopus -b:a <kbps>k -ac <channels> -c:s srt -metadata title=<filename> -metadata:s:s:0 language=<tag1> -metadata:s:s:1 language=<tag2> -map_metadata 0 <output>.mkv
 ```
 
 ### Static Analysis

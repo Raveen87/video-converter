@@ -21,6 +21,7 @@ public record ConversionDto(
     string? SelectedSubtitleStreamIndicesCsv,
     string? SelectedExternalSubtitlePathsCsv,
     string? DetectedCrop,
+    GrainLevel DetectedGrainLevel,
     string? OutputPathTemplate = null,
     bool VmafEnabled = false,
     double? RequiredVmaf = null,

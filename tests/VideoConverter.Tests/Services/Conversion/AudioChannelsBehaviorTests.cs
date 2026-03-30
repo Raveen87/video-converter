@@ -18,6 +18,7 @@ public class AudioChannelsBehaviorTests
     private readonly Mock<IAudioLanguageMatcher> _mockAudioMatcher;
     private readonly Mock<ISubtitleLanguageMatcher> _mockSubtitleMatcher;
     private readonly Mock<ICropDetector> _mockCropDetector;
+    private readonly Mock<IGrainDetector> _mockGrainDetector;
     private readonly Mock<IMetadataService> _mockMetadataService;
     private readonly Mock<IFilenameParser> _mockFilenameParser;
     private readonly Mock<IFilenameGenerator> _mockFilenameGenerator;
@@ -31,6 +32,7 @@ public class AudioChannelsBehaviorTests
         _mockAudioMatcher = new Mock<IAudioLanguageMatcher>();
         _mockSubtitleMatcher = new Mock<ISubtitleLanguageMatcher>();
         _mockCropDetector = new Mock<ICropDetector>();
+        _mockGrainDetector = new Mock<IGrainDetector>();
         _mockMetadataService = new Mock<IMetadataService>();
         _mockFilenameParser = new Mock<IFilenameParser>();
         _mockFilenameGenerator = new Mock<IFilenameGenerator>();
@@ -42,6 +44,7 @@ public class AudioChannelsBehaviorTests
             _mockAudioMatcher.Object,
             _mockSubtitleMatcher.Object,
             _mockCropDetector.Object,
+            _mockGrainDetector.Object,
             _mockMetadataService.Object,
             _mockFilenameParser.Object,
             _mockFilenameGenerator.Object,
@@ -128,6 +131,8 @@ public class AudioChannelsBehaviorTests
             });
         _ = _mockCropDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
+        _ = _mockGrainDetector.Setup(x => x.DetectAsync(It.IsAny<string>(), It.IsAny<double?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GrainLevel.Low);
         _ = _mockFilenameParser.Setup(x => x.ParseFilename(It.IsAny<string>()))
             .Returns(new ParsedFilename("test.mp4", MediaType.Movie, "Test", 2020));
         _ = _mockMetadataService.Setup(x => x.GetMovieMetadataAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
