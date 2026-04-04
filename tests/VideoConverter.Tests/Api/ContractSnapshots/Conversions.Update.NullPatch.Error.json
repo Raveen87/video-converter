@@ -1,0 +1,6 @@
+{
+  "errorCode": "ValidationFailed",
+  "errorMessage": "Patch document cannot be null.",
+  "statusCode": 400,
+  "userFriendlyMessage": "The request body must contain a valid JSON Patch document."
+}

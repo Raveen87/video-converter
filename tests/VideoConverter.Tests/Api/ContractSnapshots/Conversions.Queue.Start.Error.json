@@ -1,0 +1,9 @@
+{
+  "details": {
+    "runningConversionId": 1
+  },
+  "errorCode": "ConversionAlreadyStarted",
+  "errorMessage": "A conversion (1) is already running. Please pause or stop the queue before starting a new one.",
+  "statusCode": 400,
+  "userFriendlyMessage": "Another conversion is currently in progress. Please stop or pause the running conversion before starting a new one."
+}

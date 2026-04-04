@@ -1,5 +1,5 @@
 using System.Reflection;
-using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Features.Conversions.Services;
 
 namespace VideoConverter.Tests.Services.Conversion;
 

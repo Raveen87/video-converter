@@ -1,0 +1,6 @@
+{
+  "errorCode": "ValidationFailed",
+  "errorMessage": "Either beforeId or afterId must be provided.",
+  "statusCode": 400,
+  "userFriendlyMessage": "You must specify the target position using beforeId and/or afterId."
+}

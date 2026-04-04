@@ -50,7 +50,7 @@ internal static class FfprobeJsonParser
                     }
                 }
 
-                streams.Add(new MediaStream { Index = index, CodecType = codecType!, LanguageTag = lang, Title = title, CodecName = codecName });
+                streams.Add(new MediaStream { Index = index, CodecType = codecType, LanguageTag = lang, Title = title, CodecName = codecName });
             }
         }
 

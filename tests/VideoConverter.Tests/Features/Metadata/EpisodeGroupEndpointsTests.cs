@@ -144,7 +144,7 @@ public class EpisodeGroupEndpointsTests
         IEpisodeGroupService service,
         CancellationToken cancellationToken)
     {
-        var methodInfo = typeof(EpisodeGroupEndpoints).GetMethod(
+        var methodInfo = typeof(EpisodeGroupApi).GetMethod(
             "GetEpisodeGroups",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
@@ -161,7 +161,7 @@ public class EpisodeGroupEndpointsTests
         IEpisodeGroupService service,
         CancellationToken cancellationToken)
     {
-        var methodInfo = typeof(EpisodeGroupEndpoints).GetMethod(
+        var methodInfo = typeof(EpisodeGroupApi).GetMethod(
             "GetEpisodeGroupDetails",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 

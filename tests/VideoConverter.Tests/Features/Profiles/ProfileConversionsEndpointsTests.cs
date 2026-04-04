@@ -172,7 +172,7 @@ public sealed class ProfileConversionsEndpointsTests
         _ = batchService.LastRequest.RequiredVmaf.Should().BeNull();
     }
 
-    private static ProfileConversionsEndpoints CreateEndpoints(
+    private static ProfileConversionsApi CreateEndpoints(
         AppDbContext db,
         IConversionService conversionService,
         IDirectoryBatchService directoryBatchService)
@@ -185,7 +185,7 @@ public sealed class ProfileConversionsEndpointsTests
             fileSystemValidator,
             requestPropertyValidator);
 
-        return new ProfileConversionsEndpoints(
+        return new ProfileConversionsApi(
             db,
             profileExistsValidator,
             new EffectiveConversionRequestBuilder(NullLogger<EffectiveConversionRequestBuilder>.Instance),
@@ -193,7 +193,7 @@ public sealed class ProfileConversionsEndpointsTests
             conversionService,
             directoryBatchService,
             new FakeNotificationService(),
-            NullLogger<ProfileConversionsEndpoints>.Instance);
+            NullLogger<ProfileConversionsApi>.Instance);
     }
 
     private sealed class CapturingConversionService : IConversionService

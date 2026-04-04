@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Operations;
 using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Conversions.Api;
 using VideoConverter.Api.Features.Conversions.Services;
@@ -175,6 +176,35 @@ public class ConversionsEndpointsTests
     }
 
     [Fact]
+    public async Task UpdateConversionAsync_WithInvalidPatchPath_ThrowsApiError()
+    {
+        await using var db = DbContextTestFactory.CreateInMemory();
+        var conversion = new Conversion
+        {
+            InputPath = "test.mp4",
+            OutputDirectory = "output",
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = ConversionStatus.Pending,
+        };
+        _ = db.Conversions.Add(conversion);
+        _ = await db.SaveChangesAsync();
+
+        var patchDoc = new JsonPatchDocument<ConversionPatchDto>();
+        patchDoc.Operations.Add(new Operation<ConversionPatchDto>
+        {
+            op = "replace",
+            path = "/doesNotExist",
+            value = "value",
+        });
+
+        var endpoints = CreateEndpoints(db);
+        var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+            endpoints.UpdateConversionAsync(conversion.Id, patchDoc, CancellationToken.None));
+
+        _ = ex.ErrorCode.Should().Be(ErrorCode.ValidationFailed);
+    }
+
+    [Fact]
     public async Task UpdateConversionAsync_WithPartialUpdate_UpdatesOnlySpecifiedFields()
     {
         await using var db = DbContextTestFactory.CreateInMemory();
@@ -284,16 +314,16 @@ public class ConversionsEndpointsTests
         _ = updated.RequiredVmaf.Should().Be(91.2);
     }
 
-    private static ConversionsEndpoints CreateEndpoints(AppDbContext db)
+    private static ConversionsWriteApi CreateEndpoints(AppDbContext db)
     {
-        var logger = NullLogger<ConversionsEndpoints>.Instance;
+        var logger = NullLogger<ConversionsWriteApi>.Instance;
         var patchValidator = new ConversionPatchValidator(
             NullLogger<ConversionPatchValidator>.Instance,
             new FileSystemValidator(),
             new RequestPropertyValidator());
         var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
         var conversionService = new StubConversionServiceForUpdate();
-        return new ConversionsEndpoints(db, logger, patchValidator, existsValidator, conversionService);
+        return new ConversionsWriteApi(db, logger, patchValidator, existsValidator, conversionService);
     }
 
     private sealed class StubConversionServiceForUpdate : IConversionService

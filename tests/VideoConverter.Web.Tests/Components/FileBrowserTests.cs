@@ -6,6 +6,7 @@ using MudBlazor.Services;
 using VideoConverter.Common.Models;
 using VideoConverter.Web.Components;
 using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.FileBrowser;
 using Xunit;
 
 namespace VideoConverter.Web.Tests.Components;

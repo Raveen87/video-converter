@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.JsonPatch.SystemTextJson;
+using Microsoft.AspNetCore.JsonPatch.SystemTextJson.Operations;
+using VideoConverter.Api.Common.Exceptions;
 using VideoConverter.Api.Features.Profiles.Api;
 using VideoConverter.Api.Features.Profiles.Validation;
 using VideoConverter.Api.Shared.Domain.Entities;
@@ -125,7 +127,47 @@ public class ProfilesEndpointsTests
         }
     }
 
-    private static ProfilesEndpoints CreateEndpoints(AppDbContext db)
+    [Fact]
+    public async Task UpdateProfileAsync_WithInvalidPatchPath_ThrowsApiError()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "vc-profile-update-" + Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await using var db = DbContextTestFactory.CreateInMemory();
+            var profile = new Profile
+            {
+                Name = "Test",
+                OutputDirectory = tempDir,
+            };
+            _ = db.Profiles.Add(profile);
+            _ = await db.SaveChangesAsync();
+
+            var patchDoc = new JsonPatchDocument<ProfilePatchDto>();
+            patchDoc.Operations.Add(new Operation<ProfilePatchDto>
+            {
+                op = "replace",
+                path = "/doesNotExist",
+                value = "value",
+            });
+
+            var endpoints = CreateEndpoints(db);
+            var ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+                endpoints.UpdateProfileAsync(profile.Id, patchDoc, CancellationToken.None));
+
+            _ = ex.ErrorCode.Should().Be(ErrorCode.ValidationFailed);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    private static ProfilesApiRoutes CreateEndpoints(AppDbContext db)
     {
         var requestPropertyValidator = new RequestPropertyValidator();
         var fileSystemValidator = new FileSystemValidator();
@@ -139,9 +181,9 @@ public class ProfilesEndpointsTests
             requestPropertyValidator);
         var existsValidator = new ProfileExistsValidator(NullLogger<ProfileExistsValidator>.Instance);
 
-        return new ProfilesEndpoints(
+        return new ProfilesApiRoutes(
             db,
-            NullLogger<ProfilesEndpoints>.Instance,
+            NullLogger<ProfilesApiRoutes>.Instance,
             createValidator,
             patchValidator,
             existsValidator);

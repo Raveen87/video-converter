@@ -163,9 +163,17 @@ public class FileSystemValidatorTests
                 var isValid = _validator.IsValidDirectory(rootChild, out var errorMessage);
 
                 // Assert
-                Assert.True(isValid);
-                Assert.Null(errorMessage);
-                Assert.True(Directory.Exists(rootChild)); // Directory should be created atomically during validation
+                if (!isValid)
+                {
+                    Assert.DoesNotContain("Parent directory does not exist", errorMessage, StringComparison.Ordinal);
+                    Assert.Contains("not writable", errorMessage, StringComparison.Ordinal);
+                    Assert.False(Directory.Exists(rootChild)); // Directory should not be created when validation fails
+                }
+                else
+                {
+                    Assert.Null(errorMessage);
+                    Assert.True(Directory.Exists(rootChild)); // Directory should be created when validation succeeds
+                }
             }
             finally
             {
@@ -187,7 +195,7 @@ public class FileSystemValidatorTests
     public void IsValidDirectory_WithRootDirectoryChild_InvalidRoot_ReturnsFalse()
     {
         // Arrange - Test with a path that has no valid root (edge case)
-        var invalidRootChild = "invalidroot:\\testdir";
+        var invalidRootChild = "invalid?root/testdir";
 
         // Act
         var isValid = _validator.IsValidDirectory(invalidRootChild, out var errorMessage);

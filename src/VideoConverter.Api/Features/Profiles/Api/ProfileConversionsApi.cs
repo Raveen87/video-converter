@@ -1,0 +1,143 @@
+using VideoConverter.Api.Common.Exceptions;
+using VideoConverter.Api.Features.Conversions.Services;
+using VideoConverter.Api.Features.Notifications.Services;
+using VideoConverter.Api.Features.Profiles.Validation;
+using VideoConverter.Api.Shared.Infrastructure.Persistence;
+
+namespace VideoConverter.Api.Features.Profiles.Api;
+
+public sealed class ProfileConversionsApi(
+    AppDbContext db,
+    ProfileExistsValidator profileExistsValidator,
+    EffectiveConversionRequestBuilder effectiveRequestBuilder,
+    IRequestValidator<ConversionCreateDto> conversionValidator,
+    IConversionService conversionService,
+    IDirectoryBatchService directoryBatchService,
+    INotificationService notificationService,
+    ILogger<ProfileConversionsApi> logger)
+{
+    public async Task<IResult> QueueConversionAsync(int id, ProfileConversionCreateDto request, CancellationToken ct)
+    {
+        logger.LogDebug("Queueing single conversion for profile {ProfileId}: {Input} -> {Output}", id, request.InputPath, request.OutputDirectory);
+
+        var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, ct).ConfigureAwait(false);
+
+        var baseRequest = new ConversionCreateDto(
+            request.InputPath,
+            request.OutputDirectory,
+            profile.Crf,
+            profile.AudioBitrateKbps,
+            profile.AudioChannels,
+            profile.Resolution,
+            profile.AudioLanguages,
+            profile.SubtitleLanguages,
+            profile.OutputFilenameTemplate,
+            profile.OutputPathTemplate,
+            request.VmafEnabled,
+            request.RequiredVmaf);
+
+        // Ensure request-specified output directory takes precedence
+        var effective = effectiveRequestBuilder.Build(baseRequest, profile) with { OutputDirectory = request.OutputDirectory };
+
+        var validation = await conversionValidator.ValidateAsync(effective, ct).ConfigureAwait(false);
+        if (!validation.IsValid)
+        {
+            logger.LogWarning("Validation failed for profile conversion request {ProfileId}", id);
+            return Results.ValidationProblem(validation.ToDictionary());
+        }
+
+        try
+        {
+            var conversion = await conversionService.CreateConversionAsync(effective, ct).ConfigureAwait(false);
+            _ = db.Conversions.Add(conversion);
+            _ = await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            await AddNotificationForConversionAddedAsync(conversion, ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/conversions/{conversion.Id}", ToDto(conversion));
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning(ex, "Conversion creation failed: {Error}", ex.Message);
+            throw ApiErrorException.ValidationError(
+                ex.Message,
+                "The conversion request is invalid. Please check your input parameters and try again.",
+                ex);
+        }
+    }
+
+    public async Task<IResult> QueueDirectoryAsync(int id, ProfileDirectoryQueueRequestDto request, CancellationToken ct)
+    {
+        logger.LogInformation("Queueing directory for profile {ProfileId}: {Dir} -> {Out}", id, request.DirectoryPath, request.OutputDirectory);
+
+        var profile = await profileExistsValidator.GetProfileForReadAsync(id, db, ct).ConfigureAwait(false);
+        var effectiveVmafEnabled = request.VmafEnabled ?? profile.VmafEnabled;
+        var effectiveRequiredVmaf = request.RequiredVmaf ?? profile.RequiredVmaf;
+        if (!effectiveVmafEnabled)
+        {
+            effectiveRequiredVmaf = null;
+        }
+
+        var dto = new DirectoryQueueRequestDto(
+            DirectoryPath: request.DirectoryPath,
+            OutputDirectory: request.OutputDirectory,
+            Crf: request.Crf ?? profile.Crf,
+            AudioBitrateKbps: request.AudioBitrateKbps ?? profile.AudioBitrateKbps,
+            AudioChannels: request.AudioChannels ?? profile.AudioChannels,
+            Resolution: request.Resolution ?? profile.Resolution,
+            AudioLanguages: request.AudioLanguages ?? profile.AudioLanguages,
+            SubtitleLanguages: request.SubtitleLanguages ?? profile.SubtitleLanguages,
+            OutputFilenameTemplate: request.OutputFilenameTemplate ?? profile.OutputFilenameTemplate,
+            OutputPathTemplate: request.OutputPathTemplate ?? profile.OutputPathTemplate,
+            Extensions: request.Extensions,
+            VmafEnabled: effectiveVmafEnabled,
+            RequiredVmaf: effectiveRequiredVmaf);
+
+        var batchId = await directoryBatchService.CreateBatchAsync(dto, profileId: id, ct).ConfigureAwait(false);
+        return Results.Accepted($"/api/conversions/queue-directory/batches/{batchId}", new { batchId });
+    }
+
+    private static ConversionDto ToDto(Shared.Domain.Entities.Conversion c)
+    {
+        return new ConversionDto(
+            Id: c.Id,
+            InputPath: c.InputPath,
+            OutputDirectory: c.OutputDirectory,
+            CreatedAtUtc: c.CreatedAtUtc,
+            Status: c.Status,
+            Crf: c.Crf,
+            AudioBitrateKbps: c.AudioBitrateKbps,
+            AudioChannels: c.AudioChannels,
+            Resolution: c.Resolution,
+            MetadataBasedFilename: c.MetadataBasedFilename,
+            DeletedAtUtc: c.DeletedAtUtc,
+            TmdbId: c.TmdbId,
+            MatchedTitle: c.MatchedTitle,
+            MatchedYear: c.MatchedYear,
+            MatchedSeason: c.MatchedSeason,
+            MatchedEpisode: c.MatchedEpisode,
+            SelectedAudioStreamIndicesCsv: c.SelectedAudioStreamIndicesCsv,
+            SelectedSubtitleStreamIndicesCsv: c.SelectedSubtitleStreamIndicesCsv,
+            SelectedExternalSubtitlePathsCsv: c.SelectedExternalSubtitlePathsCsv,
+            DetectedCrop: c.DetectedCrop,
+            OutputPathTemplate: c.OutputPathTemplate,
+            VmafEnabled: c.VmafEnabled,
+            RequiredVmaf: c.RequiredVmaf,
+            VmafScore: c.VmafScore,
+            DetectedGrainLevel: c.DetectedGrainLevel);
+    }
+
+    private async Task AddNotificationForConversionAddedAsync(Shared.Domain.Entities.Conversion conversion, CancellationToken ct)
+    {
+        try
+        {
+            var title = "Conversion Added";
+            var message = $"Conversion {conversion.Id} has been added to the queue. Input: {Path.GetFileName(conversion.InputPath)}";
+            _ = await notificationService.AddAsync(title, message, NotificationType.Info, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Silently fail - notification is not critical
+        }
+    }
+}

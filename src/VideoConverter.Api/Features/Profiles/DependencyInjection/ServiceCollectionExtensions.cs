@@ -12,8 +12,8 @@ public static class ServiceCollectionExtensions
         _ = services.AddScoped<IRequestValidator<ProfileDirectoryQueueRequestDto>, ProfileDirectoryQueueRequestValidator>();
         _ = services.AddScoped<IRequestValidator<ProfileConversionCreateDto>, ProfileConversionCreateValidator>();
         _ = services.AddScoped<ProfileExistsValidator>();
-        _ = services.AddScoped<ProfilesEndpoints>();
-        _ = services.AddScoped<ProfileConversionsEndpoints>();
+        _ = services.AddScoped<ProfilesApiRoutes>();
+        _ = services.AddScoped<ProfileConversionsApi>();
         return services;
     }
 }

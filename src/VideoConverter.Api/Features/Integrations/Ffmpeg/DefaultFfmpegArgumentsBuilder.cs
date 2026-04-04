@@ -14,7 +14,7 @@ internal sealed class DefaultFfmpegArgumentsBuilder : IFfmpegArgumentsBuilder
         var args = new List<string>
         {
             "-y",
-            "-i", conversion.InputPath!,
+            "-i", conversion.InputPath,
         };
 
         args.AddRange(VideoArgsBuilder.BuildVideoCodecArgs(conversion, vf, options, logger));

@@ -98,7 +98,7 @@ public class EffectiveConversionRequestBuilder(ILogger<EffectiveConversionReques
     private string ChooseRef(string? profileValue, string requestValue, string field)
     {
         var source = !string.IsNullOrWhiteSpace(profileValue) ? "profile" : "request";
-        var chosen = !string.IsNullOrWhiteSpace(profileValue) ? profileValue! : requestValue;
+        var chosen = !string.IsNullOrWhiteSpace(profileValue) ? profileValue : requestValue;
         logger.LogDebug("Using {Source} value for {Field}: {Value}", source, field, chosen);
         return chosen;
     }

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: Build, Test, Format, Analyzers
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore VideoConverter.sln
+
+      - name: Build (warnings as errors + analyzers)
+        run: dotnet build VideoConverter.sln --configuration Release
+
+      - name: Test
+        run: dotnet test VideoConverter.sln --configuration Release --no-build
+
+      - name: Test with coverage collection
+        run: dotnet test VideoConverter.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory "./TestResults/Coverage"
+
+      - name: Enforce changed/new code coverage threshold
+        env:
+          COVERAGE_THRESHOLD: "85"
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: ./scripts/coverage-gate.sh
+
+      - name: Format verification
+        run: dotnet format VideoConverter.sln --verify-no-changes --no-restore
