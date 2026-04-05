@@ -40,8 +40,9 @@ public class VideoConverterApiClientErrorTests
         var act = () => client.CreateConversionAsync(request);
 
         // Assert
-        await act.Should().ThrowAsync<HttpRequestException>()
-            .WithMessage("*Custom error message*");
+        var ex = await act.Should().ThrowAsync<HttpRequestException>();
+        _ = ex.Which.Message.Should().Contain("Custom error message");
+        _ = ex.Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -73,8 +74,10 @@ public class VideoConverterApiClientErrorTests
         var act = () => client.CreateConversionAsync(request);
 
         // Assert
-        await act.Should().ThrowAsync<HttpRequestException>()
-            .WithMessage("*Validation errors*File does not exist*");
+        var ex = await act.Should().ThrowAsync<HttpRequestException>();
+        _ = ex.Which.Message.Should().Contain("Validation errors");
+        _ = ex.Which.Message.Should().Contain("File does not exist");
+        _ = ex.Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -106,7 +109,8 @@ public class VideoConverterApiClientErrorTests
         var act = () => client.QueueDirectoryAsync(request);
 
         // Assert
-        await act.Should().ThrowAsync<HttpRequestException>()
-            .WithMessage("*Technical error message*");
+        var ex = await act.Should().ThrowAsync<HttpRequestException>();
+        _ = ex.Which.Message.Should().Contain("Technical error message");
+        _ = ex.Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
     }
 }

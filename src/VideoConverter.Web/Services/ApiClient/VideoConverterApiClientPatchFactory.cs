@@ -37,10 +37,10 @@ internal static class VideoConverterApiClientPatchFactory
         _ = jsonBuilder.Append(']');
         var jsonContent = jsonBuilder.ToString();
 
-        logger.LogInformation("=== JSON Patch Document for conversion {ConversionId} ===", id);
-        logger.LogInformation("JSON Content: {JsonContent}", jsonContent);
-        logger.LogInformation("JSON Length: {Length} bytes", jsonContent.Length);
-        logger.LogInformation("=== End JSON Patch Document ===");
+        var operationPaths = patchOperations.Select(static operation => operation.Path).ToArray();
+        logger.LogInformation("Prepared JSON patch for conversion {ConversionId} with {OperationCount} operation(s). Paths: {OperationPaths}", id, patchOperations.Count, operationPaths);
+        logger.LogDebug("JSON patch content for conversion {ConversionId}: {JsonContent}", id, jsonContent);
+        logger.LogDebug("JSON patch length for conversion {ConversionId}: {Length} bytes", id, jsonContent.Length);
 
         var request = new HttpRequestMessage(HttpMethod.Patch, $"api/conversions/{id}")
         {
@@ -83,10 +83,10 @@ internal static class VideoConverterApiClientPatchFactory
         _ = jsonBuilder.Append(']');
         var jsonContent = jsonBuilder.ToString();
 
-        logger.LogInformation("=== JSON Patch Document for profile {ProfileId} ===", id);
-        logger.LogInformation("JSON Content: {JsonContent}", jsonContent);
-        logger.LogInformation("JSON Length: {Length} bytes", jsonContent.Length);
-        logger.LogInformation("=== End JSON Patch Document ===");
+        var operationPaths = patchOperations.Select(static operation => operation.Path).ToArray();
+        logger.LogInformation("Prepared JSON patch for profile {ProfileId} with {OperationCount} operation(s). Paths: {OperationPaths}", id, patchOperations.Count, operationPaths);
+        logger.LogDebug("JSON patch content for profile {ProfileId}: {JsonContent}", id, jsonContent);
+        logger.LogDebug("JSON patch length for profile {ProfileId}: {Length} bytes", id, jsonContent.Length);
 
         var request = new HttpRequestMessage(HttpMethod.Patch, $"api/profiles/{id}")
         {

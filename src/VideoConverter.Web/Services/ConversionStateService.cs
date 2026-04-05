@@ -162,7 +162,9 @@ public sealed class ConversionStateService(IVideoConverterApiClient apiClient, I
             await LoadConversionsAsync(token).ConfigureAwait(false);
             _logger.LogInformation("Successfully started queue");
         }
-        catch (HttpRequestException ex) when (ex.Message.Contains("400", StringComparison.Ordinal) || ex.Message.Contains("Bad Request", StringComparison.Ordinal))
+        catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.BadRequest
+            || ex.Message.Contains("400", StringComparison.Ordinal)
+            || ex.Message.Contains("Bad Request", StringComparison.Ordinal))
         {
             _logger.LogWarning(ex, "StartQueue failed with 400 - likely race condition after stop, refreshing state and blocking further attempts");
             IsRunning = true;

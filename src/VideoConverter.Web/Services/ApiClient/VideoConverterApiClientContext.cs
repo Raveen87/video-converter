@@ -70,7 +70,7 @@ internal sealed class VideoConverterApiClientContext
             var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
             var statusCode = response.StatusCode;
             Logger.LogError("{Action} failed with status {StatusCode}: {ErrorMessage}", actionDescription, statusCode, errorMessage);
-            throw new HttpRequestException($"Error: {statusCode} - {errorMessage}");
+            throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
         }
     }
 }

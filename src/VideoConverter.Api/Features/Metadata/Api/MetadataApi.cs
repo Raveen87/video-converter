@@ -5,6 +5,7 @@ public static class MetadataApi
     public static void MapMetadataEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapManualResolutionApi();
+        app.MapMetadataSearchCompatibilityApi();
         app.MapEpisodeGroupApi();
     }
 }

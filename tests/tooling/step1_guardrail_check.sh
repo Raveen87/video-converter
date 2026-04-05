@@ -16,7 +16,6 @@ declare -a move_pairs=(
   "src/VideoConverter.Api/Services/Conversion/DirectoryBatchWorker.cs|src/VideoConverter.Api/Features/Conversions/Workers/DirectoryBatchWorker.cs"
   "src/VideoConverter.Api/Services/Conversion/ConversionCleanupService.cs|src/VideoConverter.Api/Features/Conversions/Cleanup/ConversionCleanupService.cs"
   "src/VideoConverter.Api/Services/Conversion/IConversionCleanupService.cs|src/VideoConverter.Api/Features/Conversions/Cleanup/IConversionCleanupService.cs"
-  "src/VideoConverter.Api/Services/Conversion/DirectoryBatchCleanupService.cs|src/VideoConverter.Api/Features/Conversions/Cleanup/DirectoryBatchCleanupService.cs"
   "src/VideoConverter.Api/Services/Conversion/IDirectoryBatchCleanupService.cs|src/VideoConverter.Api/Features/Conversions/Cleanup/IDirectoryBatchCleanupService.cs"
   "src/VideoConverter.Api/Services/Conversion/ConversionCleanupWorker.cs|src/VideoConverter.Api/Features/Conversions/Workers/ConversionCleanupWorker.cs"
   "src/VideoConverter.Api/Services/Conversion/DirectoryBatchCleanupService.cs|src/VideoConverter.Api/Features/DirectoryBatches/Cleanup/DirectoryBatchCleanupService.cs"
@@ -47,6 +46,8 @@ validate_move_map() {
   local missing=0
   local target_exists=0
   local duplicate_targets=0
+  local duplicate_sources=0
+  declare -A source_seen=()
   declare -A target_seen=()
 
   echo "MOVE MAP VALIDATION (Step 1 planning only)"
@@ -61,6 +62,12 @@ validate_move_map() {
       missing=1
     fi
 
+    if [[ -n "${source_seen[$source]:-}" ]]; then
+      echo "DUPLICATE_SOURCE: $source"
+      duplicate_sources=1
+    fi
+    source_seen["$source"]=1
+
     if [[ -n "${target_seen[$target]:-}" ]]; then
       echo "DUPLICATE_TARGET: $target"
       duplicate_targets=1
@@ -73,9 +80,9 @@ validate_move_map() {
     fi
   done
 
-  echo "Summary: missing_source=$missing duplicate_target=$duplicate_targets target_exists=$target_exists"
+  echo "Summary: missing_source=$missing duplicate_source=$duplicate_sources duplicate_target=$duplicate_targets target_exists=$target_exists"
 
-  if [[ $missing -ne 0 || $duplicate_targets -ne 0 || $target_exists -ne 0 ]]; then
+  if [[ $missing -ne 0 || $duplicate_sources -ne 0 || $duplicate_targets -ne 0 || $target_exists -ne 0 ]]; then
     return 1
   fi
 

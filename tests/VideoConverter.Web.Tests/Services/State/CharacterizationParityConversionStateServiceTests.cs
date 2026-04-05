@@ -68,6 +68,29 @@ public sealed class CharacterizationParityConversionStateServiceTests
 
     [Fact]
     [Trait("Category", "Characterization")]
+    public async Task QueueStart_WhenBadRequestStatusCodeRace_SetsRunningAndRefreshes()
+    {
+        var api = new Mock<IVideoConverterApiClient>(MockBehavior.Strict);
+        var pending = CreateConversion(id: 10, status: ConversionStatus.Pending);
+        var running = CreateConversion(id: 10, status: ConversionStatus.Running);
+
+        _ = api.SetupSequence(x => x.GetConversionsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pending])
+            .ReturnsAsync([running]);
+        _ = api.Setup(x => x.StartQueueAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Queue start rejected", inner: null, System.Net.HttpStatusCode.BadRequest));
+
+        using var sut = new ConversionStateService(api.Object, NullLogger<ConversionStateService>.Instance);
+        await sut.LoadConversionsAsync();
+
+        await sut.StartQueueAsync();
+
+        _ = sut.IsRunning.Should().BeTrue();
+        _ = sut.IsStarting.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Category", "Characterization")]
     public async Task LoadConversions_Then_RemoveConversion_UpdatesQueueFlags()
     {
         var api = new Mock<IVideoConverterApiClient>(MockBehavior.Strict);
