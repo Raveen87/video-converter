@@ -22,6 +22,11 @@ public sealed class QueueRuntimeOrderingParityTests
     private const double BaselineFloorMilliseconds = 5.0;
     private const double AdditionalJitterBudgetMilliseconds = 300.0;
 
+    private static readonly JsonSerializerOptions WebJsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
     [Fact]
     [Trait("Category", "Parity")]
     public async Task Queue_ReorderThenStartQueue_PicksFirstReorderedItem_Deterministically()
@@ -59,7 +64,7 @@ public sealed class QueueRuntimeOrderingParityTests
         var startNextPayload = ReadPayload(startNextResult);
 
         queueStartPayload.Keys.Should().BeEquivalentTo(startNextPayload.Keys);
-        queueStartPayload.Keys.Should().BeEquivalentTo("message", "ProcessId", "Command", "conversionId");
+        queueStartPayload.Keys.Should().BeEquivalentTo("message", "processId", "command", "conversionId");
         queueStartPayload["message"].GetString().Should().Be("Started");
         startNextPayload["message"].GetString().Should().Be("Started");
         queueStartPayload["conversionId"].GetInt32().Should().Be(seededQueueStart[0].Id);
@@ -219,7 +224,7 @@ public sealed class QueueRuntimeOrderingParityTests
         valueResult.Value.Should().NotBeNull();
 
         var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            JsonSerializer.Serialize(valueResult.Value));
+            JsonSerializer.Serialize(valueResult.Value, WebJsonSerializerOptions));
 
         payload.Should().NotBeNull();
         return payload!;
