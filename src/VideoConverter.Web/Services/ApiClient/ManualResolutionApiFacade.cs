@@ -87,7 +87,7 @@ internal sealed class ManualResolutionApiFacade(VideoConverterApiClientContext c
                 _context.JsonOptions,
                 cancellationToken).ConfigureAwait(false);
 
-            if (!response.IsSuccessStatusCode && response.StatusCode is not System.Net.HttpStatusCode.MultiStatus)
+            if (!response.IsSuccessStatusCode)
             {
                 await _context.EnsureSuccessAsync(response, "Resolve batch metadata queue items", cancellationToken).ConfigureAwait(false);
             }

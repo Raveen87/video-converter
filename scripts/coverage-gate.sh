@@ -32,8 +32,8 @@ if [[ ${#coverage_files[@]} -eq 0 ]]; then
   exit 1
 fi
 
-declare -A line_hits
-declare -A line_visits
+declare -A changed_files
+declare -A line_hits_by_line
 
 if [[ -n "${changed_files_override}" ]]; then
   while IFS= read -r changed_file; do
@@ -42,13 +42,11 @@ if [[ -n "${changed_files_override}" ]]; then
     [[ "${changed_file}" != src/* ]] && continue
 
     normalized="${changed_file#./}"
-    line_hits["${normalized}"]=0
-    line_visits["${normalized}"]=0
+    changed_files["${normalized}"]=1
 
     if [[ "${normalized}" == src/* ]]; then
       without_src="${normalized#src/}"
-      line_hits["${without_src}"]=0
-      line_visits["${without_src}"]=0
+      changed_files["${without_src}"]=1
     fi
   done < <(printf '%s\n' "${changed_files_override}")
 else
@@ -58,18 +56,16 @@ else
     [[ "${changed_file}" != src/* ]] && continue
 
     normalized="${changed_file#./}"
-    line_hits["${normalized}"]=0
-    line_visits["${normalized}"]=0
+    changed_files["${normalized}"]=1
 
     if [[ "${normalized}" == src/* ]]; then
       without_src="${normalized#src/}"
-      line_hits["${without_src}"]=0
-      line_visits["${without_src}"]=0
+      changed_files["${without_src}"]=1
     fi
   done < <(git diff --name-only "${base_sha}" "${head_sha}")
 fi
 
-if [[ ${#line_hits[@]} -eq 0 ]]; then
+if [[ ${#changed_files[@]} -eq 0 ]]; then
   echo "No changed/new C# source files under src/. Skipping changed-code coverage gate."
   exit 0
 fi
@@ -84,10 +80,11 @@ for coverage_file in "${coverage_files[@]}"; do
       file_key="${file_key#${cwd}}"
     fi
 
-    if [[ -v "line_hits[${file_key}]" ]]; then
-      line_visits["${file_key}"]=$((line_visits["${file_key}"] + 1))
-      if (( visits > 0 )); then
-        line_hits["${file_key}"]=$((line_hits["${file_key}"] + 1))
+    if [[ -v "changed_files[${file_key}]" ]]; then
+      line_key="${file_key}|${line_num}"
+      current_max_hits="${line_hits_by_line["${line_key}"]:-0}"
+      if (( visits > current_max_hits )); then
+        line_hits_by_line["${line_key}"]=${visits}
       fi
     fi
   done < <(
@@ -109,9 +106,27 @@ PY
   )
 done
 
+declare -A line_hits
+declare -A line_visits
+
+for file in "${!changed_files[@]}"; do
+  line_hits["${file}"]=0
+  line_visits["${file}"]=0
+done
+
+for line_key in "${!line_hits_by_line[@]}"; do
+  file_key="${line_key%|*}"
+  max_hits_for_line="${line_hits_by_line["${line_key}"]:-0}"
+
+  line_visits["${file_key}"]=$((line_visits["${file_key}"] + 1))
+  if (( max_hits_for_line > 0 )); then
+    line_hits["${file_key}"]=$((line_hits["${file_key}"] + 1))
+  fi
+done
+
 total_lines=0
 covered_lines=0
-echo "Changed/new code coverage details:"
+echo "Changed/new file coverage details:"
 
 for file in "${!line_visits[@]}"; do
   visited=${line_visits["${file}"]}
@@ -145,7 +160,7 @@ print(f"{(covered / total) * 100:.2f}")
 PY
 )
 
-echo "Changed/new code coverage: ${covered_lines}/${total_lines} (${overall_pct}%)"
+echo "Changed/new file coverage: ${covered_lines}/${total_lines} (${overall_pct}%)"
 echo "Threshold: ${threshold}%"
 
 if python3 - <<PY
@@ -157,6 +172,6 @@ PY
 then
   echo "Coverage gate passed."
 else
-  echo "Coverage gate failed: changed/new code coverage ${overall_pct}% is below ${threshold}%."
+  echo "Coverage gate failed: changed/new file coverage ${overall_pct}% is below ${threshold}%."
   exit 1
 fi

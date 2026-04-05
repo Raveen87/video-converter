@@ -94,22 +94,25 @@ internal sealed class ProfilesApiFacade(VideoConverterApiClientContext context)
             }
 
             var (request, jsonContent) = VideoConverterApiClientPatchFactory.CreateProfileJsonPatchRequest(id, patchRequest, _context.Logger);
-            var response = await _context.HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            using (request)
             {
-                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response, _context.Logger, cancellationToken).ConfigureAwait(false);
-                var statusCode = response.StatusCode;
-                _context.Logger.LogError("Update profile {ProfileId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
-                _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+                using var response = await _context.HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-                throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response, _context.Logger, cancellationToken).ConfigureAwait(false);
+                    var statusCode = response.StatusCode;
+                    _context.Logger.LogError("Update profile {ProfileId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
+                    _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+
+                    throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<ProfileDto>(_context.JsonOptions, cancellationToken).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException("Failed to deserialize profile response");
+                _context.Logger.LogInformation("Successfully updated profile {ProfileId}", id);
+                return result;
             }
-
-            var result = await response.Content.ReadFromJsonAsync<ProfileDto>(_context.JsonOptions, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("Failed to deserialize profile response");
-            _context.Logger.LogInformation("Successfully updated profile {ProfileId}", id);
-            return result;
         }
 #pragma warning disable S2139
         catch (Exception ex)

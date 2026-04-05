@@ -83,30 +83,33 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
             patch.OutputFilenameTemplate);
         try
         {
-            var (request, jsonContent) = VideoConverterApiClientPatchFactory.CreateConversionJsonPatchRequest(id, patch, _context.Logger);
-            var response = await _context.HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            var (requestMessage, jsonContent) = VideoConverterApiClientPatchFactory.CreateConversionJsonPatchRequest(id, patch, _context.Logger);
+            using (requestMessage)
             {
-                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response: response, logger: _context.Logger, cancellationToken: cancellationToken).ConfigureAwait(false);
-                var statusCode = response.StatusCode;
-                _context.Logger.LogError("Update conversion {ConversionId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
-                _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+                using var response = await _context.HttpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
 
-                throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response: response, logger: _context.Logger, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    var statusCode = response.StatusCode;
+                    _context.Logger.LogError("Update conversion {ConversionId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
+                    _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);
+
+                    throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_context.JsonOptions, cancellationToken).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException("Failed to deserialize conversion response");
+                _context.Logger.LogInformation(
+                    "Successfully updated conversion {ConversionId}. Received response: OutputDirectory={OutputDirectory}, Crf={Crf}, AudioBitrateKbps={AudioBitrateKbps}, AudioChannels={AudioChannels}, Resolution={Resolution}",
+                    id,
+                    result.OutputDirectory,
+                    result.Crf,
+                    result.AudioBitrateKbps,
+                    result.AudioChannels,
+                    result.Resolution);
+                return result;
             }
-
-            var result = await response.Content.ReadFromJsonAsync<ConversionDto>(_context.JsonOptions, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("Failed to deserialize conversion response");
-            _context.Logger.LogInformation(
-                "Successfully updated conversion {ConversionId}. Received response: OutputDirectory={OutputDirectory}, Crf={Crf}, AudioBitrateKbps={AudioBitrateKbps}, AudioChannels={AudioChannels}, Resolution={Resolution}",
-                id,
-                result.OutputDirectory,
-                result.Crf,
-                result.AudioBitrateKbps,
-                result.AudioChannels,
-                result.Resolution);
-            return result;
         }
 #pragma warning disable S2139
         catch (Exception ex)
