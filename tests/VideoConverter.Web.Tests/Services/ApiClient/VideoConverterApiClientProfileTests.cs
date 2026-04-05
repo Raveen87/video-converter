@@ -67,7 +67,7 @@ public sealed class VideoConverterApiClientProfileTests
 
         capturedRequestBody.Should().NotBeNull();
         capturedRequestBody.Should().Contain("\"op\":\"replace\"");
-        capturedRequestBody.Should().Contain("\"path\":\"/RequiredVmaf\"");
+        capturedRequestBody.Should().Contain("\"path\":\"/requiredVmaf\"");
         capturedRequestBody.Should().Contain("\"value\":95.5");
     }
 
@@ -121,7 +121,58 @@ public sealed class VideoConverterApiClientProfileTests
 
         // Assert
         capturedRequestBody.Should().NotBeNull();
-        capturedRequestBody.Should().Contain("\"path\":\"/VmafEnabled\"");
+        capturedRequestBody.Should().Contain("\"path\":\"/vmafEnabled\"");
         capturedRequestBody.Should().Contain("\"value\":true");
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithOutputDirectoryChange_UsesCamelCasePatchPath()
+    {
+        var profileId = 2;
+        var patch = new ProfilePatchDto
+        {
+            OutputDirectory = "updated-output",
+        };
+        var changedFields = new HashSet<string>(StringComparer.Ordinal) { nameof(ProfilePatchDto.OutputDirectory) };
+        var request = new ProfilePatchRequest(patch, changedFields);
+
+        var expectedResponse = new ProfileDto(
+            profileId, "Test Profile", "updated-output", null, null, null, null, null, null, null, null, false, null);
+
+        var handler = new Mock<HttpMessageHandler>();
+        string? capturedRequestBody = null;
+
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Patch &&
+                    req.RequestUri!.ToString().EndsWith($"api/profiles/{profileId}", StringComparison.Ordinal)),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+            {
+                if (req.Content != null)
+                {
+                    using var reader = new StreamReader(req.Content.ReadAsStream());
+                    capturedRequestBody = reader.ReadToEnd();
+                }
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = JsonContent.Create(expectedResponse),
+            });
+
+        var httpClient = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri("https://localhost"),
+        };
+        var client = new VideoConverterApiClient(httpClient, NullLogger<VideoConverterApiClient>.Instance);
+
+        await client.UpdateProfileAsync(profileId, request);
+
+        capturedRequestBody.Should().NotBeNull();
+        capturedRequestBody.Should().Contain("\"path\":\"/outputDirectory\"");
+        capturedRequestBody.Should().NotContain("\"path\":\"/OutputDirectory\"");
     }
 }

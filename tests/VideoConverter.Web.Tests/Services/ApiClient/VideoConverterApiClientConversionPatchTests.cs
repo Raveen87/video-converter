@@ -56,7 +56,7 @@ public sealed class VideoConverterApiClientConversionPatchTests
         _ = await client.UpdateConversionAsync(conversionId, patch);
 
         capturedRequestBody.Should().NotBeNull();
-        capturedRequestBody.Should().Contain("\"path\":\"/RequiredVmaf\"");
+        capturedRequestBody.Should().Contain("\"path\":\"/requiredVmaf\"");
         capturedRequestBody.Should().Contain("\"value\":null");
     }
 
@@ -106,8 +106,8 @@ public sealed class VideoConverterApiClientConversionPatchTests
         _ = await client.UpdateConversionAsync(conversionId, patch);
 
         capturedRequestBody.Should().NotBeNull();
-        capturedRequestBody.Should().Contain("\"path\":\"/OutputDirectory\"");
-        capturedRequestBody.Should().NotContain("\"path\":\"/RequiredVmaf\"");
+        capturedRequestBody.Should().Contain("\"path\":\"/outputDirectory\"");
+        capturedRequestBody.Should().NotContain("\"path\":\"/requiredVmaf\"");
     }
 
     private static ConversionDto CreateExpectedResponse(int conversionId)

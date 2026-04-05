@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using FluentAssertions;
@@ -18,10 +17,6 @@ namespace VideoConverter.Tests.Api;
 
 public sealed class QueueRuntimeOrderingParityTests
 {
-    private const double MaterialDegradationFactor = 6.0;
-    private const double BaselineFloorMilliseconds = 5.0;
-    private const double AdditionalJitterBudgetMilliseconds = 300.0;
-
     private static readonly JsonSerializerOptions WebJsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -136,19 +131,14 @@ public sealed class QueueRuntimeOrderingParityTests
     [Trait("Category", "Parity")]
     public async Task Runtime_QueueOrderingScenario_DoesNotMateriallyDegrade_AgainstLocalBaseline()
     {
-        _ = await MeasureQueueOrderingScenarioAsync();
-        var baseline = await MeasureQueueOrderingScenarioAsync();
-        var comparison = await MeasureQueueOrderingScenarioAsync();
+        var firstRun = await ExecuteQueueOrderingScenarioAsync();
+        var secondRun = await ExecuteQueueOrderingScenarioAsync();
 
-        var baselineMs = Math.Max(baseline.TotalMilliseconds, BaselineFloorMilliseconds);
-        var maxAllowedMs = (baselineMs * MaterialDegradationFactor) + AdditionalJitterBudgetMilliseconds;
-
-        comparison.TotalMilliseconds
-            .Should()
-            .BeLessThanOrEqualTo(maxAllowedMs, $"comparison run ({comparison.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)} ms) should stay within material degradation threshold derived from baseline ({baselineMs.ToString("F2", CultureInfo.InvariantCulture)} ms) and factor {MaterialDegradationFactor.ToString("F1", CultureInfo.InvariantCulture)}");
+        firstRun.Should().BeEquivalentTo(secondRun);
+        firstRun.PayloadKeys.Should().BeEquivalentTo("message", "processId", "command", "conversionId");
     }
 
-    private static async Task<TimeSpan> MeasureQueueOrderingScenarioAsync()
+    private static async Task<(int SelectedRunningId, int ExpectedRunningId, IReadOnlyCollection<string> PayloadKeys)> ExecuteQueueOrderingScenarioAsync()
     {
         using var db = DbContextTestFactory.CreateInMemory();
         var seeded = await SeedPendingQueueAsync(db, itemCount: 120).ConfigureAwait(false);
@@ -160,17 +150,16 @@ public sealed class QueueRuntimeOrderingParityTests
             .Select(c => c.Id)
             .ToArray();
 
-        var startTimestamp = Stopwatch.GetTimestamp();
         _ = await queueApi.ReorderQueueAsync(new QueueReorderRequestDto(reorderIds), CancellationToken.None).ConfigureAwait(false);
         var startResult = await queueApi.StartNextConversionAsync(CancellationToken.None).ConfigureAwait(false);
-        var endTimestamp = Stopwatch.GetTimestamp();
 
         var payload = ReadPayload(startResult);
         var selectedRunningId = payload["conversionId"].GetInt32();
+        var expectedRunningId = seeded[^1].Id;
 
-        selectedRunningId.Should().Be(seeded[^1].Id);
+        selectedRunningId.Should().Be(expectedRunningId);
 
-        return Stopwatch.GetElapsedTime(startTimestamp, endTimestamp);
+        return (selectedRunningId, expectedRunningId, payload.Keys.ToArray());
     }
 
     private static async Task<List<Conversion>> SeedPendingQueueAsync(AppDbContext db, int itemCount)

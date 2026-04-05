@@ -88,7 +88,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response: response, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response: response, logger: _context.Logger, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var statusCode = response.StatusCode;
                 _context.Logger.LogError("Update conversion {ConversionId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
                 _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);

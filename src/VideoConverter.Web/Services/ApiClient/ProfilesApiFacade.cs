@@ -98,7 +98,7 @@ internal sealed class ProfilesApiFacade(VideoConverterApiClientContext context)
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
+                var errorMessage = await VideoConverterApiClientContext.ExtractUserFriendlyErrorMessageAsync(response, _context.Logger, cancellationToken).ConfigureAwait(false);
                 var statusCode = response.StatusCode;
                 _context.Logger.LogError("Update profile {ProfileId} failed with status {StatusCode}: {ErrorMessage}", id, statusCode, errorMessage);
                 _context.Logger.LogDebug("The JSON Patch document that was sent: {JsonContent}", jsonContent);

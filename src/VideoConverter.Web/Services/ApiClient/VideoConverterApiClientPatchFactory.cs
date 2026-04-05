@@ -7,6 +7,8 @@ namespace VideoConverter.Web.Services.ApiClient;
 
 internal static class VideoConverterApiClientPatchFactory
 {
+    private static readonly JsonNamingPolicy JsonPatchPathNamingPolicy = JsonNamingPolicy.CamelCase;
+
     public static (HttpRequestMessage Request, string JsonContent) CreateConversionJsonPatchRequest(int id, ConversionPatchDto patch, Microsoft.Extensions.Logging.ILogger logger)
     {
         var patchOperations = CreateConversionJsonPatchOperations(patch);
@@ -102,52 +104,52 @@ internal static class VideoConverterApiClientPatchFactory
 
         if (patch.OutputDirectory is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/OutputDirectory", Value = patch.OutputDirectory });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.OutputDirectory)), Value = patch.OutputDirectory });
         }
 
         if (patch.Crf is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/Crf", Value = patch.Crf });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.Crf)), Value = patch.Crf });
         }
 
         if (patch.AudioBitrateKbps is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioBitrateKbps", Value = patch.AudioBitrateKbps });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.AudioBitrateKbps)), Value = patch.AudioBitrateKbps });
         }
 
         if (patch.AudioChannels is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioChannels", Value = patch.AudioChannels.ToString() });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.AudioChannels)), Value = patch.AudioChannels.ToString() });
         }
 
         if (patch.Resolution is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/Resolution", Value = patch.Resolution });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.Resolution)), Value = patch.Resolution });
         }
 
         if (patch.OutputFilenameTemplate is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/OutputFilenameTemplate", Value = patch.OutputFilenameTemplate });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.OutputFilenameTemplate)), Value = patch.OutputFilenameTemplate });
         }
 
         if (patch.AudioLanguages is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/AudioLanguages", Value = patch.AudioLanguages });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.AudioLanguages)), Value = patch.AudioLanguages });
         }
 
         if (patch.SubtitleLanguages is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/SubtitleLanguages", Value = patch.SubtitleLanguages });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.SubtitleLanguages)), Value = patch.SubtitleLanguages });
         }
 
         if (patch.VmafEnabled is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/VmafEnabled", Value = patch.VmafEnabled });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.VmafEnabled)), Value = patch.VmafEnabled });
         }
 
         if (patch.RequiredVmaf is not null || patch.VmafEnabled is not null)
         {
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = "/RequiredVmaf", Value = patch.RequiredVmaf });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(nameof(ConversionPatchDto.RequiredVmaf)), Value = patch.RequiredVmaf });
         }
 
         return patchOperations;
@@ -166,7 +168,7 @@ internal static class VideoConverterApiClientPatchFactory
                 return;
             }
 
-            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = $"/{propertyName}", Value = value });
+            patchOperations.Add(new JsonPatchOperation { Op = "replace", Path = ToJsonPatchPath(propertyName), Value = value });
         }
 
         AddOperation(nameof(ProfilePatchDto.Name), patch.Name);
@@ -183,6 +185,11 @@ internal static class VideoConverterApiClientPatchFactory
         AddOperation(nameof(ProfilePatchDto.RequiredVmaf), patch.RequiredVmaf);
 
         return patchOperations;
+    }
+
+    private static string ToJsonPatchPath(string propertyName)
+    {
+        return $"/{JsonPatchPathNamingPolicy.ConvertName(propertyName)}";
     }
 
     private sealed class JsonPatchOperation

@@ -19,7 +19,7 @@ internal sealed class VideoConverterApiClientContext
 
     public Microsoft.Extensions.Logging.ILogger Logger { get; }
 
-    public static async Task<string> ExtractUserFriendlyErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    public static async Task<string> ExtractUserFriendlyErrorMessageAsync(HttpResponseMessage response, Microsoft.Extensions.Logging.ILogger logger, CancellationToken cancellationToken)
     {
         try
         {
@@ -29,7 +29,7 @@ internal sealed class VideoConverterApiClientContext
                 return $"Error: {response.StatusCode}";
             }
 
-            System.Diagnostics.Debug.WriteLine($"Error response body: {errorJson}");
+            logger.LogDebug("Error response body for status {StatusCode}: {ErrorBody}", response.StatusCode, errorJson);
 
             try
             {
@@ -67,7 +67,7 @@ internal sealed class VideoConverterApiClientContext
     {
         if (!response.IsSuccessStatusCode)
         {
-            var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
+            var errorMessage = await ExtractUserFriendlyErrorMessageAsync(response, Logger, cancellationToken).ConfigureAwait(false);
             var statusCode = response.StatusCode;
             Logger.LogError("{Action} failed with status {StatusCode}: {ErrorMessage}", actionDescription, statusCode, errorMessage);
             throw new HttpRequestException($"Error: {statusCode} - {errorMessage}", inner: null, statusCode);
