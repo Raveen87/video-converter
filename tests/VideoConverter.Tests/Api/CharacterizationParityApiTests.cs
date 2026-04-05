@@ -264,13 +264,15 @@ public sealed class CharacterizationParityApiTests
         var valueResult = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
         _ = valueResult.Value.Should().NotBeNull();
 
+        var webJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            JsonSerializer.Serialize(valueResult.Value));
+            JsonSerializer.Serialize(valueResult.Value, webJsonOptions),
+            webJsonOptions);
         _ = payload.Should().NotBeNull();
         _ = payload!.Should().ContainKey("message");
         _ = payload["message"].GetString().Should().Be("Started");
-        _ = payload.Should().ContainKey("ProcessId");
-        _ = payload.Should().ContainKey("Command");
+        _ = payload.Should().ContainKey("processId");
+        _ = payload.Should().ContainKey("command");
         _ = payload.Should().ContainKey("conversionId");
     }
 

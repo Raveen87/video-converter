@@ -39,7 +39,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
             request.OutputDirectory);
         try
         {
-            var response = await _context.HttpClient.PostAsJsonAsync(
+            using var response = await _context.HttpClient.PostAsJsonAsync(
                 "api/conversions",
                 request,
                 _context.JsonOptions,
@@ -125,7 +125,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         _context.Logger.LogDebug("Deleting conversion {ConversionId}", id);
         try
         {
-            var response = await _context.HttpClient.DeleteAsync(
+            using var response = await _context.HttpClient.DeleteAsync(
                 $"api/conversions/{id}",
                 cancellationToken).ConfigureAwait(false);
 
@@ -158,7 +158,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
                 Content = new StringContent(payload, Encoding.UTF8, "application/json"),
             };
 
-            var response = await _context.HttpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
+            using var response = await _context.HttpClient.SendAsync(message, cancellationToken).ConfigureAwait(false);
 
             await _context.EnsureSuccessAsync(response, "Delete conversions", cancellationToken).ConfigureAwait(false);
 
@@ -186,7 +186,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
                 ? $"api/conversions/finished?olderThanDays={days}"
                 : "api/conversions/finished";
 
-            var response = await _context.HttpClient.DeleteAsync(url, cancellationToken).ConfigureAwait(false);
+            using var response = await _context.HttpClient.DeleteAsync(url, cancellationToken).ConfigureAwait(false);
             await _context.EnsureSuccessAsync(response, "Clear finished conversions", cancellationToken).ConfigureAwait(false);
 
             var result = await response.Content.ReadFromJsonAsync<DeletedCountResponse>(_context.JsonOptions, cancellationToken).ConfigureAwait(false);
@@ -212,7 +212,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
             request.OutputDirectory);
         try
         {
-            var response = await _context.HttpClient.PostAsJsonAsync(
+            using var response = await _context.HttpClient.PostAsJsonAsync(
                 "api/conversions/queue-directory",
                 request,
                 _context.JsonOptions,
@@ -329,7 +329,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         _context.Logger.LogDebug("Starting next conversion in queue");
         try
         {
-            var response = await _context.HttpClient.PostAsync(
+            using var response = await _context.HttpClient.PostAsync(
                 "api/conversions/queue/start",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
@@ -352,7 +352,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         _context.Logger.LogDebug("Pausing current conversion in queue");
         try
         {
-            var response = await _context.HttpClient.PostAsync(
+            using var response = await _context.HttpClient.PostAsync(
                 "api/conversions/queue/pause",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
@@ -375,7 +375,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         _context.Logger.LogDebug("Resuming current conversion in queue");
         try
         {
-            var response = await _context.HttpClient.PostAsync(
+            using var response = await _context.HttpClient.PostAsync(
                 "api/conversions/queue/resume",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
@@ -398,7 +398,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         _context.Logger.LogDebug("Stopping current conversion in queue");
         try
         {
-            var response = await _context.HttpClient.PostAsync(
+            using var response = await _context.HttpClient.PostAsync(
                 "api/conversions/queue/stop",
                 content: null,
                 cancellationToken).ConfigureAwait(false);
@@ -422,7 +422,7 @@ internal sealed class ConversionsApiFacade(VideoConverterApiClientContext contex
         try
         {
             var request = new QueueReorderRequestDto(orderedIds);
-            var response = await _context.HttpClient.PutAsJsonAsync(
+            using var response = await _context.HttpClient.PutAsJsonAsync(
                 "api/conversions/queue/reorder",
                 request,
                 _context.JsonOptions,

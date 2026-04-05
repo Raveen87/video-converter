@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mode="${1:-validate}"
+mode="${1:-info}"
 
 declare -a move_pairs=(
   "src/VideoConverter.Api/Features/Profiles/Api/ProfileConversionsEndpoints.cs|src/VideoConverter.Api/Features/Profiles/Api/ProfileConversionsApi.cs"
@@ -118,7 +118,12 @@ check_forbidden_drift() {
   echo "PASS: no forbidden drift paths detected"
 }
 
-if [[ "$mode" == "validate" ]]; then
+if [[ "$mode" == "info" ]]; then
+  echo "Step 1 guardrail checker"
+  echo "Default mode is informational because the move map is historical and expected to fail on current HEAD."
+  echo "Use 'validate' only when intentionally verifying historical Step 1 planning assumptions."
+  echo "Usage: step1_guardrail_check.sh [info|validate|forbidden-demo|forbidden-check <paths...>]"
+elif [[ "$mode" == "validate" ]]; then
   validate_move_map
 elif [[ "$mode" == "forbidden-demo" ]]; then
   echo "FORBIDDEN DRIFT DEMO (expected failure)"
@@ -132,6 +137,6 @@ elif [[ "$mode" == "forbidden-check" ]]; then
   check_forbidden_drift "$@"
 else
   echo "Unknown mode: $mode"
-  echo "Usage: step1_guardrail_check.sh [validate|forbidden-demo|forbidden-check <paths...>]"
+  echo "Usage: step1_guardrail_check.sh [info|validate|forbidden-demo|forbidden-check <paths...>]"
   exit 2
 fi
