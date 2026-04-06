@@ -101,7 +101,7 @@ internal static partial class LanguageMatchEngine
 
         if (!string.IsNullOrWhiteSpace(stream.Title))
         {
-            var title = Normalize(stream.Title!);
+            var title = Normalize(stream.Title);
             if (candidates.Any(c => title.Contains(c, StringComparison.Ordinal)))
             {
                 return true;
