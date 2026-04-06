@@ -9,11 +9,25 @@ Minimal scaffold for a cross-platform video conversion service in C#/.NET 10 RC.
 This repository includes instructions for GitHub Copilot in `.github/copilot-instructions.md`. For comprehensive AI assistant guidelines, see `AGENTS.md` at the root of the repository.
 
 ### Build and run
+
+Start both projects from the solution root in PowerShell:
+
+```powershell
+Start-Process dotnet -ArgumentList 'watch','run','--project','src/VideoConverter.Api'; dotnet watch run --project src/VideoConverter.Web
+```
+
+Use these local addresses after startup:
+
+- Web UI: `http://localhost:5263`
+- API health: `http://localhost:5124/api/health`
+
+Note: `http://localhost:5124/` is the API host and may show a plain `OK` response during development.
+
+Other useful commands:
+
 ```bash
 dotnet build
-dotnet run --project src/VideoConverter.Api
 dotnet test
-
 dotnet ef database update --project src/VideoConverter.Api --startup-project src/VideoConverter.Api
 ```
 
@@ -949,3 +963,30 @@ The codebase has been refactored to improve maintainability and reduce complexit
 - Warnings-as-errors enforced; code style and analyzers enabled.
 - Target code coverage ≥ 85% overall; new/changed code should meet ≥ 85%.
 - Static analysis runs automatically in CI/CD pipelines.
+
+### Refactor runbook, no-behavior-change verification
+This section is for the three-step code quality refactor program and its non-regression workflow.
+
+Guardrails:
+- Keep behavior stable. Do not change routes, status codes, DTO shapes, queue/runtime semantics, DI lifetimes, or config defaults as part of refactor-only work.
+- Keep validation and error envelope contracts stable (`statusCode`, `errorCode`, `errorMessage`, `userFriendlyMessage`, `timestamp`).
+- Treat analyzer and formatter issues as release blockers. Warnings are errors in this repo.
+
+Local quality-gate command sequence (same order as CI):
+
+```bash
+dotnet restore VideoConverter.sln
+dotnet build VideoConverter.sln --configuration Release
+dotnet test VideoConverter.sln --configuration Release --no-build
+dotnet test VideoConverter.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory "./TestResults/Coverage"
+BASE_SHA=$(git rev-parse HEAD~1)
+HEAD_SHA=$(git rev-parse HEAD)
+COVERAGE_THRESHOLD=85 BASE_SHA="$BASE_SHA" HEAD_SHA="$HEAD_SHA" ./scripts/coverage-gate.sh
+dotnet format VideoConverter.sln --verify-no-changes --no-restore
+```
+
+Parity and evidence workflow:
+- Run parity and characterization suites first when touching refactor hotspots.
+- Capture both happy-path and failure-path evidence artifacts under `.sisyphus/evidence/`.
+- Use the consolidated index at `.sisyphus/evidence/refactor-three-steps-index.md` to locate Task 1 through Task 15 outputs.
+- Refresh runbook evidence when commands, paths, or CI gates change.

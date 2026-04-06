@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Web.Features.Conversions.Logic;
 using Xunit;
 
 namespace VideoConverter.Web.Tests.Components;

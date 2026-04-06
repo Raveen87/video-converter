@@ -2,3 +2,8 @@ global using System.Text.Json;
 global using System.Text.Json.Serialization;
 global using FluentAssertions;
 global using Moq;
+global using VideoConverter.Web.Features.Conversions.Logic;
+global using VideoConverter.Web.Features.ManualResolution.Logic;
+global using VideoConverter.Web.Features.Queue.Logic;
+global using VideoConverter.Web.Features.Queue.Models;
+global using VideoConverter.Web.Features.Shared.Logic;

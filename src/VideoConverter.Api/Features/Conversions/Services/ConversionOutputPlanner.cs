@@ -90,7 +90,7 @@ public sealed class ConversionOutputPlanner(IOutputPathTemplateEngine outputPath
 
     private string GetEffectiveOutputDirectory(Conversion conversion)
     {
-        var baseDirectory = conversion.OutputDirectory!;
+        var baseDirectory = conversion.OutputDirectory;
 
         if (string.IsNullOrWhiteSpace(conversion.OutputPathTemplate))
         {

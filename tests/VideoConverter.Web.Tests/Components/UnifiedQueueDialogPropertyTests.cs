@@ -2,7 +2,8 @@ using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
 using VideoConverter.Common.Models;
-using VideoConverter.Web.Models;
+using VideoConverter.Web.Features.Queue.Logic;
+using VideoConverter.Web.Features.Queue.Models;
 
 namespace VideoConverter.Web.Tests.Components;
 

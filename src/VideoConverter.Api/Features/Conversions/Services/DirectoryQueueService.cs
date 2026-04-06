@@ -67,7 +67,7 @@ public sealed class DirectoryQueueService(
 
     private static string ComputeEffectiveOutputDirectory(string? profileOutputDirectory, string requestOutputDirectory)
     {
-        return !string.IsNullOrWhiteSpace(profileOutputDirectory) ? profileOutputDirectory! : requestOutputDirectory;
+        return !string.IsNullOrWhiteSpace(profileOutputDirectory) ? profileOutputDirectory : requestOutputDirectory;
     }
 
     private static string BuildValidationReason(DomainValidationResult validation)

@@ -7,7 +7,6 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Notifications.Services;
-using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
@@ -435,7 +434,7 @@ public sealed class ConversionQueueReorderTests
             new FileSystemValidator(),
             new RequestPropertyValidator());
         var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
-        var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
+        var conversionsWriteApi = new ConversionsWriteApi(db, NullLogger<ConversionsWriteApi>.Instance, patchValidator, existsValidator, conversionService);
         var processRegistry = new RunningProcessRegistry();
         var processController = new ProcessController(loggerFactory.CreateLogger<ProcessController>());
 
@@ -446,7 +445,7 @@ public sealed class ConversionQueueReorderTests
             notificationService,
             loggerFactory.CreateLogger<ConversionsApi>(),
             progressTracker,
-            conversionsEndpoints,
+            conversionsWriteApi,
             processRegistry,
             processController);
     }

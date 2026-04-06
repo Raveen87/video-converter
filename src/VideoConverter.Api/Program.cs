@@ -9,7 +9,6 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Metadata.Api;
 using VideoConverter.Api.Features.Metadata.Services;
-using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
 
@@ -104,7 +103,6 @@ public static class Program
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
-        RegisterBatching(services);
     }
 
     private static void RegisterFeatureServices(IServiceCollection services)
@@ -116,7 +114,6 @@ public static class Program
         _ = Features.FileBrowser.DependencyInjection.ServiceCollectionExtensions.AddFileBrowserFeature(services);
         _ = Features.Notifications.DependencyInjection.ServiceCollectionExtensions.AddNotificationsFeature(services);
         RegisterValidation(services);
-        RegisterHosted(services);
         _ = services.AddSingleton<IApiErrorMapper, ApiErrorMapper>();
     }
 
@@ -125,19 +122,6 @@ public static class Program
     {
         _ = services.AddSingleton<IFileSystemValidator, FileSystemValidator>();
         _ = services.AddSingleton<IRequestPropertyValidator, RequestPropertyValidator>();
-    }
-
-    private static void RegisterHosted(IServiceCollection services)
-    {
-        _ = services.AddScoped<IConversionCleanupService, ConversionCleanupService>();
-        _ = services.AddScoped<IDirectoryBatchCleanupService, DirectoryBatchCleanupService>();
-        _ = services.AddHostedService<ConversionCleanupWorker>();
-    }
-
-    private static void RegisterBatching(IServiceCollection services)
-    {
-        _ = services.AddScoped<IDirectoryBatchService, DirectoryBatchService>();
-        _ = services.AddHostedService<DirectoryBatchWorker>();
     }
 
     private static void ConfigureMiddleware(WebApplication app)

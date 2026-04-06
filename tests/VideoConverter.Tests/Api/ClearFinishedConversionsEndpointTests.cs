@@ -1,5 +1,5 @@
 using VideoConverter.Api.Features.Conversions.Api;
-using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Tests.TestUtils;
 
 namespace VideoConverter.Tests.Api;

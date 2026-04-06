@@ -11,7 +11,7 @@ public static class Converters
 
         var listToJson = new ValueConverter<IEnumerable<string>?, string?>(
             v => v == null ? null : JsonSerializer.Serialize(v, jsonOptions),
-            v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<IEnumerable<string>>(v!, jsonOptions)!);
+            v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<IEnumerable<string>>(v, jsonOptions));
 
         var listComparer = new ValueComparer<IEnumerable<string>?>(
             (l, r) => (l ?? new List<string>()).SequenceEqual(r ?? new List<string>()),

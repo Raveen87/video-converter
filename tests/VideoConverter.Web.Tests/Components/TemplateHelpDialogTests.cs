@@ -1,4 +1,4 @@
-using VideoConverter.Web.Models;
+using VideoConverter.Web.Features.Shared.Logic;
 using static VideoConverter.Web.Components.TemplateHelpDialog;
 
 namespace VideoConverter.Web.Tests.Components;

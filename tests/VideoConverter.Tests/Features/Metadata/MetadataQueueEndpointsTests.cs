@@ -184,7 +184,7 @@ public class MetadataQueueEndpointsTests
         IManualResolutionService service,
         CancellationToken cancellationToken)
     {
-        var methodInfo = typeof(ManualResolutionEndpoints).GetMethod(
+        var methodInfo = typeof(ManualResolutionApi).GetMethod(
             "ResolveBatchMetadataQueueItems",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
@@ -200,7 +200,7 @@ public class MetadataQueueEndpointsTests
         IManualResolutionService service,
         CancellationToken cancellationToken)
     {
-        var methodInfo = typeof(ManualResolutionEndpoints).GetMethod(
+        var methodInfo = typeof(ManualResolutionApi).GetMethod(
             "ResolveMetadataQueueItem",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 

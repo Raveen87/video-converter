@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VideoConverter.Api.Services.Conversion;
+using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Tests.TestUtils;
 using BatchEntity = VideoConverter.Api.Shared.Domain.Entities.DirectoryQueueBatch;

@@ -8,6 +8,9 @@ using VideoConverter.Common.Validation;
 using VideoConverter.Common.Validation.Requests;
 using VideoConverter.Web;
 using VideoConverter.Web.Services;
+using VideoConverter.Web.Services.ApiClient;
+using VideoConverter.Web.Services.FileBrowser;
+using VideoConverter.Web.Services.Theme;
 using VideoConverter.Web.Validation;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

@@ -8,7 +8,6 @@ using VideoConverter.Api.Features.Conversions.Services;
 using VideoConverter.Api.Features.Conversions.Validation;
 using VideoConverter.Api.Features.Integrations.Ffmpeg;
 using VideoConverter.Api.Features.Notifications.Services;
-using VideoConverter.Api.Services.Conversion;
 using VideoConverter.Api.Shared.Domain.Entities;
 using VideoConverter.Api.Shared.Infrastructure.Persistence;
 using VideoConverter.Api.Shared.Validation;
@@ -86,7 +85,7 @@ public sealed class DeleteConversionsEndpointTests
             new FileSystemValidator(),
             new RequestPropertyValidator());
         var existsValidator = new ConversionExistsValidator(NullLogger<ConversionExistsValidator>.Instance);
-        var conversionsEndpoints = new ConversionsEndpoints(db, NullLogger<ConversionsEndpoints>.Instance, patchValidator, existsValidator, conversionService);
+        var conversionsWriteApi = new ConversionsWriteApi(db, NullLogger<ConversionsWriteApi>.Instance, patchValidator, existsValidator, conversionService);
 
         return new ConversionsApi(
             db,
@@ -95,7 +94,7 @@ public sealed class DeleteConversionsEndpointTests
             notificationService,
             loggerFactory.CreateLogger<ConversionsApi>(),
             progressTracker,
-            conversionsEndpoints,
+            conversionsWriteApi,
             registry,
             controller);
     }

@@ -18,7 +18,7 @@ public sealed class ConversionsApi(
     Notifications.Services.INotificationService notificationService,
     ILogger<ConversionsApi> logger,
     IProgressTracker progressTracker,
-    ConversionsEndpoints conversionsEndpoints,
+    ConversionsWriteApi conversionsWriteApi,
     IRunningProcessRegistry processRegistry,
     IProcessController processController) : ControllerBase
 {
@@ -157,7 +157,7 @@ public sealed class ConversionsApi(
             logger.LogDebug("Received patch document for conversion {ConversionId} with {OperationCount} operations", id, patchDocument.Operations.Count);
         }
 
-        return await conversionsEndpoints.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
+        return await conversionsWriteApi.UpdateConversionAsync(id, patchDocument, ct).ConfigureAwait(false);
     }
 
     [HttpDelete("{id:int}")]
