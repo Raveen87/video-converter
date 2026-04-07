@@ -522,6 +522,8 @@ Output path template (optional):
 
 The `outputPathTemplate` field allows dynamic directory structures based on metadata. When specified, the rendered template path is appended to the `outputDirectory` to create the final output location.
 
+In the profile create/edit UI, output location is entered as a single `Output Path` input. The app resolves that value into the same runtime fields: base `outputDirectory` plus optional template subpath (`outputPathTemplate`). This is a UI convenience only, API contracts and runtime behavior are unchanged.
+
 Supported tokens:
 - `{Type}`: Media type ("Movie" or "TV")
 - `{Title}`: Movie title or TV show name

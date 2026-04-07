@@ -27,7 +27,7 @@
             <HeaderContent>
                 <MudTh>ID</MudTh>
                 <MudTh>Name</MudTh>
-                <MudTh>Output Directory</MudTh>
+                <MudTh>Output Path</MudTh>
                 <MudTh>CRF</MudTh>
                 <MudTh>Audio Bitrate</MudTh>
                 <MudTh>Audio Channels</MudTh>
@@ -39,9 +39,15 @@
                 <MudTd DataLabel="Name">
                     <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Name</MudText>
                 </MudTd>
-                <MudTd DataLabel="Output Directory">
-                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
-                        @(context.OutputDirectory ?? "Not set")
+                <MudTd DataLabel="Output Path">
+                    <MudText Typo="Typo.body2" Class="font-weight-medium text-truncate" Style="max-width: 300px;">
+                        @BuildOutputPathDisplay(context.OutputDirectory, context.OutputPathTemplate)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate" Style="max-width: 300px;">
+                        Subpath template: @BuildTemplateDisplay(context.OutputPathTemplate, "None")
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate" Style="max-width: 300px;">
+                        Filename template: @BuildTemplateDisplay(context.OutputFilenameTemplate, "Default")
                     </MudText>
                 </MudTd>
                 <MudTd DataLabel="CRF">@(context.Crf?.ToString() ?? "-")</MudTd>
@@ -312,5 +318,28 @@
             Logger.LogError(ex, "Error queueing directory with profile {ProfileId}", profileId);
             Snackbar.Add($"Error queueing directory: {ex.Message}", Severity.Error);
         }
+    }
+
+    private static string BuildOutputPathDisplay(string? outputDirectory, string? outputPathTemplate)
+    {
+        if (string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            return "Not set";
+        }
+
+        if (string.IsNullOrWhiteSpace(outputPathTemplate))
+        {
+            return outputDirectory;
+        }
+
+        var directory = outputDirectory.TrimEnd('/', '\\');
+        var template = outputPathTemplate.TrimStart('/', '\\');
+        var separator = directory.Contains('\\', StringComparison.Ordinal) ? "\\" : "/";
+        return $"{directory}{separator}{template}";
+    }
+
+    private static string BuildTemplateDisplay(string? templateValue, string emptyValue)
+    {
+        return string.IsNullOrWhiteSpace(templateValue) ? emptyValue : templateValue;
     }
 }

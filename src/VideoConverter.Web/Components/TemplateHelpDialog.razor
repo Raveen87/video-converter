@@ -129,6 +129,11 @@
                     The path template creates dynamic directory structures based on media metadata. The rendered path is appended to the output directory.
                 </MudText>
 
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                    In profile editing, the single <strong>Output Path</strong> input combines the base output directory with an optional template subpath.
+                    It still resolves to the same runtime values: <code>outputDirectory</code> + optional <code>outputPathTemplate</code>.
+                </MudAlert>
+
                 <MudText Typo="Typo.subtitle2" Class="mb-2">Available Tokens</MudText>
                 <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
                     <thead>

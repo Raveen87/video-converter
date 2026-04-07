@@ -175,4 +175,107 @@ public sealed class VideoConverterApiClientProfileTests
         capturedRequestBody.Should().Contain("\"path\":\"/outputDirectory\"");
         capturedRequestBody.Should().NotContain("\"path\":\"/OutputDirectory\"");
     }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithOutputPathTemplateChange_UsesCamelCasePatchPath()
+    {
+        var profileId = 3;
+        var patch = new ProfilePatchDto
+        {
+            OutputPathTemplate = "{Type}/{Title}",
+        };
+        var changedFields = new HashSet<string>(StringComparer.Ordinal) { nameof(ProfilePatchDto.OutputPathTemplate) };
+        var request = new ProfilePatchRequest(patch, changedFields);
+
+        var expectedResponse = new ProfileDto(
+            profileId, "Test Profile", "updated-output", null, null, null, null, null, "{Type}/{Title}", null, null, false, null);
+
+        var handler = new Mock<HttpMessageHandler>();
+        string? capturedRequestBody = null;
+
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Patch &&
+                    req.RequestUri!.ToString().EndsWith($"api/profiles/{profileId}", StringComparison.Ordinal)),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+            {
+                if (req.Content != null)
+                {
+                    using var reader = new StreamReader(req.Content.ReadAsStream());
+                    capturedRequestBody = reader.ReadToEnd();
+                }
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = JsonContent.Create(expectedResponse),
+            });
+
+        var httpClient = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri("https://localhost"),
+        };
+        var client = new VideoConverterApiClient(httpClient, NullLogger<VideoConverterApiClient>.Instance);
+
+        await client.UpdateProfileAsync(profileId, request);
+
+        capturedRequestBody.Should().NotBeNull();
+        capturedRequestBody.Should().Contain("\"path\":\"/outputPathTemplate\"");
+        capturedRequestBody.Should().NotContain("\"path\":\"/OutputPathTemplate\"");
+        capturedRequestBody.Should().Contain("\"value\":\"{Type}/{Title}\"");
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithClearedOutputPathTemplate_EmitsExplicitNullPatchValue()
+    {
+        var profileId = 4;
+        var patch = new ProfilePatchDto
+        {
+            OutputPathTemplate = null,
+        };
+        var changedFields = new HashSet<string>(StringComparer.Ordinal) { nameof(ProfilePatchDto.OutputPathTemplate) };
+        var request = new ProfilePatchRequest(patch, changedFields);
+
+        var expectedResponse = new ProfileDto(
+            profileId, "Test Profile", "updated-output", null, null, null, null, null, null, null, null, false, null);
+
+        var handler = new Mock<HttpMessageHandler>();
+        string? capturedRequestBody = null;
+
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Patch &&
+                    req.RequestUri!.ToString().EndsWith($"api/profiles/{profileId}", StringComparison.Ordinal)),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+            {
+                if (req.Content != null)
+                {
+                    using var reader = new StreamReader(req.Content.ReadAsStream());
+                    capturedRequestBody = reader.ReadToEnd();
+                }
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = JsonContent.Create(expectedResponse),
+            });
+
+        var httpClient = new HttpClient(handler.Object)
+        {
+            BaseAddress = new Uri("https://localhost"),
+        };
+        var client = new VideoConverterApiClient(httpClient, NullLogger<VideoConverterApiClient>.Instance);
+
+        await client.UpdateProfileAsync(profileId, request);
+
+        capturedRequestBody.Should().NotBeNull();
+        capturedRequestBody.Should().Contain("\"path\":\"/outputPathTemplate\"");
+        capturedRequestBody.Should().Contain("\"value\":null");
+    }
 }
