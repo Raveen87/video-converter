@@ -130,8 +130,8 @@
                 </MudText>
 
                 <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
-                    In profile editing, the single <strong>Output Path</strong> input combines the base output directory with an optional template subpath.
-                    It still resolves to the same runtime values: <code>outputDirectory</code> + optional <code>outputPathTemplate</code>.
+                    In profile editing, the single <strong>Output Path</strong> input maps to the same runtime fields.
+                    It sets base <code>outputDirectory</code>, plus optional <code>outputPathTemplate</code> and optional <code>outputFilenameTemplate</code> when template segments are present.
                 </MudAlert>
 
                 <MudText Typo="Typo.subtitle2" Class="mb-2">Available Tokens</MudText>
