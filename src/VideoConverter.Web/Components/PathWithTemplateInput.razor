@@ -140,6 +140,12 @@
     {
         if (string.IsNullOrEmpty(input)) return (null, null, null);
 
+        var endsWithSeparator = input.IndexOfAny(Separators) >= 0 && Array.IndexOf(Separators, input[^1]) >= 0;
+        if (endsWithSeparator && input.IndexOf('{') == -1)
+        {
+            return (input, null, null);
+        }
+
         if (IsRootedSingleSegmentPath(input))
         {
             return (input, null, null);

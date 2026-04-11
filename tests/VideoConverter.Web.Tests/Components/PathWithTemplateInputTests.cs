@@ -103,4 +103,82 @@ public sealed class PathWithTemplateInputTests : BunitContext
         pathTemplate.Should().BeNull();
         filenameTemplate.Should().BeNull();
     }
+
+    [Fact]
+    public void TextInput_WithUnixDirectoryOnlyTrailingSeparator_MapsToDirectoryOnly()
+    {
+        // Arrange
+        string? directory = null;
+        string? pathTemplate = null;
+        string? filenameTemplate = null;
+
+        var cut = Render<PathWithTemplateInput>(parameters => parameters
+            .Add(p => p.Directory, directory)
+            .Add(p => p.DirectoryChanged, value => directory = value)
+            .Add(p => p.PathTemplate, pathTemplate)
+            .Add(p => p.PathTemplateChanged, value => pathTemplate = value)
+            .Add(p => p.FilenameTemplate, filenameTemplate)
+            .Add(p => p.FilenameTemplateChanged, value => filenameTemplate = value));
+
+        // Act
+        var input = cut.Find("input");
+        input.Input("/out/");
+
+        // Assert
+        directory.Should().Be("/out/");
+        pathTemplate.Should().BeNull();
+        filenameTemplate.Should().BeNull();
+    }
+
+    [Fact]
+    public void TextInput_WithWindowsDirectoryOnlyTrailingSeparator_MapsToDirectoryOnly()
+    {
+        // Arrange
+        string? directory = null;
+        string? pathTemplate = null;
+        string? filenameTemplate = null;
+
+        var cut = Render<PathWithTemplateInput>(parameters => parameters
+            .Add(p => p.Directory, directory)
+            .Add(p => p.DirectoryChanged, value => directory = value)
+            .Add(p => p.PathTemplate, pathTemplate)
+            .Add(p => p.PathTemplateChanged, value => pathTemplate = value)
+            .Add(p => p.FilenameTemplate, filenameTemplate)
+            .Add(p => p.FilenameTemplateChanged, value => filenameTemplate = value));
+
+        // Act
+        var input = cut.Find("input");
+        input.Input("C:/out/");
+
+        // Assert
+        directory.Should().Be("C:/out/");
+        pathTemplate.Should().BeNull();
+        filenameTemplate.Should().BeNull();
+    }
+
+    [Fact]
+    public void TextInput_WithRootDirectoryOnly_MapsToDirectoryOnly()
+    {
+        // Arrange
+        string? directory = null;
+        string? pathTemplate = null;
+        string? filenameTemplate = null;
+
+        var cut = Render<PathWithTemplateInput>(parameters => parameters
+            .Add(p => p.Directory, directory)
+            .Add(p => p.DirectoryChanged, value => directory = value)
+            .Add(p => p.PathTemplate, pathTemplate)
+            .Add(p => p.PathTemplateChanged, value => pathTemplate = value)
+            .Add(p => p.FilenameTemplate, filenameTemplate)
+            .Add(p => p.FilenameTemplateChanged, value => filenameTemplate = value));
+
+        // Act
+        var input = cut.Find("input");
+        input.Input("/");
+
+        // Assert
+        directory.Should().Be("/");
+        pathTemplate.Should().BeNull();
+        filenameTemplate.Should().BeNull();
+    }
 }
