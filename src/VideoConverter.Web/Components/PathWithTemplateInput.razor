@@ -163,6 +163,11 @@
             f = input.Substring(lastSepIndex + 1);
             var remainder = input.Substring(0, lastSepIndex);
 
+            if (f.Length == 0 && remainder.IndexOf('{') >= 0)
+            {
+                f = null;
+            }
+
             if (!string.IsNullOrEmpty(remainder))
             {
                 var firstBrace = remainder.IndexOf('{');
