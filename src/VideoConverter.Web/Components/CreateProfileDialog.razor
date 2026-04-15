@@ -157,7 +157,7 @@
                 _formModel.Resolution,
                 audioLanguages,
                 subtitleLanguages,
-                _formModel.OutputFilenameTemplate,
+                NormalizeOptionalTemplate(_formModel.OutputFilenameTemplate),
                 _formModel.OutputPathTemplate,
                 _formModel.VmafEnabled,
                 _formModel.VmafEnabled ? _formModel.RequiredVmaf : null);
@@ -232,6 +232,11 @@
             Logger.LogDebug("Enter key pressed and form is valid, triggering form submission");
             await HandleValidSubmit();
         }
+    }
+
+    private static string? NormalizeOptionalTemplate(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private sealed class ProfileFormModel

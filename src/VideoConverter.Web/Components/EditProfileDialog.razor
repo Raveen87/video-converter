@@ -285,9 +285,11 @@
             _ = changedFields.Add(nameof(ProfilePatchDto.Resolution));
         }
 
-        if (!string.Equals(_formModel.OutputFilenameTemplate, original.OutputFilenameTemplate, StringComparison.Ordinal))
+        var normalizedOutputFilenameTemplate = NormalizeOptionalTemplate(_formModel.OutputFilenameTemplate);
+        var normalizedOriginalOutputFilenameTemplate = NormalizeOptionalTemplate(original.OutputFilenameTemplate);
+        if (!string.Equals(normalizedOutputFilenameTemplate, normalizedOriginalOutputFilenameTemplate, StringComparison.Ordinal))
         {
-            patch.OutputFilenameTemplate = _formModel.OutputFilenameTemplate;
+            patch.OutputFilenameTemplate = normalizedOutputFilenameTemplate;
             _ = changedFields.Add(nameof(ProfilePatchDto.OutputFilenameTemplate));
         }
 
@@ -353,6 +355,11 @@
         }
 
         return Math.Abs(left.Value - right.Value) <= 0.001;
+    }
+
+    private static string? NormalizeOptionalTemplate(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private async Task HandleCancel()
