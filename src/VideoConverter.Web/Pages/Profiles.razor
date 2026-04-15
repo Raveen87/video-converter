@@ -334,7 +334,7 @@
 
         var directory = outputDirectory.TrimEnd('/', '\\');
         var template = outputPathTemplate.TrimStart('/', '\\');
-        var separator = directory.Contains('\\', StringComparison.Ordinal) ? "\\" : "/";
+        var separator = directory.Contains('\\') ? "\\" : "/";
         return $"{directory}{separator}{template}";
     }
 
