@@ -113,9 +113,15 @@
         {
              fullTpl = $"{PathTemplate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}{Path.DirectorySeparatorChar}{FilenameTemplate.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}";
         }
+        else if (!string.IsNullOrEmpty(PathTemplate))
+        {
+            fullTpl = FilenameTemplate is null
+                ? PathTemplate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar
+                : (PathTemplate + FilenameTemplate);
+        }
         else
         {
-            fullTpl = (PathTemplate ?? string.Empty) + (FilenameTemplate ?? string.Empty);
+            fullTpl = FilenameTemplate ?? string.Empty;
         }
 
         if (string.IsNullOrEmpty(Directory))

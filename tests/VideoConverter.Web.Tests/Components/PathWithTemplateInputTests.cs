@@ -53,6 +53,34 @@ public sealed class PathWithTemplateInputTests : BunitContext
     }
 
     [Fact]
+    public void Parameters_WithDirectoryAndPathTemplateOnly_ReconstructCombinedTextWithTrailingSeparator()
+    {
+        // Arrange & Act
+        var cut = Render<PathWithTemplateInput>(parameters => parameters
+            .Add(p => p.Directory, "/out")
+            .Add(p => p.PathTemplate, "{Type}/{Title}")
+            .Add(p => p.FilenameTemplate, (string?)null));
+
+        // Assert
+        var input = cut.Find("input");
+        input.GetAttribute("value").Should().Be("/out/{Type}/{Title}/");
+    }
+
+    [Fact]
+    public void Parameters_WithPathTemplateOnly_ReconstructCombinedTextWithTrailingSeparator()
+    {
+        // Arrange & Act
+        var cut = Render<PathWithTemplateInput>(parameters => parameters
+            .Add(p => p.Directory, (string?)null)
+            .Add(p => p.PathTemplate, "{Type}/{Title}")
+            .Add(p => p.FilenameTemplate, (string?)null));
+
+        // Assert
+        var input = cut.Find("input");
+        input.GetAttribute("value").Should().Be("{Type}/{Title}/");
+    }
+
+    [Fact]
     public void TextInput_WithUnixDirectoryOnly_MapsToDirectoryOnly()
     {
         // Arrange
