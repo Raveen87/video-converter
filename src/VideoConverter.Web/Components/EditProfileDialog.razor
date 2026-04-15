@@ -293,9 +293,11 @@
             _ = changedFields.Add(nameof(ProfilePatchDto.OutputFilenameTemplate));
         }
 
-        if (!string.Equals(_formModel.OutputPathTemplate, original.OutputPathTemplate, StringComparison.Ordinal))
+        var normalizedOutputPathTemplate = NormalizeOptionalTemplate(_formModel.OutputPathTemplate);
+        var normalizedOriginalOutputPathTemplate = NormalizeOptionalTemplate(original.OutputPathTemplate);
+        if (!string.Equals(normalizedOutputPathTemplate, normalizedOriginalOutputPathTemplate, StringComparison.Ordinal))
         {
-            patch.OutputPathTemplate = _formModel.OutputPathTemplate;
+            patch.OutputPathTemplate = normalizedOutputPathTemplate;
             _ = changedFields.Add(nameof(ProfilePatchDto.OutputPathTemplate));
         }
 

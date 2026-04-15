@@ -158,7 +158,7 @@
                 audioLanguages,
                 subtitleLanguages,
                 NormalizeOptionalTemplate(_formModel.OutputFilenameTemplate),
-                _formModel.OutputPathTemplate,
+                NormalizeOptionalTemplate(_formModel.OutputPathTemplate),
                 _formModel.VmafEnabled,
                 _formModel.VmafEnabled ? _formModel.RequiredVmaf : null);
 
