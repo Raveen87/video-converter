@@ -113,9 +113,15 @@
         {
              fullTpl = $"{PathTemplate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}{Path.DirectorySeparatorChar}{FilenameTemplate.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)}";
         }
+        else if (!string.IsNullOrEmpty(PathTemplate))
+        {
+            fullTpl = FilenameTemplate is null
+                ? PathTemplate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar
+                : (PathTemplate + FilenameTemplate);
+        }
         else
         {
-            fullTpl = (PathTemplate ?? string.Empty) + (FilenameTemplate ?? string.Empty);
+            fullTpl = FilenameTemplate ?? string.Empty;
         }
 
         if (string.IsNullOrEmpty(Directory))
@@ -140,6 +146,17 @@
     {
         if (string.IsNullOrEmpty(input)) return (null, null, null);
 
+        var endsWithSeparator = input.IndexOfAny(Separators) >= 0 && Array.IndexOf(Separators, input[^1]) >= 0;
+        if (endsWithSeparator && input.IndexOf('{') == -1)
+        {
+            return (input, null, null);
+        }
+
+        if (IsRootedSingleSegmentPath(input))
+        {
+            return (input, null, null);
+        }
+
         string? d = null, p = null, f = null;
         var lastSepIndex = input.LastIndexOfAny(Separators);
 
@@ -151,6 +168,11 @@
         {
             f = input.Substring(lastSepIndex + 1);
             var remainder = input.Substring(0, lastSepIndex);
+
+            if (f.Length == 0 && remainder.IndexOf('{') >= 0)
+            {
+                f = null;
+            }
 
             if (!string.IsNullOrEmpty(remainder))
             {
@@ -175,6 +197,26 @@
             }
         }
         return (d, p, f);
+    }
+
+    private static bool IsRootedSingleSegmentPath(string input)
+    {
+        if (input.Length < 2)
+        {
+            return false;
+        }
+
+        if ((input[0] == '/' || input[0] == '\\') && input.IndexOfAny(Separators, 1) == -1)
+        {
+            return true;
+        }
+
+        if (input.Length >= 3 && char.IsLetter(input[0]) && input[1] == ':' && (input[2] == '/' || input[2] == '\\') && input.IndexOfAny(Separators, 3) == -1)
+        {
+            return true;
+        }
+
+        return false;
     }
 
 
